@@ -13,10 +13,10 @@ p='index.html'; s=open(p,encoding='utf-8').read()
 s=s.replace('<title>JJR Controle Contábil</title>','<title>KCBM</title>')
 s=s.replace('https://kleydsoncontador-svg.github.io/jjr-controle/assets/logo-jjr.png','https://kleydsoncontador-svg.github.io/kcbm/assets/logo-kcbm.png')
 s=s.replace('JJR Consultoria Contábil S/S','Kleydson')  # login e cabeçalhos de relatórios
-s=s.replace('<meta name="theme-color" content="#0F7B6C">','<meta name="theme-color" content="#2563EB">')
+s=s.replace('<meta name="theme-color" content="#0F7B6C">','<meta name="theme-color" content="#1E2352">')
 # paleta: verde do JJR -> azul; azul do JJR -> lilás (cores escritas direto no código; as demais vêm das variáveis do tema.css)
 for a,b in [('#0F7B6C','#2563EB'),('#0F9C8C','#2563EB'),('#14A899','#3B82F6'),('#14B8A6','#3B82F6'),('#14b8a6','#3B82F6'),('#2DD4BF','#60A5FA'),('#E6F4F2','#E3EBFD'),
-            ('rgba(15,123,108','rgba(37,99,235'),('rgba(20,184,166','rgba(59,130,246'),('#1D4ED8','#7C5CC9'),('#DBEAFE','#EDE7FB')]:
+            ('rgba(15,123,108','rgba(37,99,235'),('hue-rotate(118deg)','hue-rotate(188deg)'),('rgba(20,184,166','rgba(59,130,246'),('#1D4ED8','#7C5CC9'),('#DBEAFE','#EDE7FB')]:
     s=s.replace(a,b)
 s=re.sub(r'<link rel="icon"[^>]*>','<link rel="icon" type="image/png" href="assets/icon-192.png">',s,count=1)  # ícone da aba: preto com calculadora dourada
 # ISOLAMENTO DE MEMÓRIA LOCAL: JJR e KCBM ficam no mesmo endereço-base (kleydsoncontador-svg.github.io), então o navegador

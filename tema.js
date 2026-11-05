@@ -17,7 +17,11 @@
 
   // ── 2) módulos escondidos no KCBM (só visual: nenhum dado é apagado). Para esconder outro, acrescente o id do menu aqui. ──
   var ESCONDER = ['n-nbc']; // Normas Brasileiras de Contabilidade
-  function esconder() { ESCONDER.forEach(function (id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
+  function esconder() {
+    ESCONDER.forEach(function (id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; });
+    // o mesmo módulo também aparece como cartão na tela inicial: esconde o cartão que abre a página dele
+    ESCONDER.forEach(function (id) { var pg = id.replace(/^n-/, ''); [].slice.call(document.querySelectorAll('#homeCardsGrid > div')).forEach(function (c) { var oc = c.getAttribute('onclick') || ''; if (oc.indexOf("'" + pg + "'") >= 0) c.style.display = 'none'; }); });
+  }
 
   // ── 3) marca KCBM ──
   function marca() {

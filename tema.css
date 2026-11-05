@@ -1,14 +1,21 @@
-/* KCBM — mesma aparência do JJR Controle (modo claro e modo escuro, com o botão de alternar).
-   Só muda a paleta: onde o JJR usa VERDE, o KCBM usa AZUL; onde o JJR usa AZUL, o KCBM usa LILÁS CLARINHO.
+/* KCBM — mesma estrutura e funções do JJR Controle (modo claro e modo escuro), mas com identidade de cor PRÓPRIA, para nunca confundir os dois:
+   JJR = verde-água sobre cinza-azulado.  KCBM = azul real + lilás sobre índigo (cabeçalho/menu índigo, fundo e cartões com leve tom lilás).
    As cores de situação (vermelho = erro/atraso, amarelo = atenção, verde de "ok/ativo", realce de diferenças) ficam como no JJR. */
 :root{
-  --teal:#2563EB;--teal-l:#3B82F6;--teal-bg:#E3EBFD;
-  --blue:#7C5CC9;--blue-bg:#EDE7FB;
-  --glow:0 0 0 3px rgba(37,99,235,.14);
+  --ink:#1E2352;--ink2:#2A3170;--ink3:#4A5190;
+  --teal:#2F5BEA;--teal-l:#5B84F5;--teal-bg:#E4EAFD;
+  --blue:#7B5CD6;--blue-bg:#ECE6FB;
+  --slate:#6B6C93;--border:#DAD6EE;--bg:#EBE8F7;--white:#F8F6FE;
+  --glow:0 0 0 3px rgba(47,91,234,.16);
 }
 html.dark-mode{
-  --teal:#3B82F6;--teal-l:#60A5FA;--teal-bg:rgba(59,130,246,.16);
+  --ink:#E7E9FF;--ink2:#0F1334;--ink3:#B4B9E6;
+  --teal:#5B84F5;--teal-l:#86A4FA;--teal-bg:rgba(91,132,245,.18);
   --blue:#CDB9F7;--blue-bg:rgba(205,185,247,.16);
+  --slate:#A4A8D0;--border:#2A3166;--bg:#0A0D24;--white:#131838;
 }
-/* títulos que no JJR são azul-marinho (#1E3558): no modo claro viram lilás profundo (legível); no escuro o JJR já os deixa claros */
-[style*="color:#1E3558" i]{color:#4B3F8F!important}
+/* cabeçalho e menu lateral: índigo no claro; índigo bem escuro no escuro (o JJR fixa um cinza-azulado quase preto) */
+header,aside{background:#1E2352}
+html.dark-mode header,html.dark-mode aside,html.dark-mode #loginScreen{background:#0D1130!important}
+/* títulos que no JJR são azul-marinho (#1E3558): no modo claro viram lilás profundo; no escuro o JJR já os deixa claros */
+[style*="color:#1E3558" i]{color:#4B3F9A!important}
