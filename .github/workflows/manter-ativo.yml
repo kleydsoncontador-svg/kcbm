@@ -1,0 +1,19 @@
+name: Manter o banco KCBM ativo
+
+# O plano grátis do Supabase pausa o projeto depois de ~1 semana sem nenhuma atividade.
+# Esta rotina faz uma consulta simples ao banco todo dia. A chave abaixo é a "publishable" (pública por desenho);
+# sem login a consulta volta vazia, mas conta como atividade.
+on:
+  schedule:
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar o banco
+        run: |
+          curl -s -o /dev/null -w "HTTP %{http_code}\n" \
+            -H "apikey: sb_publishable_WK8R-quJN_7ZY0UHCc4M8g_yYNXT0R8" \
+            "https://dbwioastafltogatlvtx.supabase.co/rest/v1/dados_app?select=key&limit=1"
