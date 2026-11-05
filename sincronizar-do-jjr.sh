@@ -15,6 +15,31 @@ s=s.replace('https://kleydsoncontador-svg.github.io/jjr-controle/assets/logo-jjr
 s=s.replace('JJR Consultoria Contábil S/S','Kleydson')  # login e cabeçalhos de relatórios
 s=s.replace('<meta name="theme-color" content="#0F7B6C">','<meta name="theme-color" content="#000000">')
 s=re.sub(r'<link rel="icon"[^>]*>','<link rel="icon" type="image/png" href="assets/icon-192.png">',s,count=1)  # ícone da aba: preto com calculadora dourada
+# ISOLAMENTO DE MEMÓRIA LOCAL: JJR e KCBM ficam no mesmo endereço-base (kleydsoncontador-svg.github.io), então o navegador
+# daria a MESMA localStorage/IndexedDB aos dois. Este script (o PRIMEIRO do <head>) prefixa tudo com "kcbm::" só no KCBM.
+ISOL = """<script>/*kcbm-isolamento*/(function(){try{var P='kcbm::',real=window.localStorage;
+function mine(){var r=[];for(var i=0;i<real.length;i++){var k=real.key(i);if(k&&k.indexOf(P)===0)r.push(k);}return r;}
+var px=new Proxy(real,{
+ get:function(t,k){
+  if(k==='getItem')return function(x){return real.getItem(P+x);};
+  if(k==='setItem')return function(x,v){real.setItem(P+x,v);};
+  if(k==='removeItem')return function(x){real.removeItem(P+x);};
+  if(k==='key')return function(i){var a=mine();return i<a.length?a[i].slice(P.length):null;};
+  if(k==='length')return mine().length;
+  if(k==='clear')return function(){mine().forEach(function(x){real.removeItem(x);});};
+  return typeof k==='string'?(real.getItem(P+k)===null?undefined:real.getItem(P+k)):undefined;},
+ set:function(t,k,v){real.setItem(P+k,v);return true;},
+ deleteProperty:function(t,k){real.removeItem(P+k);return true;},
+ has:function(t,k){return real.getItem(P+k)!==null;},
+ ownKeys:function(){return mine().map(function(x){return x.slice(P.length);});},
+ getOwnPropertyDescriptor:function(t,k){var v=real.getItem(P+k);return v===null?undefined:{value:v,enumerable:true,configurable:true,writable:true};}
+});
+Object.defineProperty(window,'localStorage',{value:px,configurable:true});
+var io=window.indexedDB&&window.indexedDB.open;if(io){window.indexedDB.open=function(n,v){return v===undefined?io.call(window.indexedDB,P+n):io.call(window.indexedDB,P+n,v);};}
+}catch(e){console.warn('KCBM isolamento:',e);}})();</script>
+"""
+if 'kcbm-isolamento' not in s:
+    s=s.replace('<head>','<head>\n'+ISOL,1)
 if 'tema.css' not in s:
     s=s.replace('</head>','<link rel="stylesheet" href="tema.css">\n</head>',1)
     i=s.rfind('</body>')  # o ÚLTIMO: dentro de textos de script também aparece '</body>'

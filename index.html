@@ -1,6 +1,27 @@
 ﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<script>/*kcbm-isolamento*/(function(){try{var P='kcbm::',real=window.localStorage;
+function mine(){var r=[];for(var i=0;i<real.length;i++){var k=real.key(i);if(k&&k.indexOf(P)===0)r.push(k);}return r;}
+var px=new Proxy(real,{
+ get:function(t,k){
+  if(k==='getItem')return function(x){return real.getItem(P+x);};
+  if(k==='setItem')return function(x,v){real.setItem(P+x,v);};
+  if(k==='removeItem')return function(x){real.removeItem(P+x);};
+  if(k==='key')return function(i){var a=mine();return i<a.length?a[i].slice(P.length):null;};
+  if(k==='length')return mine().length;
+  if(k==='clear')return function(){mine().forEach(function(x){real.removeItem(x);});};
+  return typeof k==='string'?(real.getItem(P+k)===null?undefined:real.getItem(P+k)):undefined;},
+ set:function(t,k,v){real.setItem(P+k,v);return true;},
+ deleteProperty:function(t,k){real.removeItem(P+k);return true;},
+ has:function(t,k){return real.getItem(P+k)!==null;},
+ ownKeys:function(){return mine().map(function(x){return x.slice(P.length);});},
+ getOwnPropertyDescriptor:function(t,k){var v=real.getItem(P+k);return v===null?undefined:{value:v,enumerable:true,configurable:true,writable:true};}
+});
+Object.defineProperty(window,'localStorage',{value:px,configurable:true});
+var io=window.indexedDB&&window.indexedDB.open;if(io){window.indexedDB.open=function(n,v){return v===undefined?io.call(window.indexedDB,P+n):io.call(window.indexedDB,P+n,v);};}
+}catch(e){console.warn('KCBM isolamento:',e);}})();</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="jjr-build" content="__BUILD_ID__">
