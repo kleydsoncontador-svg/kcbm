@@ -1,14 +1,14 @@
-/* KCBM — paleta própria: fundo preto, azul no lugar do verde do JJR, lilás clarinho no lugar do azul, dourado e prateado.
-   NÃO altera as cores de situação (vermelho = erro/atraso, amarelo = atenção, realce de diferenças): essas ficam como no JJR. */
-html.dark-mode{
-  --bg:#000000;--white:#0A0A0C;--border:#2B2C31;
-  --ink:#DADDE4;--ink2:#050506;--ink3:#B8BCC7;--slate:#A3A8B3;
-  --teal:#3B82F6;--teal-l:#60A5FA;--teal-bg:rgba(59,130,246,.16);
-  --blue:#D3C2FA;--blue-bg:rgba(211,194,250,.14);
-  --gold:#D4AF37;--gold-l:#F0D27A;--silver:#C0C4CC;
+/* KCBM — mesma aparência do JJR Controle (modo claro e modo escuro, com o botão de alternar).
+   Só muda a paleta: onde o JJR usa VERDE, o KCBM usa AZUL; onde o JJR usa AZUL, o KCBM usa LILÁS CLARINHO.
+   As cores de situação (vermelho = erro/atraso, amarelo = atenção, verde de "ok/ativo", realce de diferenças) ficam como no JJR. */
+:root{
+  --teal:#2563EB;--teal-l:#3B82F6;--teal-bg:#E3EBFD;
+  --blue:#7C5CC9;--blue-bg:#EDE7FB;
+  --glow:0 0 0 3px rgba(37,99,235,.14);
 }
-html.dark-mode body{background:#000}
-html.dark-mode header,html.dark-mode aside,html.dark-mode #loginScreen{background:#050506!important;border-color:#2B2C31}
-html.dark-mode .logo,html.dark-mode .logo em{color:var(--gold)!important}
-html.dark-mode .ptitle{color:var(--gold-l)}
-html.dark-mode th{color:var(--silver)}
+html.dark-mode{
+  --teal:#3B82F6;--teal-l:#60A5FA;--teal-bg:rgba(59,130,246,.16);
+  --blue:#CDB9F7;--blue-bg:rgba(205,185,247,.16);
+}
+/* títulos que no JJR são azul-marinho (#1E3558): no modo claro viram lilás profundo (legível); no escuro o JJR já os deixa claros */
+[style*="color:#1E3558" i]{color:#4B3F8F!important}

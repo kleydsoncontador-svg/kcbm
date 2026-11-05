@@ -32,7 +32,7 @@ var io=window.indexedDB&&window.indexedDB.open;if(io){window.indexedDB.open=func
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js"></script>
 <link rel="icon" type="image/png" href="assets/icon-192.png">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#2563EB">
 <meta name="color-scheme" content="light dark">
 <meta name="app-build" content="2026-09-15-1">
 <link rel="manifest" href="manifest.json">
@@ -46,17 +46,17 @@ var io=window.indexedDB&&window.indexedDB.open;if(io){window.indexedDB.open=func
 :root{
   color-scheme:light;
   --ink:#1A1F2E;--ink2:#2D3447;--ink3:#44526A;
-  --teal:#0F7B6C;--teal-l:#14A899;--teal-bg:#E6F4F2;
+  --teal:#2563EB;--teal-l:#3B82F6;--teal-bg:#E3EBFD;
   --amber:#D97706;--amber-bg:#FEF3C7;
   --red:#B91C1C;--red-bg:#FEE2E2;
   --green:#15803D;--green-bg:#DCFCE7;
   --gray:#475569;--gray-bg:#E2E8F0;
-  --blue:#1D4ED8;--blue-bg:#DBEAFE;
+  --blue:#7C5CC9;--blue-bg:#EDE7FB;
   --slate:#64748B;--border:#E2E8F0;--bg:#EAECF0;--white:#F5F7FA;
   --mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;
   --r:10px;--r2:14px;--shadow:0 1px 2px rgba(15,23,42,.04),0 4px 14px rgba(15,23,42,.06);
   --shadow-md:0 8px 28px rgba(15,23,42,.12);
-  --glow:0 0 0 3px rgba(15,123,108,.12);
+  --glow:0 0 0 3px rgba(37,99,235,.12);
 }
 /* ── Modo escuro ───────────────────────────────────────────────────────────
    Antes usava filter:invert() na página inteira (resultado lavado, cores
@@ -70,7 +70,7 @@ var io=window.indexedDB&&window.indexedDB.open;if(io){window.indexedDB.open=func
    sistema (ex: #1E3558 nos títulos, fundos brancos/claros de aviso). */
 html.dark-mode{
   --ink:#E8ECF3;--ink2:#181D28;--ink3:#AEB8C8;
-  --teal:#14B8A6;--teal-l:#2DD4BF;--teal-bg:rgba(20,184,166,.16);
+  --teal:#3B82F6;--teal-l:#60A5FA;--teal-bg:rgba(59,130,246,.16);
   --amber:#FBBF24;--amber-bg:rgba(217,119,6,.18);
   --red:#F87171;--red-bg:rgba(220,38,38,.18);
   --green:#4ADE80;--green-bg:rgba(34,197,94,.16);
@@ -97,7 +97,7 @@ html.dark-mode [style*="background:#fff" i],
 html.dark-mode [style*="background: #fff" i],
 html.dark-mode [style*="background:#ffffff" i]{background:var(--white)!important}
 .conv-ativo-fila-box{background:#EFF6FF;border:1px solid #BFDBFE}
-.conv-ativo-fila-txt{color:#1D4ED8}
+.conv-ativo-fila-txt{color:#7C5CC9}
 .conv-ativo-fila-item{border-bottom:1px solid #BFDBFE}
 html.dark-mode .conv-ativo-fila-box{background:#0F1F3D;border-color:#1E3A66}
 html.dark-mode .conv-ativo-fila-txt{color:#93C5FD}
@@ -108,8 +108,8 @@ html.dark-mode [style*="#F9FAFB" i]{background-color:#1B2230!important}
 html.dark-mode [style*="#F0FDF9" i],
 html.dark-mode [style*="#F0FDF4" i],
 html.dark-mode [style*="#EFF6FF" i],
-html.dark-mode [style*="#DBEAFE" i],
-html.dark-mode [style*="#E6F4F2" i],
+html.dark-mode [style*="#EDE7FB" i],
+html.dark-mode [style*="#E3EBFD" i],
 html.dark-mode [style*="#D0EDE9" i],
 html.dark-mode [style*="#f0f7f4" i],
 html.dark-mode [style*="#e8f5ee" i],
@@ -118,7 +118,7 @@ html.dark-mode [style*="#d1ecf1" i],
 html.dark-mode [style*="#d0e4f7" i],
 html.dark-mode [style*="#f0f7ff" i],
 html.dark-mode [style*="#dcfce7" i],
-html.dark-mode [style*="#EEF2FF" i]{background-color:rgba(20,184,166,.14)!important}
+html.dark-mode [style*="#EEF2FF" i]{background-color:rgba(59,130,246,.14)!important}
 html.dark-mode [style*="#FFFBEB" i],
 html.dark-mode [style*="#FEF3C7" i],
 html.dark-mode [style*="#FDE68A" i],
@@ -190,7 +190,7 @@ html.dark-mode [style*="background-color:#e0f2fe" i],
 html.dark-mode [style*="background-color:#bfdbfe" i],
 html.dark-mode [style*="background-color:#dce9fa" i],
 html.dark-mode [style*="background-color:#f0f4ff" i],
-html.dark-mode [style*="background-color:#f5f3ff" i]{background-color:rgba(20,184,166,.14)!important}
+html.dark-mode [style*="background-color:#f5f3ff" i]{background-color:rgba(59,130,246,.14)!important}
 html.dark-mode [style*="background:#e2e8f0" i],
 html.dark-mode [style*="background:#e8e8e8" i],
 html.dark-mode [style*="background:#e5e5e5" i],
@@ -259,7 +259,7 @@ html.dark-mode .luc-brl-in:hover,html.dark-mode .luc-brl-in:focus,
 html.dark-mode .luc-text-in:hover,html.dark-mode .luc-text-in:focus,
 html.dark-mode .luc-val-input:hover,html.dark-mode .luc-val-input:focus,
 html.dark-mode .chk-sticky-head th.cur,html.dark-mode .chk-sticky-head th.nm.cur,
-html.dark-mode table.chk th.nm.cur{background:rgba(20,184,166,.16)!important}
+html.dark-mode table.chk th.nm.cur{background:rgba(59,130,246,.16)!important}
 html.dark-mode table.chk tbody tr:not(.status-row):not(.addrow):not(.chk-section-div):hover td{background:#33425A!important}
 html.dark-mode tr.decl-entregue td,html.dark-mode tr.decl-entregue:hover td,
 html.dark-mode tr.row-fechado td,html.dark-mode tr.row-fechado:hover td,
@@ -267,7 +267,7 @@ html.dark-mode tr.row-fechado .fch-vazio{background:rgba(37,99,235,.16)!importan
 html.dark-mode tr.row-fechado .fch-ok{background:rgba(37,99,235,.28);border-color:#3B82F6;color:#93C5FD}
 html.dark-mode tr.row-fechado .fch-na{background:rgba(37,99,235,.2);border-color:#2563EB;color:#60A5FA}
 html.dark-mode tr.row-fechado .fch-sm{background:rgba(217,119,6,.35);border-color:#D97706;color:#FCD34D}
-html.dark-mode .pend-t th.pcur,html.dark-mode .pend-t td.pcur{background:rgba(20,184,166,.16)!important}
+html.dark-mode .pend-t th.pcur,html.dark-mode .pend-t td.pcur{background:rgba(59,130,246,.16)!important}
 html.dark-mode .pend-t td.pok,html.dark-mode .fch-ok,
 html.dark-mode .luc-distribuido td,html.dark-mode .luc-soc-pago td,
 html.dark-mode tr.ta-pago td{background:rgba(34,197,94,.16)!important}
@@ -280,10 +280,10 @@ html.dark-mode .luc-prejuizo td{background:rgba(220,38,38,.16)!important}
 html.dark-mode .prog-bar-wrap{background:#232A38}
 html.dark-mode .luc-nav-item.concluido,html.dark-mode .luc-nav-trim.concluido{background:#000;color:#fff}
 /* Acentos de brilho (glow) — mais efeito no escuro, onde o neon aparece melhor */
-html.dark-mode{--glow:0 0 0 3px rgba(20,184,166,.18),0 0 14px rgba(20,184,166,.15)}
-html.dark-mode .bp{box-shadow:0 0 16px rgba(20,184,166,.3),0 2px 8px rgba(0,0,0,.35)}
-html.dark-mode .bp:hover{box-shadow:0 0 22px rgba(20,184,166,.45),0 4px 14px rgba(0,0,0,.4)}
-html.dark-mode .card:hover,html.dark-mode .sc:hover{box-shadow:0 0 22px rgba(20,184,166,.1),var(--shadow)}
+html.dark-mode{--glow:0 0 0 3px rgba(59,130,246,.18),0 0 14px rgba(59,130,246,.15)}
+html.dark-mode .bp{box-shadow:0 0 16px rgba(59,130,246,.3),0 2px 8px rgba(0,0,0,.35)}
+html.dark-mode .bp:hover{box-shadow:0 0 22px rgba(59,130,246,.45),0 4px 14px rgba(0,0,0,.4)}
+html.dark-mode .card:hover,html.dark-mode .sc:hover{box-shadow:0 0 22px rgba(59,130,246,.1),var(--shadow)}
 html.dark-mode .action-btn{box-shadow:0 2px 10px rgba(0,0,0,.4)}
 html.dark-mode .fi,html.dark-mode .si{background:var(--ink2)!important;color:var(--ink)!important;-webkit-text-fill-color:var(--ink)!important}
 html.dark-mode .fi:focus,html.dark-mode .si:focus{background:var(--ink2)!important;color:var(--ink)!important;-webkit-text-fill-color:var(--ink)!important}
@@ -316,7 +316,7 @@ header{background:var(--ink);height:52px;display:flex;align-items:center;justify
 aside{background:var(--ink2);padding:14px 0;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;min-height:calc(100vh - 52px);height:100%}
 .ni{display:flex;align-items:center;gap:9px;padding:9px 14px;margin:1px 8px;border-radius:9px;cursor:pointer;font-size:13px;color:#fff;font-weight:700;transition:.18s;border-left:none;line-height:1.3}
 .ni:hover{background:rgba(255,255,255,.08);color:#fff}
-.ni.on{background:linear-gradient(135deg,rgba(15,123,108,.35),rgba(20,168,153,.18));color:var(--teal-l);border-left:none;font-weight:700;box-shadow:0 0 0 1px rgba(20,168,153,.3),0 2px 12px rgba(15,123,108,.25)}
+.ni.on{background:linear-gradient(135deg,rgba(37,99,235,.35),rgba(20,168,153,.18));color:var(--teal-l);border-left:none;font-weight:700;box-shadow:0 0 0 1px rgba(20,168,153,.3),0 2px 12px rgba(37,99,235,.25)}
 .ni .ic{font-size:13.5px;width:20px;text-align:center;opacity:.85}
 .ni.stub{opacity:.5}
 .al{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#475569;padding:0 16px;margin:16px 0 6px}
@@ -331,10 +331,10 @@ main{padding:24px;min-width:0}
 .crumb-voltar{margin-bottom:14px}
 .conv-hub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:6px}
 .conv-hub-card{display:flex;align-items:center;gap:14px;background:var(--white);border:1px solid var(--border);border-radius:var(--r2);padding:18px;cursor:pointer;transition:.2s;box-shadow:var(--shadow)}
-.conv-hub-card:hover{border-color:var(--teal);box-shadow:0 4px 18px rgba(15,123,108,.18);transform:translateY(-2px)}
+.conv-hub-card:hover{border-color:var(--teal);box-shadow:0 4px 18px rgba(37,99,235,.18);transform:translateY(-2px)}
 .lalup-emp-card{border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--white);display:flex;justify-content:space-between;align-items:center;transition:.2s}
-.lalup-emp-card:hover{border-color:var(--teal);box-shadow:0 4px 18px rgba(15,123,108,.18);transform:translateY(-2px)}
-.conv-hub-icon{width:44px;height:44px;flex-shrink:0;border-radius:12px;background:linear-gradient(135deg,var(--teal),var(--teal-l));display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(15,123,108,.28)}
+.lalup-emp-card:hover{border-color:var(--teal);box-shadow:0 4px 18px rgba(37,99,235,.18);transform:translateY(-2px)}
+.conv-hub-icon{width:44px;height:44px;flex-shrink:0;border-radius:12px;background:linear-gradient(135deg,var(--teal),var(--teal-l));display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(37,99,235,.28)}
 .conv-hub-nome{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.3;flex:1}
 .conv-hub-arrow{font-size:15px;color:var(--teal);flex-shrink:0;opacity:.7}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:22px}
@@ -344,7 +344,7 @@ main{padding:24px;min-width:0}
 .cv.g{color:var(--green)}.cv.r{color:var(--red)}.cv.a{color:var(--amber)}
 .cs{font-size:11px;color:var(--slate);margin-top:2px}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;border:none;transition:.15s;white-space:nowrap}
-.bp{background:linear-gradient(135deg,var(--teal),var(--teal-l));color:#fff;box-shadow:0 2px 8px rgba(15,123,108,.28);transition:.2s}.bp:hover{background:linear-gradient(135deg,var(--teal-l),var(--teal));box-shadow:0 4px 14px rgba(15,123,108,.38);transform:translateY(-1px)}.bp:active{transform:translateY(0)}
+.bp{background:linear-gradient(135deg,var(--teal),var(--teal-l));color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.28);transition:.2s}.bp:hover{background:linear-gradient(135deg,var(--teal-l),var(--teal));box-shadow:0 4px 14px rgba(37,99,235,.38);transform:translateY(-1px)}.bp:active{transform:translateY(0)}
 /* Padrão visual único pra QUALQUER botão que dispare IA (Gemini) — pedido do
    usuário (10/09/2026): "todos os botões do site inteiro que usam IA devem
    ser pretos (brancos com fonte preta no módulo escuro) e ter IA Gemini no
@@ -436,7 +436,7 @@ table.chk th{background:#F1F5F9;text-align:center;font-size:10px;text-transform:
 table.chk th.nm,table.chk td.nm{text-align:left;min-width:350px;max-width:500px;position:sticky;left:0;background:#fff;font-size:12px;white-space:normal;word-wrap:break-word;overflow-wrap:break-word;z-index:10;box-shadow:1px 0 0 rgba(0,0,0,.1)}
 table.chk th.nm{background:#F1F5F9;z-index:11}
 table.chk td.mes,table.chk th.mes{width:46px;text-align:center}
-table.chk td.mes.cur,table.chk th.mes.cur{background:#E6F4F2}
+table.chk td.mes.cur,table.chk th.mes.cur{background:#E3EBFD}
 table.chk td.inf,table.chk th.inf{min-width:130px;text-align:left;font-size:11px;color:var(--slate);white-space:normal}
 table.chk td.act{width:34px;text-align:center;position:sticky;right:0;background:#fff}
 .cell{width:24px;height:24px;border-radius:5px;border:1px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;margin:0 auto;font-size:11px;color:var(--slate);transition:.1s}
@@ -474,7 +474,7 @@ main{padding:22px 40px;max-width:none;min-width:0}
 .fi:focus{border-color:var(--teal);box-shadow:var(--glow)}
 select.fi{cursor:pointer}
 .btn{border:none;border-radius:var(--r);padding:7px 14px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans);display:inline-flex;align-items:center;gap:6px;transition:.15s}
-.bp{background:linear-gradient(135deg,var(--teal),var(--teal-l));color:#fff;box-shadow:0 2px 8px rgba(15,123,108,.28);transition:.2s}.bp:hover{background:linear-gradient(135deg,var(--teal-l),var(--teal));box-shadow:0 4px 14px rgba(15,123,108,.38);transform:translateY(-1px)}.bp:active{transform:translateY(0)}
+.bp{background:linear-gradient(135deg,var(--teal),var(--teal-l));color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.28);transition:.2s}.bp:hover{background:linear-gradient(135deg,var(--teal-l),var(--teal));box-shadow:0 4px 14px rgba(37,99,235,.38);transform:translateY(-1px)}.bp:active{transform:translateY(0)}
 .action-bar-sticky{position:sticky;top:0;z-index:100;background:transparent;padding:12px 0;border-bottom:1px solid var(--border);margin:0 0 20px 0;display:flex;gap:10px;flex-wrap:wrap}
 .action-btn{display:inline-flex;align-items:center;gap:5px;padding:10px 20px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:none;transition:.2s;color:white;box-shadow:0 2px 8px rgba(15,23,42,.15)}.action-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(15,23,42,.22)}.action-btn:active{transform:translateY(0)}
 .action-btn-pdf{background:#e74c3c}.action-btn-pdf:hover{background:#c0392b}
@@ -501,7 +501,7 @@ tr.row-bloq>td{background:rgba(234,179,8,.16)!important}
 .b-vazio{background:var(--bg);color:#94A3B8}
 .b-blue{background:var(--blue-bg);color:var(--blue)}
 tr.decl-entregue td{background:#EFF6FF!important}
-tr.decl-entregue:hover td{background:#DBEAFE!important}
+tr.decl-entregue:hover td{background:#EDE7FB!important}
 .b-amber{background:var(--amber-bg);color:var(--amber)}
 .chip{display:inline-block;background:var(--white);border:0.5px solid var(--border);border-radius:20px;padding:3px 11px;font-size:12px;color:var(--gray)}
 .tb-wrap{overflow-x:auto;border:0.5px solid var(--border);border-radius:var(--r2);background:var(--white);margin-bottom:16px}
@@ -516,7 +516,7 @@ table.chk th.nm{background:var(--bg);z-index:11}
 .chk-sticky-head th.nm.cur{background:#D0EDE9}
 table.chk th.mes,table.chk td.mes{width:60px;text-align:center}
 table.chk th.inf,table.chk td.inf{min-width:160px;text-align:left;font-size:12px;color:var(--slate)}
-table.chk th.cur,table.chk td.cur{background:#E6F4F2}
+table.chk th.cur,table.chk td.cur{background:#E3EBFD}
 table.chk th.nm.cur{background:#D0EDE9}
 /* nome de documento/tarefa com link pra uma tela do site (coluna "Link" da Listagem) */
 table.chk td.nm .nm-link{cursor:pointer;color:var(--teal);text-decoration:underline dotted;text-underline-offset:3px}
@@ -584,7 +584,7 @@ tr.imp-dest input::placeholder{color:rgba(255,255,255,.55)}
 tr.imp-contab{background:#dbeafe}
 html.dark-mode tr.imp-dest{background:#2A3A55}
 html.dark-mode tr.imp-dest input[type="text"],html.dark-mode tr.imp-dest input[type="date"]{background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.22)!important}
-html.dark-mode tr.imp-contab{background:rgba(20,184,166,.15)}
+html.dark-mode tr.imp-contab{background:rgba(59,130,246,.15)}
 html.dark-mode [data-lancamento-section] tbody{background:transparent!important}
 html.dark-mode [data-lancamento-section] input[data-valor]{color:var(--ink)}
 html.dark-mode .imp-linha:hover td{background:#1B2230}
@@ -603,11 +603,11 @@ html.dark-mode .imp-linha:hover td{background:#1B2230}
 .box-amarelo{background:#FEF3C7}
 .box-indigo{background:#EEF2FF}
 .box-roxo{background:#F5F3FF;border:1px solid #C4B5FD}
-html.dark-mode .box-verde{background:rgba(20,184,166,.14);border-color:rgba(20,184,166,.35)}
-html.dark-mode .box-azul{background:rgba(20,184,166,.14);border-color:rgba(20,184,166,.35)}
+html.dark-mode .box-verde{background:rgba(59,130,246,.14);border-color:rgba(59,130,246,.35)}
+html.dark-mode .box-azul{background:rgba(59,130,246,.14);border-color:rgba(59,130,246,.35)}
 html.dark-mode .box-amarelo{background:rgba(217,119,6,.16)}
-html.dark-mode .box-indigo{background:rgba(20,184,166,.14)}
-html.dark-mode .box-roxo{background:rgba(20,184,166,.14);border-color:rgba(20,184,166,.35)}
+html.dark-mode .box-indigo{background:rgba(59,130,246,.14)}
+html.dark-mode .box-roxo{background:rgba(59,130,246,.14);border-color:rgba(59,130,246,.35)}
 .lst-add{background:var(--white);border:0.5px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:16px}
 .lst-add h3{font-size:13px;font-weight:600;margin-bottom:10px;color:var(--slate)}
 .toast{position:fixed;bottom:90px;right:20px;background:var(--ink2);color:#fff;padding:10px 18px;border-radius:var(--r2);font-size:13px;font-weight:500;box-shadow:var(--shadow-md);opacity:0;transition:opacity .25s;z-index:999;pointer-events:none;max-width:360px}
@@ -624,7 +624,7 @@ html.dark-mode .box-roxo{background:rgba(20,184,166,.14);border-color:rgba(20,18
 #page-tributacao{flex-direction:column;height:calc(100vh - 100px);overflow:hidden}
 .pend-t th.presp,.pend-t td.presp{min-width:80px;text-align:left;font-size:12px}
 .pend-t th.pmes,.pend-t td.pmes{width:72px;text-align:center}
-.pend-t th.pcur,.pend-t td.pcur{background:#E6F4F2!important}
+.pend-t th.pcur,.pend-t td.pcur{background:#E3EBFD!important}
 .pend-t td.pok{background:#F0FDF4}
 .pend-t td.ppend{background:#FFFBEB}
 .pend-t td.pvazio{background:var(--bg)}
@@ -684,9 +684,9 @@ html.dark-mode .vg-mini.breve .v,html.dark-mode .vg-mini.breve .s{color:#FBBF24}
 .vg-mini.on::after{content:'✕';position:absolute;top:1px;right:4px;font-size:8px;color:var(--teal);font-weight:700}
 /* Blue row when balancete fechado */
 tr.row-fechado td{background:#EFF6FF!important}
-tr.row-fechado:hover td{background:#DBEAFE!important}
-tr.row-fechado .fch-ok{background:#BFDBFE;border-color:#93C5FD;color:#1D4ED8}
-tr.row-fechado .fch-na{background:#DBEAFE;border-color:#BFDBFE;color:#3B82F6}
+tr.row-fechado:hover td{background:#EDE7FB!important}
+tr.row-fechado .fch-ok{background:#BFDBFE;border-color:#93C5FD;color:#7C5CC9}
+tr.row-fechado .fch-na{background:#EDE7FB;border-color:#BFDBFE;color:#3B82F6}
 tr.row-fechado .fch-sm{background:#FCD34D;border-color:#F59E0B;color:#7C2D12}
 tr.row-fechado .fch-vazio{background:#EFF6FF}
 /* Saída date input inline */
@@ -732,10 +732,10 @@ table.ta-t thead th{background:var(--ink2)!important;color:#fff!important}
 .vg-t thead th{background:var(--ink2)!important;color:#fff!important}
 .b-blue{background:var(--blue-bg);color:var(--blue)}
 tr.decl-entregue td{background:#EFF6FF!important}
-tr.decl-entregue:hover td{background:#DBEAFE!important}
+tr.decl-entregue:hover td{background:#EDE7FB!important}
 
 
-.ta-add-bar{display:flex;align-items:center;gap:10px;background:var(--white);border:1.5px solid var(--teal);border-radius:var(--r2);padding:12px 16px;margin-bottom:4px;flex-wrap:wrap;box-shadow:0 0 0 3px rgba(15,123,108,.06)}
+.ta-add-bar{display:flex;align-items:center;gap:10px;background:var(--white);border:1.5px solid var(--teal);border-radius:var(--r2);padding:12px 16px;margin-bottom:4px;flex-wrap:wrap;box-shadow:0 0 0 3px rgba(37,99,235,.06)}
 .ta-card{background:var(--white);border:0.5px solid var(--border);border-radius:var(--r2);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;max-width:1500px}
 .ta-card-head{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;border-bottom:1px solid var(--border);background:var(--bg);flex-wrap:wrap;gap:8px}
 .ta-t td,.ta-t th{padding:4px 10px;font-size:12.5px}
@@ -1014,7 +1014,7 @@ html.dark-mode span.af-sem-txt-badge, :root[data-theme="dark"] span.af-sem-txt-b
 <script src="itau-extrato-parsers.js?v=1"></script>
 <script src="extrato-generico.js?v=1"></script>
 <script src="supabase-config.js"></script>
-<link rel="stylesheet" href="tema.css">
+<link rel="stylesheet" href="tema.css?v=__BUILD_ID__">
 </head>
 <body>
 <!-- ═══ TELA DE LOGIN ═══ -->
@@ -7519,7 +7519,7 @@ function _vgSincronizarFiltrosColuna(){
 // Pedido do usuário 26/09/2026: CNPJ na Visão geral, e clicar nele copia (sem abrir a empresa).
 function copiarCnpjVisaoGeral(td,cnpj){
   if(!cnpj) return;
-  const ok=()=>{ toast('CNPJ copiado: '+cnpj,'ok'); if(td){ const o=td.style.color; td.style.color='var(--teal,#0F7B6C)'; setTimeout(()=>{td.style.color=o;},700); } };
+  const ok=()=>{ toast('CNPJ copiado: '+cnpj,'ok'); if(td){ const o=td.style.color; td.style.color='var(--teal,#2563EB)'; setTimeout(()=>{td.style.color=o;},700); } };
   try{ navigator.clipboard.writeText(cnpj).then(ok,()=>{ _copiarTextoFallback(cnpj); ok(); }); }
   catch(e){ _copiarTextoFallback(cnpj); ok(); }
 }
@@ -7527,7 +7527,7 @@ function copiarCnpjVisaoGeral(td,cnpj){
 function copiarCnpjSoNumeros(td,cnpj){
   let n=String(cnpj||'').replace(/\D/g,''); if(!n) return;
   if(n.length>=12&&n.length<14) n=n.padStart(14,'0');
-  const ok=()=>{ toast('CNPJ copiado (só números): '+n,'ok'); if(td){ const o=td.style.color; td.style.color='var(--teal,#0F7B6C)'; setTimeout(()=>{td.style.color=o;},700); } };
+  const ok=()=>{ toast('CNPJ copiado (só números): '+n,'ok'); if(td){ const o=td.style.color; td.style.color='var(--teal,#2563EB)'; setTimeout(()=>{td.style.color=o;},700); } };
   try{ navigator.clipboard.writeText(n).then(ok,()=>{ _copiarTextoFallback(n); ok(); }); }
   catch(e){ _copiarTextoFallback(n); ok(); }
 }
@@ -12556,7 +12556,7 @@ function _mostrarAvisoVersaoNova(){
   if(document.getElementById('avisoVersaoNova')) return;
   const el=document.createElement('div');
   el.id='avisoVersaoNova';
-  el.style.cssText='position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:99999;background:#0F7B6C;color:#fff;padding:10px 16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:13px;display:flex;gap:10px;align-items:center;cursor:pointer';
+  el.style.cssText='position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:99999;background:#2563EB;color:#fff;padding:10px 16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:13px;display:flex;gap:10px;align-items:center;cursor:pointer';
   el.innerHTML='🔄 Uma versão nova do sistema já está no ar — clique para atualizar esta aba.';
   el.onclick=()=>location.reload();
   document.body.appendChild(el);
@@ -19555,7 +19555,7 @@ function renderConvAtivoFilaImobilizadoForm(eid,fila){
     html+=`<div class="conv-ativo-fila-item" style="margin-bottom:10px;padding-bottom:10px">
     <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">
       <div style="flex:1;min-width:220px"><label style="font-size:10px;color:var(--slate);display:block">NCM ${esc(item.ncm)}${item.categoriaLabel?` <span style="background:#0d9488;color:#fff;border-radius:8px;padding:0 7px;font-weight:600">${esc(item.categoriaLabel)}</span>`:''} — ${esc(item.descricao)}</label><div style="font-size:11px" class="conv-ativo-fila-txt">NF ${esc(entrada.nfInfo.nfNumero)} · ${esc(entrada.nfInfo.fornecedor)} · R$ ${_fmt(item.valorTotal)}</div></div>
-      <div>${entrada.categoriaLabel?`<div style="font-size:11px;font-weight:700;color:var(--teal,#14b8a6);margin-bottom:2px">${esc(entrada.categoriaLabel)}</div>`:''}<label style="font-size:10px;color:var(--slate);display:block">Conta Patrimonial</label><input class="fi" id="convAtivoFilaConta_${eid}_${i}" placeholder="Conta" style="font-size:12px;width:140px"></div>
+      <div>${entrada.categoriaLabel?`<div style="font-size:11px;font-weight:700;color:var(--teal,#3B82F6);margin-bottom:2px">${esc(entrada.categoriaLabel)}</div>`:''}<label style="font-size:10px;color:var(--slate);display:block">Conta Patrimonial</label><input class="fi" id="convAtivoFilaConta_${eid}_${i}" placeholder="Conta" style="font-size:12px;width:140px"></div>
       <div><label style="font-size:10px;color:var(--slate);display:block">Centro de Custo</label><input class="fi" id="convAtivoFilaCentro_${eid}_${i}" placeholder="Centro" style="font-size:12px;width:120px"></div>
       <div><label style="font-size:10px;color:var(--slate);display:block">Taxa Depreciação (%)</label><input class="fi" id="convAtivoFilaTaxa_${eid}_${i}" value="${esc(entrada.taxaSugerida||'')}" placeholder="Ex: 10" style="font-size:12px;width:100px"></div>
       <div><label style="font-size:10px;color:var(--slate);display:block">Valor Residual</label><input class="fi" id="convAtivoFilaResidual_${eid}_${i}" value="${esc(residualInicial)}" style="font-size:12px;width:110px"></div>
@@ -38136,7 +38136,7 @@ let _lancctbRegistroPagina=0;
 let _lancctbRegistroBusca='';
 // ── Registro Contábil: colunas Conta Débito/Conta Crédito (separador), Identificação e PF/PJ (pedido do usuário 24/10/2026) ──
 let _lancctbRegistroPfPj='';
-const LANCCTB_SEP_CRED='border-left:2px solid rgba(20,184,166,.6);';
+const LANCCTB_SEP_CRED='border-left:2px solid rgba(59,130,246,.6);';
 // PF = CPF no histórico do extrato (completo "000.000.000-00" ou mascarado "***.000.000-**"); PJ = CNPJ completo ("00.000.000/0000-00"); sem documento = vazio.
 function _lancctbPfPjDoHistorico(h){
   const t=String(h||'');
@@ -40239,7 +40239,7 @@ function _lancctbRegistroLinhaHtml(item,contaAtual){
     ${_lancctbIdentCelHtml(!bancoEhD?contaBancoClassif:'',!bancoEhD?esc(contaBancoDesc):`<span style="cursor:pointer;text-decoration:underline dotted" onclick="abrirLancctbSoContaModal(${r.id})">— pendente —</span>`)}
     ${_lancctbPfPjCelHtml(r.historico_bancario)}
     <td style="padding:7px 10px;text-align:right;color:${corValor}">R$ ${_fmt(valor)}</td>
-    <td style="padding:6px 8px;font-size:10.5px;line-height:1.25;white-space:normal;word-break:break-word" title="${esc(r.historico_bancario||'')}">${(/\bDAS\b/i.test(r.historico_bancario||'')||/simples\s+nacional/i.test(r.historico_bancario||''))?'<span style="background:#0F7B6C;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;margin-right:5px" title="Parece pagamento de DAS (Simples Nacional) — clique no botão Regra pra criar (sem rateio)">DAS</span>':''}${esc(r.historico_bancario||'')}</td>
+    <td style="padding:6px 8px;font-size:10.5px;line-height:1.25;white-space:normal;word-break:break-word" title="${esc(r.historico_bancario||'')}">${(/\bDAS\b/i.test(r.historico_bancario||'')||/simples\s+nacional/i.test(r.historico_bancario||''))?'<span style="background:#2563EB;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;margin-right:5px" title="Parece pagamento de DAS (Simples Nacional) — clique no botão Regra pra criar (sem rateio)">DAS</span>':''}${esc(r.historico_bancario||'')}</td>
     ${regraBtnHtml}
     <td style="padding:7px 10px;color:var(--slate)">—</td>
     <td style="padding:7px 10px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;${item.comprovanteSugerido?'cursor:pointer':''}" ${item.comprovanteSugerido?`onclick="event.stopPropagation();abrirLancctbRegraPorTerceiro(${r.id})"`:''} title="${item.comprovanteSugerido?'Sugestão via comprovante (ainda não conciliado): '+esc(item.comprovanteSugerido.cliente_fornecedor_nome||'')+' — clique pra criar uma Regra por este terceiro':''}">${item.comprovanteSugerido?`<span style="font-style:italic;color:var(--slate)">${esc(item.comprovanteSugerido.cliente_fornecedor_nome||'')} ?</span>`:'—'}</td>
@@ -61119,8 +61119,8 @@ function lucRenderFiscalEmpBody(eid){
   ];
   var thStyle='padding:7px 10px;font-size:11px;font-weight:700;text-align:right;white-space:nowrap;background:var(--ink2);color:#fff;border-bottom:1px solid var(--border)';
   var thStyleL=thStyle+';text-align:left';
-  var thTotal='padding:7px 10px;font-size:11px;font-weight:700;text-align:right;white-space:nowrap;background:#0F9C8C;color:#fff;border-bottom:1px solid var(--border)';
-  var tdTotal='padding:6px 10px;text-align:right;font-family:var(--mono);font-weight:700;background:#F0FDF9;border-left:2px solid #0F9C8C';
+  var thTotal='padding:7px 10px;font-size:11px;font-weight:700;text-align:right;white-space:nowrap;background:#2563EB;color:#fff;border-bottom:1px solid var(--border)';
+  var tdTotal='padding:6px 10px;text-align:right;font-family:var(--mono);font-weight:700;background:#F0FDF9;border-left:2px solid #2563EB';
   // Colunas dos trimestres alinhadas entre as duas tabelas (layout fixo: 1ª coluna = 360px nas duas) e coluna do trimestre com bandeirinha em azul clarinho (como nos meses).
   var _idFis=String(eid).replace(/[^A-Za-z0-9_-]/g,'_');
   var _cssFlag='';
@@ -66310,7 +66310,7 @@ function dirpfRenderTabBens(p){
     +'<div style="flex:1"><label style="font-size:11px;color:var(--slate)">Situação 31/12/'+(parseInt(ano,10)-1)+'</label><input class="si" id="dirpfDividaAnt" value="'+lucFmtBRL(divid.anterior||0).replace('R$ ','')+'" onblur="dirpfSalvarDividas(\''+p.id+'\')" style="width:100%;box-sizing:border-box"></div>'
     +'<div style="flex:1"><label style="font-size:11px;color:var(--slate)">Situação 31/12/'+ano+'</label><input class="si" id="dirpfDividaAtu" value="'+lucFmtBRL(divid.atual||0).replace('R$ ','')+'" onblur="dirpfSalvarDividas(\''+p.id+'\')" style="width:100%;box-sizing:border-box"></div>'
     +'</div></div>'
-    +'<div style="margin-top:14px;padding:10px 14px;border-radius:8px;max-width:520px;background:'+(variacao>0?'#FEF3C7':'#F0FDF9')+';border:1px solid '+(variacao>0?'#F59E0B':'#0F9C8C')+'">'
+    +'<div style="margin-top:14px;padding:10px 14px;border-radius:8px;max-width:520px;background:'+(variacao>0?'#FEF3C7':'#F0FDF9')+';border:1px solid '+(variacao>0?'#F59E0B':'#2563EB')+'">'
     +'<b>Variação Patrimonial no ano: </b>'+lucFmtBRL(variacao)
     +'<div style="font-size:11.5px;color:var(--slate);margin-top:4px">Patrimônio líquido em 31/12/'+ano+' (bens − dívidas) menos o patrimônio líquido em 31/12/'+(parseInt(ano,10)-1)+'. Compare com a Renda Líquida Disponível no ano, na aba "Apuração / Evolução", para verificar se há origem de recursos compatível.</div>'
     +'</div>';
@@ -66561,8 +66561,8 @@ function dirpfRenderTabApuracao(p){
     +'<th style="background:var(--ink2);color:#fff;text-align:right">Dividendos</th>'
     +'<th style="background:var(--ink2);color:#fff;text-align:right">IRPF do Mês</th>'
     +'<th style="background:var(--ink2);color:#fff;text-align:right">Retenção Dividendos</th>'
-    +'<th style="background:#0F9C8C;color:#fff;text-align:right">Acum. Renda Tributável</th>'
-    +'<th style="background:#0F9C8C;color:#fff;text-align:right">Acum. Dividendos</th>'
+    +'<th style="background:#2563EB;color:#fff;text-align:right">Acum. Renda Tributável</th>'
+    +'<th style="background:#2563EB;color:#fff;text-align:right">Acum. Dividendos</th>'
     +'</tr></thead><tbody>'+linhas+'</tbody></table></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;max-width:900px">'
     +'<div style="background:var(--white);border:1px solid var(--border);border-radius:7px;overflow:hidden">'
@@ -66571,7 +66571,7 @@ function dirpfRenderTabApuracao(p){
     +'<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f0f0f0"><span>Renda tributável acumulada</span><span style="font-family:var(--mono)">'+lucFmtBRL(acRendaTrib)+'</span></div>'
     +'<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f0f0f0"><span>IRPF apurado pela tabela anual</span><span style="font-family:var(--mono)">'+lucFmtBRL(anualCalc.devido)+'</span></div>'
     +'<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f0f0f0"><span>(−) IRPF já apurado mês a mês</span><span style="font-family:var(--mono)">'+lucFmtBRL(acIrpfMensal)+'</span></div>'
-    +'<div style="display:flex;justify-content:space-between;padding:5px 0;font-weight:700;border-top:2px solid #1E3558;margin-top:4px"><span>'+(saldoAno>0.005?'Saldo a pagar':saldoAno<-0.005?'Saldo a restituir':'Saldo')+'</span><span style="font-family:var(--mono);color:'+(saldoAno>0.005?'#dc2626':saldoAno<-0.005?'#0F9C8C':'inherit')+'">'+lucFmtBRL(Math.abs(saldoAno))+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:5px 0;font-weight:700;border-top:2px solid #1E3558;margin-top:4px"><span>'+(saldoAno>0.005?'Saldo a pagar':saldoAno<-0.005?'Saldo a restituir':'Saldo')+'</span><span style="font-family:var(--mono);color:'+(saldoAno>0.005?'#dc2626':saldoAno<-0.005?'#2563EB':'inherit')+'">'+lucFmtBRL(Math.abs(saldoAno))+'</span></div>'
     +'</div></div>'
     +'<div style="background:var(--white);border:1px solid var(--border);border-radius:7px;overflow:hidden">'
     +'<div style="background:#1E3558;padding:6px 10px;font-size:.75rem;font-weight:700;color:#fff">IRPFM — Imposto Mínimo (Lei 15.270/2025)</div>'
@@ -68198,7 +68198,7 @@ function renderImportacoesLista(){
     if(rasc){
       const c=rasc.campos||{}; const quando=new Date(rasc.ts).toLocaleString('pt-BR');
       html+=`
-        <tr class="imp-linha" style="border-bottom:2px solid var(--teal);background:rgba(20,184,166,.10)">
+        <tr class="imp-linha" style="border-bottom:2px solid var(--teal);background:rgba(59,130,246,.10)">
           <td style="padding:12px 16px;cursor:pointer" onclick="novaImportacao(true)">${esc(c.formPI||'(sem PI)')}</td>
           <td style="padding:12px 16px;cursor:pointer" onclick="novaImportacao(true)">${esc(c.formFornecedor||'—')}</td>
           <td style="padding:12px 16px;cursor:pointer" onclick="novaImportacao(true)">${esc(c.formNF||'-')}</td>
@@ -68232,7 +68232,7 @@ function renderImportacoesLista(){
           <td style="padding:12px 16px;cursor:pointer" onclick="editarImportacao(${idx})">${esc(item.di||'-')}</td>
           <td style="padding:12px 16px;cursor:pointer" onclick="editarImportacao(${idx})">${esc(item.invoice||'-')}</td>
           <td style="padding:12px 16px">
-            <select style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;background:${statusVal==='finalizada'?'#DBEAFE':'white'}" onchange="mudarStatusImportacao(${idx},this.value)" onclick="event.stopPropagation()">
+            <select style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;background:${statusVal==='finalizada'?'#EDE7FB':'white'}" onchange="mudarStatusImportacao(${idx},this.value)" onclick="event.stopPropagation()">
               <option value="andamento" ${statusVal==='andamento'?'selected':''}>🟡 Em andamento</option>
               <option value="finalizada" ${statusVal==='finalizada'?'selected':''}>✅ Finalizada</option>
               <option value="pendente" ${statusVal==='pendente'?'selected':''}>⚠️ Docs. Pendentes</option>
@@ -69394,7 +69394,7 @@ function _cronAtribTarefaDetalheHtml(nome){
     return h;
   }
   h+=`<div style="overflow:auto;max-height:70vh;border:1px solid var(--border);border-radius:var(--r)"><table class="pend-t" style="width:100%;border-collapse:collapse;font-size:12px;background:var(--white)"><thead style="position:sticky;top:0;z-index:2"><tr>
-    <th style="${_cronTh()}">ID</th><th style="${_cronTh()}">Empresa</th><th style="${_cronTh()}">CNPJ</th><th style="${_cronTh()}">Responsável</th>${meses12.map(m=>`<th class="pmes" style="${_cronTh()};text-align:center${m===fech?';background:rgba(20,184,166,.5)':''}">${anual?m:_cronMesAA(m)}</th>`).join('')}</tr></thead><tbody>`;
+    <th style="${_cronTh()}">ID</th><th style="${_cronTh()}">Empresa</th><th style="${_cronTh()}">CNPJ</th><th style="${_cronTh()}">Responsável</th>${meses12.map(m=>`<th class="pmes" style="${_cronTh()};text-align:center${m===fech?';background:rgba(59,130,246,.5)':''}">${anual?m:_cronMesAA(m)}</th>`).join('')}</tr></thead><tbody>`;
   linhas.forEach(l=>{
     h+=`<tr><td style="${_cronTd()};font-family:var(--mono)">${esc(l.eid)}</td><td style="${_cronTd()};font-weight:600"><a onclick="goEmpresa('${esc(l.eid)}')" title="Abrir a Visão Geral desta empresa" style="cursor:pointer;color:inherit;text-decoration:underline dotted">${esc(l.nome)}</a></td><td onclick="copiarCnpjSoNumeros(this,'${esc((l.emp&&(l.emp.cnpjNum||l.emp.cnpj))||'')}')" title="Clique para copiar o CNPJ (só números)" style="${_cronTd()};font-family:var(--mono);white-space:nowrap;cursor:copy">${esc((l.emp&&l.emp.cnpj)||'—')}</td><td style="${_cronTd()}">${esc(l.resp)}</td>`;
     meses12.forEach(m=>{
@@ -69674,12 +69674,12 @@ function _cronCnHtml(){
       const cnpj=(e&&e.cnpj)||c.cnpj||'';
       const done=tars.filter(t=>(cn.status[c.id]||{})[t.id]).length, tudo=feito(c);
       const nomeHtml=c.eid?`<a onclick="goEmpresa('${esc(String(c.eid))}')" title="Abrir a Visão Geral desta empresa" style="cursor:pointer;color:inherit;text-decoration:underline dotted">${esc((e&&e.nome)||c.nome)}</a>`:`${esc(c.nome)} <span style="font-size:10.5px;color:var(--slate)" title="Não está na lista de empresas">(sem cadastro)</span>`;
-      h+=`<tr${tudo?' style="background:rgba(20,184,166,.12)"':''}><td style="${_cronTd()};font-weight:600;white-space:nowrap">${c.eid?`<span style="font-family:var(--mono);font-weight:400;color:var(--slate)">${esc(String(c.eid))}</span> `:''}${nomeHtml}</td>
+      h+=`<tr${tudo?' style="background:rgba(59,130,246,.12)"':''}><td style="${_cronTd()};font-weight:600;white-space:nowrap">${c.eid?`<span style="font-family:var(--mono);font-weight:400;color:var(--slate)">${esc(String(c.eid))}</span> `:''}${nomeHtml}</td>
         <td onclick="copiarCnpjSoNumeros(this,'${esc(String((e&&(e.cnpjNum||e.cnpj))||c.cnpj||''))}')" title="Clique para copiar o CNPJ (só números)" style="${_cronTd()};font-family:var(--mono);white-space:nowrap;cursor:copy">${esc(cnpj||'—')}</td>
         <td style="${_cronTd()};white-space:nowrap;color:var(--slate)" title="${c.por?'Adicionado por '+esc(c.por):''}">${_cronBR(c.criado)}</td>`;
       tars.forEach((t,i)=>{
         const s1=(cn.status[c.id]||{})[t.id];
-        h+=`<td style="${_cronTd()};text-align:center" title="${s1?esc('Concluída em '+_cronBR(s1.data)+(s1.por?' por '+s1.por:'')):'Marcar como concluída'}"><input type="checkbox" ${s1?'checked':''} onchange="_cronCnToggle('${esc(c.id)}',${i})" style="width:17px;height:17px;cursor:pointer;accent-color:var(--teal,#0F7B6C)"></td>`;
+        h+=`<td style="${_cronTd()};text-align:center" title="${s1?esc('Concluída em '+_cronBR(s1.data)+(s1.por?' por '+s1.por:'')):'Marcar como concluída'}"><input type="checkbox" ${s1?'checked':''} onchange="_cronCnToggle('${esc(c.id)}',${i})" style="width:17px;height:17px;cursor:pointer;accent-color:var(--teal,#2563EB)"></td>`;
       });
       h+=`<td style="${_cronTd()};text-align:center;white-space:nowrap">${tudo?'<span class="pcell-ok" title="Todas as tarefas concluídas">✓</span>':`<span style="color:var(--slate)">${done}/${tars.length}</span>`}</td>
         <td style="${_cronTd()};text-align:center"><button class="icon-btn" onclick="_cronCnRemover('${esc(c.id)}')" title="Remover este cliente da lista" style="background:none;border:none;cursor:pointer;color:var(--red)">🗑️</button></td></tr>`;
@@ -70119,7 +70119,7 @@ function cronExportarExcel(){
 function cronExportarPDF(){
   const D=_cronDados(), {V,cfg,k}=D;
   const entCron=V+'-'+_cronP2(cfg.entregaCronogramaDia), entCtl=_cronAddMes(V,1)+'-'+_cronP2(cfg.entregaControleDia);
-  const cores={g:['#DCFCE7','#15803D'],a:['#FEF3C7','#B45309'],r:['#FEE2E2','#B91C1C'],b:['#DBEAFE','#1D4ED8']};
+  const cores={g:['#DCFCE7','#15803D'],a:['#FEF3C7','#B45309'],r:['#FEE2E2','#B91C1C'],b:['#EDE7FB','#7C5CC9']};
   const th='background:#1E3558;color:#fff;padding:5px 7px;font-size:10px;text-align:left;border:1px solid #1E3558';
   const td='padding:4px 7px;border:1px solid #cbd5e1;font-size:10px;vertical-align:top';
   let h=`<div style="margin-bottom:10px;font-size:11px">Entrega do cronograma: até <b>${_cronBR(entCron)}</b> &nbsp;•&nbsp; Entrega do controle mensal: até <b>${_cronBR(entCtl)}</b></div>
@@ -70185,7 +70185,7 @@ function cronExportarPDF(){
   setTimeout(conferir,5000);
 })();
 </script>
-<script src="tema.js"></script>
+<script src="tema.js?v=__BUILD_ID__"></script>
 </body>
 </html>
 
