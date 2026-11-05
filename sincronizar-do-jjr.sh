@@ -12,6 +12,8 @@ import re
 p='index.html'; s=open(p,encoding='utf-8').read()
 s=s.replace('<title>JJR Controle Contábil</title>','<title>KCBM</title>')
 s=s.replace('https://kleydsoncontador-svg.github.io/jjr-controle/assets/logo-jjr.png','https://kleydsoncontador-svg.github.io/kcbm/assets/logo-kcbm.png')
+s=s.replace('JJR Consultoria Contábil S/S','Kleydson')  # login e cabeçalhos de relatórios
+s=re.sub(r'<link rel="icon"[^>]*>','<link rel="icon" type="image/png" href="assets/icon-192.png">',s,count=1)  # ícone da aba: preto com calculadora dourada
 if 'tema.css' not in s:
     s=s.replace('</head>','<link rel="stylesheet" href="tema.css">\n</head>',1)
     i=s.rfind('</body>')  # o ÚLTIMO: dentro de textos de script também aparece '</body>'

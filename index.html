@@ -10,7 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js"></script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230F7B6C'/%3E%3Crect x='12' y='8' width='40' height='48' rx='5' fill='white'/%3E%3Crect x='16' y='12' width='32' height='12' rx='2' fill='%230F7B6C'/%3E%3Crect x='16' y='30' width='8' height='7' rx='2' fill='%230F7B6C'/%3E%3Crect x='28' y='30' width='8' height='7' rx='2' fill='%230F7B6C'/%3E%3Crect x='40' y='30' width='8' height='7' rx='2' fill='%230F7B6C'/%3E%3Crect x='16' y='42' width='8' height='7' rx='2' fill='%230F7B6C'/%3E%3Crect x='28' y='42' width='8' height='7' rx='2' fill='%230F7B6C'/%3E%3Crect x='40' y='42' width='8' height='14' rx='2' fill='%230F7B6C'/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" href="assets/icon-192.png">
 <meta name="theme-color" content="#0F7B6C">
 <meta name="color-scheme" content="light dark">
 <meta name="app-build" content="2026-09-15-1">
@@ -1014,7 +1014,7 @@ html.dark-mode span.af-sem-txt-badge, :root[data-theme="dark"] span.af-sem-txt-b
       <input id="loginPass" name="password" type="password" autocomplete="current-password" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;font-family:var(--sans);outline:none" placeholder="••••••" onkeydown="if(event.key==='Enter')tentarLogin()">
     </div>
     <button onclick="tentarLogin()" style="width:100%;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans)">Entrar</button>
-    <div style="text-align:center;margin-top:14px;font-size:11.5px;color:var(--slate)">JJR Consultoria Contábil S/S</div>
+    <div style="text-align:center;margin-top:14px;font-size:11.5px;color:var(--slate)">Kleydson</div>
   </div>
 </div>
 
@@ -11066,7 +11066,7 @@ function exportarContasAlertaPDF(){
   htmlConteudo += '<div class="jjr-hdr">';
   htmlConteudo += '<img src="'+_LOGOURL+'" onerror="this.style.display=\'none\'">';
   htmlConteudo += '<div>';
-  htmlConteudo += '<div class="jjr-title">JJR Consultoria Contábil S/S</div>';
+  htmlConteudo += '<div class="jjr-title">Kleydson</div>';
   htmlConteudo += '<div class="jjr-sub">Pontos de Atenção &bull; '+dataAtual+'</div>';
   htmlConteudo += '</div></div>';
 
@@ -11905,7 +11905,7 @@ button,.btn,.export-bar,.emp-back,.icon-btn{display:none!important}
 </style></head><body>
 <div class="jjr-hdr">
   <img src="${_LOGOURL}" onerror="this.style.display='none'">
-  <div><div class="jjr-title">JJR Consultoria Contábil S/S</div><div class="jjr-sub">Relatório: ${pageId} &bull; ${new Date().toLocaleDateString('pt-BR')}</div></div>
+  <div><div class="jjr-title">Kleydson</div><div class="jjr-sub">Relatório: ${pageId} &bull; ${new Date().toLocaleDateString('pt-BR')}</div></div>
 </div>`;
     const content = el.cloneNode(true);
     content.querySelectorAll('button,.export-bar,.tbar,.emp-back,.decl-tabs,.ta-add-bar,.hide-in-print').forEach(function(b){b.remove();});
@@ -11941,7 +11941,7 @@ th{background:#1E3558;color:#fff;padding:6px 8px;font-size:10px;white-space:nowr
 td{padding:5px 8px;border:1px solid #E2E8F0;font-size:10px}
 .ev{background:#F0F4F8}.neg{color:#dc2626!important;font-weight:700}
 </style></head><body>
-<b style="font-size:13px">JJR Consultoria Contábil S/S</b><br>
+<b style="font-size:13px">Kleydson</b><br>
 <span style="font-size:10px;color:#888">Relatório: ${pageId} — ${new Date().toLocaleDateString('pt-BR')}</span><br><br>`;
   tables.forEach(function(t){
     xlHtml+='<table><colgroup>';
@@ -21008,7 +21008,7 @@ function baixarConvAtivoExcelCompleto(eid){
   .hd{background:#1E3558;color:#fff;font-weight:bold;padding:6px 8px;font-size:10px}
   td{padding:5px 8px;border:1px solid #E2E8F0;font-size:10px}
   </style></head><body>
-  <b style="font-size:13px">JJR Consultoria Contábil S/S</b><br>
+  <b style="font-size:13px">Kleydson</b><br>
   <span style="font-size:10px;color:#888">${esc(emp?emp.nome:eid)} · NF Ativo Fixo · Todos os bens cadastrados (${bens.length})</span><br><br>
   <table>
   <tr><th class="hd">Cód. Bem</th><th class="hd">Descrição</th><th class="hd">Data Aquisição</th><th class="hd">Valor</th><th class="hd">Conta Patrimonial</th><th class="hd">Centro de Custo</th><th class="hd">Fornecedor</th><th class="hd">Nº NF</th><th class="hd">Taxa Deprec. (%)</th><th class="hd">Histórico</th></tr>
@@ -52322,7 +52322,7 @@ td{padding:5px 8px;border-bottom:1px solid #E2E8F0;font-size:10px}
 tr:nth-child(even) td{background:#F0F4F8}
 </style></head><body>
 <div class="jjr-hdr"><img src="${_LU}" onerror="this.style.display='none'">
-<div><div class="jjr-title">JJR Consultoria Contábil S/S</div>
+<div><div class="jjr-title">Kleydson</div>
 <div class="jjr-sub">${titulo} &bull; Emitido em ${data}</div></div></div>
 ${tabelaHtml}</body></html>`;
     const win=window.open('','_blank','width=1000,height=750');
@@ -52338,7 +52338,7 @@ table{border-collapse:collapse;width:100%;border:1px solid #ccc}
 th{background:#1E3558;color:#fff;padding:6px 8px;font-size:10px;white-space:nowrap}
 td{padding:5px 8px;border:1px solid #E2E8F0;font-size:10px}
 </style></head><body>
-<b style="font-size:13px">JJR Consultoria Contábil S/S</b><br>
+<b style="font-size:13px">Kleydson</b><br>
 <span style="font-size:10px;color:#888">${titulo} — ${data}</span><br><br>
 ${tabelaHtml}</body></html>`;
   const blob=new Blob([xl],{type:'application/vnd.ms-excel;charset=utf-8'});
@@ -52514,7 +52514,7 @@ function exportGanhoEmpresaExcel(eid){
   let h=`<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8">
   <style>body{font-family:Arial;font-size:10px}.hd{background:#1E3558;color:#fff;font-weight:bold;padding:5px 8px;font-size:10px}
   td{padding:4px 8px;border:1px solid #ccc;font-size:10px}.sal{background:#166534;color:#fff;font-weight:bold}.resumo{background:#fef08a;font-weight:bold;color:#1E3558}</style></head><body>
-  <div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:#1E3558">JJR Consultoria Contábil S/S</div>
+  <div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:#1E3558">Kleydson</div>
   <div style="font-size:10px;color:#555">${esc(emp.nome)} &bull; Ganhos/Rendimentos &bull; ${periodoStr} &bull; ${new Date().toLocaleDateString('pt-BR')}</div>
   ${emitidoPorXl?`<div style="font-size:9px;color:#666;margin-top:3px">${emitidoPorXl}</div>`:''}</div>`;
   gArr.forEach(g0=>{
@@ -57314,7 +57314,7 @@ function _jjrHeader(subtitulo){
   const emitidoPor=currentUser&&currentUser.nome?`Emitido por: ${esc(currentUser.nome)}`:'';
   return`<div style="display:flex;align-items:center;gap:14px;padding-bottom:12px;margin-bottom:16px;border-bottom:3px solid #3DA0A0">
   <img src="${_LOGO}" style="height:52px" onerror="this.style.display='none'">
-  <div><div style="font-size:14px;font-weight:700;color:#1E3558">JJR Consultoria Contábil S/S</div>
+  <div><div style="font-size:14px;font-weight:700;color:#1E3558">Kleydson</div>
   <div style="font-size:10px;color:#888;margin-top:2px">${subtitulo}</div>
   ${emitidoPor?`<div style="font-size:9px;color:#666;margin-top:3px">${emitidoPor}</div>`:''}</div></div>`;
 }
@@ -57340,7 +57340,7 @@ td{padding:5px 8px;border:1px solid #E2E8F0;font-size:10px}
 .neg{color:#dc2626!important;font-weight:bold!important}
 </style></head><body>
 <div style="margin-bottom:12px;padding-bottom:10px;border-bottom:3px solid #3DA0A0">
-<div style="font-size:10px;font-weight:700;color:#1E3558">JJR Consultoria Contábil S/S</div>
+<div style="font-size:10px;font-weight:700;color:#1E3558">Kleydson</div>
 <div style="font-size:10px;color:#555;margin-top:3px">Produto: ${esc(ganho.nome)} &bull; CNPJ: ${esc(ganho.cnpj||'—')} &bull; Fonte Pagadora: ${esc(ganho.razaoSocial||'—')} &bull; ${new Date().toLocaleDateString('pt-BR')}</div>
 </div>
 <table>
@@ -57866,7 +57866,7 @@ button,.btn{display:none!important}
 @media print{button,.btn{display:none!important}}
 </style></head><body>
 <div class="jjr-hdr"><img src="${_LU}" onerror="this.style.display='none'">
-<div><div class="jjr-title">JJR Consultoria Contábil S/S</div>
+<div><div class="jjr-title">Kleydson</div>
 <div class="jjr-sub">Parcelamentos &bull; ${titulo} &bull; ${data}</div></div></div>`;
     const content=el.cloneNode(true);
     content.querySelectorAll('button,.btn').forEach(b=>b.remove());
@@ -57891,7 +57891,7 @@ table{border-collapse:collapse;width:100%;border:1px solid #ccc;margin-bottom:16
 th{background:#1E3558;color:#fff;padding:5px 8px;font-size:10px;white-space:nowrap}
 td{padding:4px 8px;border:1px solid #ddd;font-size:10px}
 </style></head><body>
-<b style="font-size:13px">JJR Consultoria Contábil S/S</b><br>
+<b style="font-size:13px">Kleydson</b><br>
 <span style="font-size:10px;color:#888">${titulo} — ${data}</span><br><br>`;
   if(p){
     xl+=`<table>
@@ -58017,7 +58017,7 @@ button,.btn{display:none!important}
 @media print{button,.btn{display:none!important}@page{size:landscape}}
 </style></head><body>
 <div class="jjr-hdr"><img src="${_LU}" onerror="this.style.display='none'">
-<div><div class="jjr-title">JJR Consultoria Contábil S/S</div>
+<div><div class="jjr-title">Kleydson</div>
 <div class="jjr-sub">Parcelamentos &bull; ${titulo} &bull; Emitido em ${data}</div></div></div>`;
     const content=el.cloneNode(true);
     content.querySelectorAll('button,.btn').forEach(b=>b.remove());
@@ -58037,7 +58037,7 @@ th{background:#1E3558;color:#fff;padding:5px 8px;font-size:9px;white-space:nowra
 td{padding:3px 8px;border:1px solid #ddd;font-size:9px}
 tfoot td{background:#e8e8e8;font-weight:700}
 </style></head><body>
-<b style="font-size:13px">JJR Consultoria Contábil S/S</b><br>
+<b style="font-size:13px">Kleydson</b><br>
 <span style="font-size:10px;color:#888">${titulo} — ${data}</span><br><br>`;
   const tables=el.querySelectorAll('table');
   tables.forEach(t=>{
@@ -60582,7 +60582,7 @@ button,.btn{display:none!important}
 @media print{button,.btn{display:none!important}@page{size:landscape}}
 </style></head><body>
 <div class="jjr-hdr"><img src="${_LU}" onerror="this.style.display='none'">
-<div><div class="jjr-title">JJR Consultoria Contábil S/S</div>
+<div><div class="jjr-title">Kleydson</div>
 <div class="jjr-sub">Empréstimos &bull; ${titulo} &bull; Emitido em ${data}</div></div></div>`;
     const content=el.cloneNode(true);
     content.querySelectorAll('button,.btn').forEach(b=>b.remove());
@@ -60600,7 +60600,7 @@ th{background:#1E3558;color:#fff;padding:5px 8px;font-size:9px;white-space:nowra
 td{padding:3px 8px;border:1px solid #ddd;font-size:9px}
 tfoot td{background:#e8e8e8;font-weight:700}
 </style></head><body>
-<b style="font-size:13px">JJR Consultoria Contábil S/S</b><br>
+<b style="font-size:13px">Kleydson</b><br>
 <span style="font-size:10px;color:#888">${titulo} — ${data}</span><br><br>`;
   el.querySelectorAll('table').forEach(t=>{
     xl+='<table>';
@@ -70070,7 +70070,7 @@ function cronExportarExcel(){
   if(typeof XLSX==='undefined'){ toast('Biblioteca de Excel não carregada.','err'); return; }
   const D=_cronDados(), {V,cfg,k}=D;
   const entCron=V+'-'+_cronP2(cfg.entregaCronogramaDia), entCtl=_cronAddMes(V,1)+'-'+_cronP2(cfg.entregaControleDia);
-  const ws1=[['JJR Consultoria Contábil S/S'],['Cronograma e Controle Mensal — vencimentos de '+fmtMes(V)],['Emitido em '+_cronBR(D.hoje)+(currentUser&&currentUser.nome?' por '+currentUser.nome:'')],
+  const ws1=[['Kleydson'],['Cronograma e Controle Mensal — vencimentos de '+fmtMes(V)],['Emitido em '+_cronBR(D.hoje)+(currentUser&&currentUser.nome?' por '+currentUser.nome:'')],
     ['Entrega do cronograma até',_cronBR(entCron)],['Entrega do controle mensal até',_cronBR(entCtl)],[],
     ['RESUMO'],['Tarefas no mês',k.total],['Entregues',k.entregue],['Entregues no prazo',k.noPrazo],['Entregues com atraso',k.comAtraso],['Entregues (sem data registrada)',k.semData],['Atrasadas',k.atrasada],['Vencem em breve (até 3 dias)',k.breve],['A vencer',k.aVencer],['Empresas com documentação pendente',k.empDoc],['Empresas com tarefas adicionais pendentes',k.empTar],['% concluído',k.total?Math.round(k.entregue/k.total*100)+'%':'—'],[],
     ['CRONOGRAMA — ATIVIDADES E PRAZOS'],['Atividade','Definição',...CRON_GRUPOS]];
