@@ -3,7 +3,7 @@
 # as rotinas de backup do JJR. Os arquivos próprios do KCBM (supabase-config.js, tema.css, tema.js, manifest, ícones) NUNCA são sobrescritos.
 set -e
 ORIG="${1:-/c/jjr-controle}"; DEST="$(cd "$(dirname "$0")" && pwd)"
-ARQ="index.html analises.js calc-motor.js calc-ui.js contabil-import.js contabil-parsers.js extrato-generico.js fopag-lote.js itau-extrato-parsers.js pride-fluxo-parser.js razao-parser.js busca-empresa.js composicao.html valor-residual.html refresh.html nbc-conteudo-1.js nbc-conteudo-2.js nbc-conteudo-3.js nbc-conteudo-4.js nbc-conteudo-5.js nbc-conteudo-6.js nbc-conteudo-7.js nbc-conteudo-8.js nbc-conteudo-9.js nbc-mapas.js nbc-mapas-2.js nbc-mapas-3.js nbc-mapas-4.js nbc-mapas-5.js nbc-ui.js"
+ARQ="index.html analises.js calc-motor.js calc-ui.js contabil-import.js contabil-parsers.js extrato-generico.js fopag-lote.js itau-extrato-parsers.js pride-fluxo-parser.js razao-parser.js busca-empresa.js xls-fallback.js analises-explicacoes.js composicao.html valor-residual.html refresh.html nbc-conteudo-1.js nbc-conteudo-2.js nbc-conteudo-3.js nbc-conteudo-4.js nbc-conteudo-5.js nbc-conteudo-6.js nbc-conteudo-7.js nbc-conteudo-8.js nbc-conteudo-9.js nbc-mapas.js nbc-mapas-2.js nbc-mapas-3.js nbc-mapas-4.js nbc-mapas-5.js nbc-ui.js"
 for f in $ARQ; do [ -f "$ORIG/$f" ] && cp "$ORIG/$f" "$DEST/$f"; done
 cd "$DEST"
 # identidade do KCBM no index.html + ganchos do tema

@@ -7,6 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="xls-fallback.js?v=1"></script>
 <style>
 
 
@@ -123,6 +124,10 @@ main{padding:24px;min-width:0}
 table{width:100%;border-collapse:collapse;font-size:12.5px}
 thead th{background:var(--ink);padding:9px 13px;text-align:left;font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#94A3B8;border-bottom:2px solid rgba(255,255,255,.08);white-space:nowrap;position:sticky;top:0;z-index:10}
 thead th.col-destaque{color:#F87171}
+/* cabeçalho da tabela de contas da composição: preto com fonte branca (pedido do usuário 05/11/2026) */
+[id^="compTable_"] thead th,.ledger-table thead th{background:#000!important;color:#fff!important}
+/* barras claras (Seleção em massa etc.) escurecem no modo noturno */
+html.dark-mode [style*="#F8FAFC" i],html.dark-mode [style*="rgb(248, 250, 252)"],html.dark-mode .bulk-bar,html.dark-mode #contaDetSelecaoMassa>div{background:var(--white)!important;color:var(--ink)!important;border-color:var(--border)!important}
 .tw{background:var(--white);border:1px solid var(--border);border-radius:var(--r2);overflow:auto;box-shadow:var(--shadow);margin-bottom:20px}tbody tr{border-bottom:1px solid #EFF2F7;transition:.1s}
 tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:#F7FAFD}
@@ -336,6 +341,17 @@ html.dark-mode #compListaWrap thead tr,html.dark-mode #compListaWrap thead th{ba
 html.dark-mode #compListaWrap tbody td{background:transparent;border-bottom-color:#161C27}
 html.dark-mode #compListaWrap thead input,html.dark-mode #compListaWrap thead select{background:#0B0F17;border-color:#1F2735;color:#CBD5E1}
 html.dark-mode #compListaWrap .idtag{background:#07090E!important;color:#fff}
+/* conta/empresa concluída: verde médio com letras pretas (legível nos dois modos); hover não clareia demais no noturno (pedido do usuário 05/11/2026) */
+html body .conta-fechada-verde td,html.dark-mode body .conta-fechada-verde td{background:#86D4A2!important;color:#000!important}
+html body .conta-fechada-verde td div,html body .conta-fechada-verde td span:not(.badge):not(.concil-badge),html body .conta-fechada-verde td .mn{color:#000!important}
+html body .conta-fechada-verde:hover td{background:#6FC48E!important}
+html.dark-mode .ledger-acct-row:hover{background:transparent!important}
+html.dark-mode .ledger-acct-row:not(.conta-fechada-verde):hover td{background:rgba(255,255,255,.07)!important}
+/* selinhos (Tipo, Conciliação, Status) dentro de conta fechada: fundo claro translúcido e letras pretas */
+html body .conta-fechada-verde td .badge,html body .conta-fechada-verde td .concil-badge,html.dark-mode body .conta-fechada-verde td .badge,html.dark-mode body .conta-fechada-verde td .concil-badge{background:rgba(255,255,255,.65)!important;color:#000!important;border:1px solid rgba(0,0,0,.28)!important;font-weight:700!important}
+/* filtros sob o título de cada coluna (conta aberta) */
+html body .ledger-table thead tr.cdf-row th{background:#161616!important;padding:3px 4px;position:sticky;z-index:39}
+.cdf-i{width:100%;min-width:56px;font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--white);color:var(--ink)}
 </style>
 </head>
 <body>
@@ -454,6 +470,7 @@ html.dark-mode #compListaWrap .idtag{background:#07090E!important;color:#fff}
   <div class="conta-det-sticky">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
       <button class="btn bo bsm" onclick="voltarComposicao()">← Voltar à composição</button>
+      <button class="btn bo bsm" onclick="compVerNoBalancete()" title="Abre o Balancete deste mês (Demonstrativos Contábeis), já na linha desta conta">📊 Ver no Balancete do mês</button>
       <h1 id="contaDetTitulo" style="margin:0;font-size:18px"></h1>
     </div>
     <p class="sub" id="contaDetSub" style="margin-bottom:14px"></p>
@@ -461,10 +478,8 @@ html.dark-mode #compListaWrap .idtag{background:#07090E!important;color:#fff}
     <div class="cards" id="contaDetCards" style="margin-bottom:14px"></div>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-      <input class="si" id="contaDetFiltroData" placeholder="Data (yyyy-mm)..." oninput="renderContaDetTabela()" style="width:130px">
-      <input class="si" id="contaDetFiltroHist" placeholder="🔍 Histórico contém..." oninput="renderContaDetTabela()" style="width:240px">
-      <input class="si" id="contaDetFiltroValor" placeholder="Valor..." oninput="renderContaDetTabela()" style="width:110px">
-      <select class="si" id="contaDetFiltroStatus" onchange="renderContaDetTabela()" style="width:150px">
+      <input type="hidden" id="contaDetFiltroData"><input type="hidden" id="contaDetFiltroHist"><input type="hidden" id="contaDetFiltroValor">
+      <select class="si" id="contaDetFiltroStatus" onchange="renderContaDetTabela()" style="display:none">
         <option value="">Todos os status</option>
         <option value="aberto">Em aberto</option>
         <option value="baixado_exato">Conciliado (exato)</option>
@@ -474,6 +489,7 @@ html.dark-mode #compListaWrap .idtag{background:#07090E!important;color:#fff}
       </select>
       <button class="btn bo bsm" onclick="limparFiltrosContaDet()">✕ Limpar</button>
       <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn bo bsm" style="border-color:var(--teal);color:var(--teal);font-weight:600" onclick="abrirDetalharSaldoAnteriorModal()" title="Anexar Excel/CSV com data, débito, crédito e histórico: vira lançamentos dos meses anteriores e o Saldo Anterior fica zerado">📥 Implantar Saldo Anterior</button>
         <button class="btn bo bsm" style="background:#f5c518;color:#1E3558;border:none" onclick="atualizarSaldoCorridoConta()" title="Recalcula a coluna Saldo de todos os lançamentos desta conta, na ordem, a partir do Saldo Anterior">🔄 Atualizar Saldo</button>
         <button class="btn bo bsm" onclick="abrirParcelasConta()" title="Ver todos os grupos de parcelamento em aberto desta conta">📦 Parcelas</button>
         <button class="btn bo bsm" onclick="abrirConciliadoConta()" title="Ver todos os grupos de parcelamento já totalmente quitados desta conta">✅ Conciliado</button>
@@ -632,7 +648,7 @@ html.dark-mode #compListaWrap .idtag{background:#07090E!important;color:#fff}
       <span>📤 Detalhar Saldo Anterior — <span id="detSaldoAntConta"></span></span>
       <button onclick="closeModal('mDetalharSaldoAnterior');resetDetalharSaldoAnterior()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--slate)">✕</button>
     </div>
-    <div class="info" style="margin-bottom:12px">ℹ Envie a planilha "Relação de Lançamentos" com a composição do Saldo Anterior desta conta, lançamento a lançamento (com colunas de Débito/Crédito). Ao confirmar, o Saldo Anterior (valor único) é <b>substituído</b> por esses lançamentos individuais — cada um passa a poder ser conciliado/baixado normalmente junto com os lançamentos do mês.</div>
+    <div class="info" style="margin-bottom:12px">ℹ Envie a planilha "Relação de Lançamentos" com a composição do Saldo Anterior desta conta, lançamento a lançamento (com colunas de Débito/Crédito). Ao confirmar, o Saldo Anterior (valor único) é <b>substituído</b> por esses lançamentos individuais: os de meses <b>anteriores</b> ao mês aberto entram nos próprios meses deles (ago, jul, jun…) e aparecem em "Lançamentos de meses anteriores em aberto"; o Saldo Anterior fica R$ 0,00. Cada um pode ser conciliado/baixado normalmente. Colunas: Data, Histórico, Débito e Crédito (Número é opcional).</div>
     <div id="detSaldoAntP1">
       <div class="uz" id="uzDetSaldoAnt" onclick="document.getElementById('fileDetSaldoAnt').click()" style="padding:32px 20px">
         <div style="font-size:36px">📤</div>
@@ -1105,9 +1121,13 @@ if(isEmbedded){
   /* navegar via postMessage do pai: {type:'goPage', page:'dash'|'comp'|...} */
   window.addEventListener('message', function(e){
     if(e.data && e.data.type === 'goPage' && typeof goPage === 'function'){
-      if(e.data.page === 'comp'){ curEmpId=''; curMes=''; }
+      if(e.data.page === 'comp'){ curEmpId=''; curMes=''; pendFiltroEmp=''; }
       if(ca2Ready){ goPage(e.data.page); }
       else { pendingNavPage = e.data.page; }
+    }
+    if(e.data && e.data.type === 'abrirConta'){
+      if(ca2Ready){ compAbrirContaPorEid(e.data.eid,e.data.mes,e.data.codigo); }
+      else { pendingAbrirConta = e.data; }
     }
     if(e.data && e.data.type === 'empresaGlobalChanged' && typeof renderComp === 'function'){
       try{ renderComp(); }catch(err){}
@@ -1801,7 +1821,7 @@ function applyUser(uid){
 // GLOBALS
 // ════════════════════════════════════════════════════════════
 let curEmpId='', curMes='', balRawData=[], balHeaders=[], balMaping={};
-var ca2Ready = false, pendingNavPage = null;
+var ca2Ready = false, pendingNavPage = null, pendingAbrirConta = null;
 let pendingInitOpt='', pendingInitData=null, pendingMes='';
 let compBusca='';
 let agingFull=[];
@@ -1922,7 +1942,12 @@ function currentYear(){return new Date().getFullYear()}
 // ════════════════════════════════════════════════════════════
 // NAV / PAGES
 // ════════════════════════════════════════════════════════════
+var _paginaAtual='comp';
+function _compNotificaCrumb(){
+  try{ window.parent.postMessage({type:'compCrumb',visivel:!(_paginaAtual==='comp'&&!curEmpId)},'*'); }catch(e){}
+}
 function goPage(id){
+  _paginaAtual=id;
   window.scrollTo(0,0);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
@@ -1937,6 +1962,7 @@ function goPage(id){
   if(id==='users')renderUsers();
   if(id==='exclientes')renderExClientes();
   if(id==='pendencias')renderPendencias();
+  _compNotificaCrumb();
   if(id==='conta'){
     renderContaDetHeader();
     renderContaDetTabela();
@@ -1994,12 +2020,26 @@ function getPendenciasData(){
   return resultado;
 }
 
+var pendFiltroEmp='';
+function compIrExportar(empId){
+  goPage('export');
+  var sel=document.getElementById('expEmp'); if(sel) sel.value=empId;
+  var emp=S.emps().find(function(e){return e.id===empId;}), inp=document.getElementById('expEmpSearch');
+  if(inp&&emp) inp.value=(emp.eid?'['+emp.eid+'] ':'')+emp.nome;
+}
+function compIrPendencias(empId){ pendFiltroEmp=empId; goPage('pendencias'); }
 function renderPendencias(){
   var el=document.getElementById('pendenciasConteudo');
   if(!el) return;
   var dados=getPendenciasData();
+  var _barraFiltro='';
+  if(pendFiltroEmp){
+    var _eF=S.emps().find(function(e){return e.id===pendFiltroEmp;});
+    dados=dados.filter(function(item){return String(item.emp.id)===String(pendFiltroEmp);});
+    _barraFiltro='<div style="margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="font-size:13px">Mostrando só: <b>'+(_eF?((_eF.eid?'['+_eF.eid+'] ':'')+_eF.nome):'')+'</b></span><button class="btn bo bsm" onclick="pendFiltroEmp=\'\';renderPendencias()">Ver de todas as empresas</button></div>';
+  }
   if(!dados.length){
-    el.innerHTML='<div class="empty"><div class="ei">✅</div><div class="et">Nenhuma pendência</div><div class="es">Quando você flegar lançamentos como Pagamento ou Recebimento, eles aparecerão aqui.</div></div>';
+    el.innerHTML=_barraFiltro+'<div class="empty"><div class="ei">✅</div><div class="et">Nenhuma pendência</div><div class="es">Quando você flegar lançamentos como Pagamento ou Recebimento, eles aparecerão aqui.</div></div>';
     return;
   }
   var html='';
@@ -2472,10 +2512,10 @@ function compAddFiltrar(){
 }
 function compFiltrarLista(){
   const v=id=>((document.getElementById(id)||{}).value||'').toLowerCase().trim();
-  const fId=v('compFId'), fEmp=v('compFEmp'), fCnpj=v('compFCnpj').replace(/\D/g,''), fResp=((document.getElementById('compFResp')||{}).value||''), fTrib=((document.getElementById('compFTrib')||{}).value||'');
+  const fId=v('compFId'), fEmp=v('compFEmp'), fCnpj=v('compFCnpj').replace(/\D/g,''), fResp=((document.getElementById('compFResp')||{}).value||''), fTrib=((document.getElementById('compFTrib')||{}).value||''), fUlt=((document.getElementById('compFUlt')||{}).value||'');
   document.querySelectorAll('#compEmpsTbody tr').forEach(function(tr){
     const d=tr.dataset;
-    const ok=(!fId||d.eid.includes(fId))&&(!fEmp||d.nome.includes(fEmp)||d.eid.includes(fEmp))&&(!fCnpj||d.cnpj.includes(fCnpj))&&(!fResp||d.resp===fResp)&&(!fTrib||d.reg===fTrib);
+    const ok=(!fId||d.eid.includes(fId))&&(!fEmp||d.nome.includes(fEmp)||d.eid.includes(fEmp))&&(!fCnpj||d.cnpj.includes(fCnpj))&&(!fResp||d.resp===fResp)&&(!fTrib||d.reg===fTrib)&&(!fUlt||(fUlt==='__vazias'?!d.ult:d.ult===fUlt));
     tr.style.display=ok?'':'none';
   });
 }
@@ -2502,6 +2542,7 @@ function renderDashHist(empId){
 // COMPOSIÇÃO — TELA PRINCIPAL
 // ════════════════════════════════════════════════════════════
 function renderComp(){
+  _compNotificaCrumb();
   const el=document.getElementById('compConteudo');
   if(!curEmpId){
     // Pedido do usuário 08/09/2026: "esse módulo deve conter todas as
@@ -2520,6 +2561,9 @@ function renderComp(){
     // ID em etiqueta preta, nome em destaque e linha azul quando a última composição já alcançou o Fechamento Atual.
     const _uniq=a=>[...new Set(a.filter(Boolean))].sort((x,y)=>String(x).localeCompare(String(y),'pt-BR'));
     const _resps=_uniq(emps.map(e=>e.resp)), _tribs=_uniq(emps.map(e=>e.reg));
+    const _ultDe=e=>{ const ms=Object.keys(S.comp(e.id)).sort(); return ms[ms.length-1]||''; };
+    const _ultMeses=[...new Set(emps.map(_ultDe).filter(Boolean))].sort().reverse(); // só os meses que existem como "última composição"
+    const _mmaaaa=m=>m?(m.slice(5,7)+'/'+m.slice(0,4)):'';
     let _fechAtual=''; try{ _fechAtual=(window.parent&&typeof window.parent.__jjrFechAtual==='function'&&window.parent.__jjrFechAtual())||''; }catch(e){}
     const _th='background:var(--ink2);color:#fff';
     const _inp='width:100%;font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--white,#fff);color:var(--ink)';
@@ -2539,6 +2583,7 @@ function renderComp(){
         <th style="${_th};white-space:nowrap">Resp.</th>
         <th style="${_th};white-space:nowrap">Tributação</th>
         <th style="${_th};text-align:center;white-space:nowrap">Última composição</th>
+        <th style="${_th};text-align:center;white-space:nowrap">Ações</th>
         <th style="${_th}"></th>
       </tr><tr>
         <th style="${_th};padding:4px 6px"><input id="compFId" style="${_inp}" placeholder="ID" oninput="compFiltrarLista()"></th>
@@ -2546,6 +2591,7 @@ function renderComp(){
         <th style="${_th};padding:4px 6px"><input id="compFCnpj" style="${_inp}" placeholder="CNPJ" oninput="compFiltrarLista()"></th>
         <th style="${_th};padding:4px 6px"><select id="compFResp" style="${_inp}" onchange="compFiltrarLista()"><option value="">Todos</option>${_resps.map(r=>'<option>'+r+'</option>').join('')}</select></th>
         <th style="${_th};padding:4px 6px"><select id="compFTrib" style="${_inp}" onchange="compFiltrarLista()"><option value="">Todas</option>${_tribs.map(r=>'<option>'+r+'</option>').join('')}</select></th>
+        <th style="${_th};padding:4px 6px"><select id="compFUlt" style="${_inp}" onchange="compFiltrarLista()"><option value="">Todas</option>${_ultMeses.map(m=>'<option value="'+m+'">'+_mmaaaa(m)+'</option>').join('')}<option value="__vazias">Vazias (sem composição)</option></select></th>
         <th style="${_th}"></th>
         <th style="${_th}"></th>
       </tr></thead><tbody id="compEmpsTbody">`;
@@ -2553,13 +2599,17 @@ function renderComp(){
       const comp=S.comp(e.id);const meses=Object.keys(comp).sort();const ult=meses[meses.length-1];
       const rowBg=(ult&&_fechAtual&&ult>=_fechAtual)?'background:var(--blue-bg)':'';
       const norm=t=>String(t||'').toLowerCase();
-      html+=`<tr style="cursor:pointer;${rowBg}" onclick="selecionarEmp('${e.id}')" data-eid="${norm(e.eid)}" data-nome="${norm(e.nome)}" data-cnpj="${String(e.cnpj||'').replace(/\D/g,'')}" data-resp="${e.resp||''}" data-reg="${e.reg||''}">
+      html+=`<tr style="cursor:pointer;${rowBg}" onclick="selecionarEmp('${e.id}')" data-eid="${norm(e.eid)}" data-nome="${norm(e.nome)}" data-cnpj="${String(e.cnpj||'').replace(/\D/g,'')}" data-resp="${e.resp||''}" data-reg="${e.reg||''}" data-ult="${ult||''}">
         <td style="text-align:center">${e.eid?'<span class="idtag" style="font-family:var(--mono);font-size:11px;font-weight:600;background:#0B0F17;color:#fff;padding:2px 8px;border-radius:5px">'+e.eid+'</span>':'—'}</td>
         <td><b style="color:var(--ink)">${e.nome||'—'}</b>${(function(){ try{ return window.parent&&window.parent._lancctbFilialBadge?window.parent._lancctbFilialBadge(String(e.eid)):''; }catch(err){ return ''; } })()}</td>
         <td style="font-family:var(--mono);color:var(--slate)">${e.cnpj||'—'}</td>
         <td>${e.resp||'—'}</td>
         <td style="font-size:12px">${e.reg||'—'}</td>
-        <td style="text-align:center">${ult?mesLabel(ult):'<span style="color:var(--slate)">—</span>'}</td>
+        <td style="text-align:center">${ult?_mmaaaa(ult):'<span style="color:var(--slate)">—</span>'}</td>
+        <td style="text-align:center;white-space:nowrap" onclick="event.stopPropagation()">
+          <button title="Exportar a memória de cálculo desta empresa" onclick="compIrExportar('${e.id}')" style="background:none;border:none;cursor:pointer;padding:2px 6px;color:var(--ink);line-height:1.1"><span style="display:block;font-size:17px">📤</span><span style="display:block;font-size:8.5px;color:var(--slate)">Exportar</span></button>
+          <button title="Ver as pendências desta empresa" onclick="compIrPendencias('${e.id}')" style="background:none;border:none;cursor:pointer;padding:2px 6px;color:var(--ink);line-height:1.1"><span style="display:block;font-size:17px">⏳</span><span style="display:block;font-size:8.5px;color:var(--slate)">Pendências</span></button>
+        </td>
         <td style="text-align:center" onclick="event.stopPropagation()"><button title="Remover da lista (não apaga nenhuma composição)" onclick="compRemoverEmpresa('${e.eid}')" style="background:none;border:none;cursor:pointer;color:#dc2626;padding:4px">🗑️</button></td>
       </tr>`;
     });
@@ -2592,22 +2642,20 @@ function renderComp(){
     const totalAb=contas.filter(c=>Math.abs(c.saldoFinal)>0.01).reduce((s,c)=>s+Math.abs(c.saldoFinal),0);
     const isActive=curMes===m;
     if(isActive)activeMes=m;
+    // Status automático (pedido do usuário 05/11/2026): vira "Fechado" quando todas as contas do mês foram fechadas/ignoradas ou já estão zeradas
+    const _pend=contas.filter(c=>!c.ignorada&&!c.concilFechada&&Math.abs(c.saldoFinal)>0.01).length;
+    const _fechadoAuto=!!d.locked||(contas.length>0&&_pend===0);
     html+=`<div class="tl-item">
-      <div class="tl-dot ${d.locked?'done':'open'}"></div>
+      <div class="tl-dot ${_fechadoAuto?'done':'open'}"></div>
       <div class="tl-card">
-        <div class="tl-header">
+        <div class="tl-header" onclick="abrirComposicao('${m}')" title="Clique para ${isActive?'recolher':'abrir'} a composição deste mês" style="cursor:pointer">
           <div>
             <div class="tl-mes">${mesLabel(m)}</div>
             <div class="tl-stats">${contas.length} contas · ${contas.filter(c=>Math.abs(c.saldoFinal)>0.01).length} em aberto · Saldo total: ${fmt(totalAb)}</div>
           </div>
           <div style="display:flex;gap:6px;align-items:center">
-            <span class="badge ${d.locked?'b-ok':'b-op'}">${d.locked?'Fechado':'Em aberto'}</span>
-            <button class="btn bo bsm" onclick="abrirComposicao('${m}')">${isActive?'Fechar ▲':'Abrir ▼'}</button>
-            ${d.locked
-              ?`<button class="btn bo bsm" onclick="reabrirMes('${m}')" style="border-color:#d97706;color:#d97706">🔓 Reabrir</button>`
-              :`<button class="btn bg-btn bsm" onclick="fecharMes('${m}')">✓ Fechar mês</button>`
-            }
-            <button class="btn bd bsm" onclick="excluirComposicao('${m}')" title="Excluir esta competência">🗑</button>
+            <span class="badge ${_fechadoAuto?'b-ok':'b-op'}">${_fechadoAuto?'Fechado':'Em aberto'}</span>
+            <button class="btn bd bsm" onclick="event.stopPropagation();excluirComposicao('${m}')" title="Excluir esta competência">🗑</button>
           </div>
         </div>
         ${isActive?'<div class="detalhe-slot" data-mes="'+m+'"></div>':''}
@@ -2650,7 +2698,7 @@ function renderDetalheMes(m){
       '<div style="font-size:44px">\uD83D\uDCD2</div>'+
       '<div style="font-weight:700;font-size:16px;color:var(--teal);margin:12px 0 6px">Importar Razão Contábil</div>'+
       '<div style="font-size:13px;color:var(--ink3);line-height:1.5">Arquivo principal para conciliação automática.<br>Arraste ou clique para selecionar.</div>'+
-      '<div style="margin-top:14px"><span class="badge b-at">Obrigatório para iniciar</span></div>';
+      '<div style="margin-top:14px"><span class="badge b-at">Só o Razão é necessário</span></div>';
     card.onclick=(function(mes){return function(){abrirRazao(mes);};})(m);
     wrap.appendChild(card);
 
@@ -2715,6 +2763,7 @@ function renderDetalheMes(m){
   // ── Bulk actions for contas (Fechar/Ignorar/Reabrir em lote) ──
   if(!d.locked){
     var bulkBar=document.createElement('div');
+    bulkBar.className='bulk-bar';
     bulkBar.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:8px;padding:6px 10px;background:#F8FAFC;border:1px solid var(--border);border-radius:8px;font-size:12px';
     bulkBar.innerHTML=
       '<span style="color:var(--slate)">Seleção em massa:</span>'+
@@ -2744,8 +2793,9 @@ function renderDetalheMes(m){
   // Build contas from Razão if no balancete
   var ajustesAll=d.ajustes||{};
   var contasToShow = contas;
-  if(!hasBalancete && hasRazao){
-    contasToShow = Object.keys(razao)
+  // A Composição NÃO depende do Balancete (05/11/2026): as contas vêm só do Razão; restos de um Balancete antigo (contas que não estão no Razão) saem daqui.
+  if(hasRazao){
+    var _doRazao = Object.keys(razao)
       .filter(function(cod){ return isPatrimonialOuPermitida(cod,razao[cod].nome); })
       .map(function(cod){
         var r=razao[cod];
@@ -2754,11 +2804,12 @@ function renderDetalheMes(m){
         var totDeb=0, totCre=0;
         (r.lancamentos||[]).forEach(function(l){totDeb+=l.debito||0;totCre+=l.credito||0;});
         var sa=r.saldoAnterior||0;
-        var sf=sa+totDeb-totCre;
+        var impl=implNet(m,cod);
+        var sf=sa+impl+totDeb-totCre;
         if(existing){
           existing.debitos=totDeb; existing.creditos=totCre;
-          existing.saldoAnterior=existing.saldoAnterior||sa;
-          existing.saldoFinal=existing.saldoAnterior+totDeb-totCre;
+          if(!existing.saldoAnteriorManual) existing.saldoAnterior=sa;
+          existing.saldoFinal=existing.saldoAnterior+impl+totDeb-totCre;
           return existing;
         }
         return {
@@ -2768,6 +2819,9 @@ function renderDetalheMes(m){
           debitos:totDeb, creditos:totCre, saldoFinal:sf
         };
       });
+    // mantém só o que o usuário mexeu (ajuste/reclassificação ou saldo anterior editado à mão) mesmo sem estar no Razão
+    var _extras=contas.filter(function(c){ return !razao[c.codigo]&&((ajustesAll[c.codigo]&&ajustesAll[c.codigo].length)||c.saldoAnteriorManual); });
+    contasToShow=_doRazao.concat(_extras);
     // Persist so editar/fechar/ignorar/ledger operate on real data
     comp[m].contas=contasToShow;
     S.saveComp(curEmpId,comp);
@@ -2783,7 +2837,7 @@ function renderDetalheMes(m){
     if(existing){
       existing.debitos=(existing.debitos||0)+totDebAj;
       existing.creditos=(existing.creditos||0)+totCreAj;
-      existing.saldoFinal=existing.saldoAnterior+existing.debitos-existing.creditos;
+      existing.saldoFinal=existing.saldoAnterior+implNet(m,cod)+existing.debitos-existing.creditos;
     } else if(isPatrimonialOuPermitida(cod,(razao[cod]&&razao[cod].nome)||cod)){
       // Account reached only via reclassification (not in Razão for this period)
       var sa2=0;
@@ -2801,6 +2855,7 @@ function renderDetalheMes(m){
   tableDiv.id='compTable_'+m;
   tableDiv.appendChild(renderContasTable(contasToShow,m,d.locked));
   wrap.appendChild(tableDiv);
+  compPublicarSaldosMes(m,contasToShow);
 
   return wrap;
 }
@@ -3035,38 +3090,13 @@ async function confirmarEscolhaMes(){
 // formato que a tabela de composição usa. Contas SINTÉTICAS (grupo) não
 // entram aqui — a composição é por conta de lançamento.
 async function iniciarMesDeBalancete(m){
-  const partes=m.split('-'); const ano=partes[0], mes=partes[1];
-  toast('Buscando Balancete de '+mesLabel(m)+' em Demonstrativos Contábeis…','info');
-  const balancete=await ca2LerDemocBalancete(curEmpId,ano,mes);
-  if(!balancete||!Array.isArray(balancete.contas)||!balancete.contas.length){
-    toast('Nenhum Balancete de '+mesLabel(m)+' encontrado — importe primeiro em Demonstrativos Contábeis (aba Balancete) antes de compor este mês.','err');
-    return;
-  }
-  const ignoradas=S.contasSempreIgnoradas(curEmpId);
-  const contasAnaliticas=balancete.contas.filter(c=>c&&c.tipo!=='sintetica');
-  const comp=S.comp(curEmpId);
-  comp[m]={
-    contas:contasAnaliticas.map(c=>{
-      const codigo=c.codigo_analitico||c.codigo_reduzido||'';
-      return{
-        codigo, nome:c.nome_conta||'',
-        tipo:tipoFromCodigo(codigo),
-        saldoAnterior:parseFloat(c.saldo_anterior)||0,
-        debitos:parseFloat(c.debito)||0,
-        creditos:parseFloat(c.credito)||0,
-        saldoFinal:parseFloat(c.saldo_atual)||0,
-        ignorada:ignoradas.indexOf(codigo)>=0,
-        itens:[]
-      };
-    }),
-    locked:false,
-    origemBalancete:true,
-    arquivoBalancete:balancete.arquivo||''
-  };
-  S.saveComp(curEmpId,comp);
+  // A Composição é independente do Balancete (pedido do usuário 05/11/2026): o mês nasce vazio e as contas vêm do Livro Razão.
+  const comp0=S.comp(curEmpId);
+  comp0[m]={contas:[],locked:false,origemBalancete:false};
+  S.saveComp(curEmpId,comp0);
   curMes=m;
   renderComp();
-  toast('Balancete de '+mesLabel(m)+' carregado — '+contasAnaliticas.length+' conta(s) ✓','ok');
+  toast(mesLabel(m)+' criado — anexe o Livro Razão para montar a composição.','ok');
 }
 
 function selectOpt(v){
@@ -3110,6 +3140,7 @@ function excluirComposicao(m){
   delete comp[m];
   S.saveComp(curEmpId,comp);
   S.saveRazao(curEmpId,m,{});
+  try{ const _emp=S.emps().find(e=>e.id===curEmpId); if(_emp&&_emp.eid!=null&&_emp.eid!=='') S.s('comp_saldos_eid_'+_emp.eid+'_'+m,{}); }catch(e){} // limpa o saldo publicado para o Balancete
   if(curMes===m)curMes='';
   toast(`Composição de ${label} excluída`,'ok');
   renderComp();renderDash();
@@ -4551,7 +4582,9 @@ function handleRazao(event){
     try{
       const wb=XLSX.read(e.target.result,{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
-      const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      let data=ws?XLSX.utils.sheet_to_json(ws,{header:1,defval:''}):[];
+      if(!data.length&&window.XlsFallback){ const alt=XlsFallback.lerLinhas(e.target.result); if(alt&&alt.length){ data=alt; toast('Planilha lida pelo leitor de reserva (.xls fora do padrão).','ok'); } }
+      if(!data.length){ toast('Não consegui ler esta planilha. Abra no Excel e salve como .xlsx, depois anexe de novo.','err'); return; }
       processRazao(data, file.name);
     }catch(err){toast('Erro ao ler arquivo: '+err.message,'err');}
   };
@@ -4941,9 +4974,89 @@ function excluirDadosConta(){
   renderContaDetHeader();
   renderContaDetTabela();
 }
+// ── Razão com vários meses no mesmo arquivo (pedido do usuário 05/11/2026): avisa e deixa escolher "só o mês" ou "tudo" ──
+var _razaoPend=null;
+function _razaoMesDe(l){ return String((l&&l.data)||'').slice(0,7); }
+function _razaoMesesDoArquivo(contas){
+  var set={};
+  Object.keys(contas).forEach(function(cod){ (contas[cod].lancamentos||[]).forEach(function(l){ var mm=_razaoMesDe(l); if(/^[0-9]{4}-[0-9]{2}$/.test(mm)) set[mm]=(set[mm]||0)+1; }); });
+  return set;
+}
+// Separa cada conta por mês; o saldo anterior de cada mês = saldo anterior do arquivo + movimento dos meses anteriores (débito - crédito).
+function _razaoDividir(contas){
+  var out={};
+  Object.keys(contas).forEach(function(cod){
+    var c=contas[cod], run=c.saldoAnterior||0, porM={};
+    (c.lancamentos||[]).forEach(function(l){ var mm=_razaoMesDe(l)||razaoMesAtual; (porM[mm]=porM[mm]||[]).push(l); });
+    var ms=Object.keys(porM); if(ms.indexOf(razaoMesAtual)<0) ms.push(razaoMesAtual);
+    ms.sort().forEach(function(mm){
+      var ls=porM[mm]||[];
+      (out[mm]=out[mm]||{})[cod]={classificacao:c.classificacao||cod,nome:c.nome,saldoAnterior:Math.round(run*100)/100,lancamentos:ls};
+      ls.forEach(function(l){ run+=(l.debito||0)-(l.credito||0); });
+    });
+  });
+  return out;
+}
+function razaoAplicarDivisao(modo){
+  var P=_razaoPend; if(!P) return;
+  // 'tudo' = tudo DENTRO do mês aberto (a composição de setembro mostra a movimentação de jan a set; saldo anterior = o do arquivo, início do período)
+  // 'mes'  = só os lançamentos do mês aberto, com o saldo anterior já acumulado dos meses anteriores
+  var divid;
+  if(modo==='tudo'){ divid={}; divid[razaoMesAtual]=P.contas; } else divid=_razaoDividir(P.contas);
+  var meses=Object.keys(divid).sort();
+  if(modo==='mes') meses=meses.filter(function(m){return m===razaoMesAtual;});
+  var comp=S.comp(curEmpId);
+  var nLanc=0;
+  meses.forEach(function(mm){
+    if(!comp[mm]) comp[mm]={contas:[],locked:false};
+    var rz=S.razao(curEmpId,mm);
+    Object.keys(divid[mm]).forEach(function(cod){
+      var novo=divid[mm][cod];
+      var ant=rz[cod]; // preserva lançamentos implantados por "Implantar Saldo Anterior"
+      if(ant&&ant.lancamentos){ var impl=ant.lancamentos.filter(function(l){return l.implantacao;}); if(impl.length) novo.lancamentos=novo.lancamentos.concat(impl); }
+      nLanc+=novo.lancamentos.length;
+      rz[cod]=novo;
+    });
+    S.saveRazao(curEmpId,mm,rz);
+  });
+  var alvo=divid[razaoMesAtual]||{};
+  if(comp[razaoMesAtual]){
+    (comp[razaoMesAtual].contas||[]).forEach(function(c){
+      var r=alvo[c.codigo];
+      if(r&&r.saldoAnterior&&!c.saldoAnterior&&!c.saldoAnteriorManual) c.saldoAnterior=r.saldoAnterior;
+    });
+  }
+  S.saveComp(curEmpId,comp);
+  _razaoPend=null;
+  var resultEl=document.getElementById('razaoResult');
+  if(resultEl) resultEl.innerHTML='<div class="info">✓ '+(modo==='mes'?'Importado só '+mesLabel(razaoMesAtual):'Importado tudo ('+P.mesesTxt+') dentro de '+mesLabel(razaoMesAtual))+' ('+nLanc+' lançamentos). Executando conciliação automática...</div>';
+  toast('Razão importado ('+meses.length+' mês(es), '+nLanc+' lançamentos) ✓');
+  setTimeout(function(){
+    var okC=0, totC=0;
+    meses.forEach(function(mm){ try{ var res=rodarConciliacao(curEmpId,mm); if(res){ totC+=Object.keys(res).length; okC+=Object.values(res).filter(function(r){return r.resumo==='conciliada';}).length; } }catch(e){ console.warn('conciliação',mm,e); } });
+    if(resultEl){
+      var div=document.createElement('div');
+      div.style.cssText='margin-top:8px;padding:10px 14px;background:var(--green-bg);border:1px solid #86EFAC;border-radius:8px;font-size:13px;color:var(--green);font-weight:500';
+      div.textContent='✓ Conciliação automática: '+okC+'/'+totC+' contas conciliadas';
+      resultEl.appendChild(div);
+    }
+  },300);
+}
 function processRazao(data, filename){
   var parsed = parseRazaoFile(data);
   var contas = parsed.contas, totalContas = parsed.totalContas, totalLanc = parsed.totalLanc;
+  var _ms=_razaoMesesDoArquivo(contas), _fora=Object.keys(_ms).filter(function(m){return m!==razaoMesAtual;});
+  if(_fora.length){
+    _razaoPend={contas:contas,filename:filename,mesesTxt:Object.keys(_ms).sort().map(mesLabel).join(', ')};
+    document.getElementById('razaoP1').style.display='none';
+    document.getElementById('razaoP2').style.display='block';
+    var rEl=document.getElementById('razaoResult');
+    var lista=Object.keys(_ms).sort().map(function(m){ return '<b>'+mesLabel(m)+'</b>: '+_ms[m]+' lançamento(s)'; }).join(' · ');
+    if(rEl) rEl.innerHTML='<div class="info" style="background:var(--amber-bg,#FEF3C7);border-color:#F5D36B">⚠ Este arquivo tem movimento de <b>mais de um mês</b> ('+lista+'). Você está compondo <b>'+mesLabel(razaoMesAtual)+'</b>.<br><br><b>Tudo</b>: os lançamentos de todos os meses ficam dentro de '+mesLabel(razaoMesAtual)+' (saldo anterior = o do começo do arquivo). <b>Só o mês</b>: entram só os de '+mesLabel(razaoMesAtual)+', com o saldo anterior já somado dos meses anteriores.</div>'
+      +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn bp" onclick="razaoAplicarDivisao(\'mes\')">Importar só '+mesLabel(razaoMesAtual)+'</button>'
+      +'<button class="btn bo" onclick="razaoAplicarDivisao(\'tudo\')">Importar tudo ('+Object.keys(_ms).length+' meses) dentro de '+mesLabel(razaoMesAtual)+'</button></div>';
+    return;
+  }
 
   // Faz MERGE com o Razão já salvo desse mês, nunca substitui o objeto
   // inteiro — cada conta é independente, então importar um arquivo com só
@@ -4961,7 +5074,7 @@ function processRazao(data, filename){
   if(comp[razaoMesAtual]){
     comp[razaoMesAtual].contas.forEach(function(c){
       var r=contas[c.codigo];
-      if(r&&r.saldoAnterior&&!c.saldoAnterior)c.saldoAnterior=r.saldoAnterior;
+      if(r&&r.saldoAnterior&&!c.saldoAnterior&&!c.saldoAnteriorManual)c.saldoAnterior=r.saldoAnterior;
     });
     S.saveComp(curEmpId,comp);
   }
@@ -5789,7 +5902,7 @@ function exportarLedgerFiltrado(){
   var saIncluded=(fStatus===''||fStatus==='flagged')||
     (fStatus==='aberto'&&!saConciliado)||
     ((fStatus==='baixado_exato'||fStatus==='manual')&&saConciliado);
-  if(fHist||fVal||fData)saIncluded=false;
+  if(fHist||fVal||fData||cdfAtivo())saIncluded=false;
 
   if(!rows.length&&!saIncluded){toast('Nenhum lançamento para exportar com os filtros atuais','err');return}
 
@@ -5998,7 +6111,9 @@ function parseSaldoAnteriorFile(data){
       break;
     }
   }
-  if(headerRowIdx<0||COL.data===undefined||COL.debito===undefined||COL.credito===undefined||COL.valor===undefined) return null;
+  if(headerRowIdx<0||COL.data===undefined||COL.debito===undefined||COL.credito===undefined) return null;
+  // Layout simples (Data, Histórico, Débito, Crédito com os VALORES nas próprias colunas) não tem coluna "Valor".
+  var semColunaValor=(COL.valor===undefined);
 
   var codigo='', nome='';
   for(var r=headerRowIdx;r<data.length;r++){
@@ -6030,18 +6145,26 @@ function parseSaldoAnteriorFile(data){
     var row=data[r]; if(!row)continue;
     var dataVal=row[COL.data];
     if(!dataVal)continue;
-    var valor=parseBRVal(row[COL.valor]);
-    if(!valor)continue;
-    var ehDebito=String(row[COL.debito]||'').trim()!=='';
-    var ehCredito=String(row[COL.credito]||'').trim()!=='';
-    if(!ehDebito&&!ehCredito)continue;
+    var valor, ehDebito, ehCredito, vDeb=0, vCre=0;
+    if(semColunaValor){
+      vDeb=Math.abs(parseBRVal(row[COL.debito])); vCre=Math.abs(parseBRVal(row[COL.credito]));
+      if(!vDeb&&!vCre)continue;
+      ehDebito=vDeb>0; ehCredito=vCre>0;
+    } else {
+      valor=parseBRVal(row[COL.valor]);
+      if(!valor)continue;
+      ehDebito=String(row[COL.debito]||'').trim()!=='';
+      ehCredito=String(row[COL.credito]||'').trim()!=='';
+      if(!ehDebito&&!ehCredito)continue;
+      vDeb=ehDebito?valor:0; vCre=ehCredito?valor:0;
+    }
     lancamentos.push({
       data:excelDateToStr(dataVal),
       numero:String((COL.numero!==undefined?row[COL.numero]:'')||'').trim(),
       historico:String((COL.historico!==undefined?row[COL.historico]:'')||'').trim(),
       ctapart:'',
-      debito:ehDebito?valor:0,
-      credito:ehCredito?valor:0,
+      debito:vDeb,
+      credito:vCre,
       saldo:null // deixa a tela calcular o saldo corrido dinamicamente (ver renderContaDetTabela)
     });
   }
@@ -6112,12 +6235,16 @@ function renderDetalharSaldoAnteriorPreview(){
     '<div class="card"><div class="cl">Saldo Anterior atual (valor único)</div><div class="cv">'+fmt(sa)+'</div></div>'+
     '<div class="card"><div class="cl">Soma dos lançamentos da planilha</div><div class="cv g">'+fmt(somaLiquida)+'</div><div class="cs">'+lancs.length+' lançamento(s)</div></div>'+
     '</div>';
-  if(diff>0.05){
+  if(!sa){
+    html+='<div class="info">O Saldo Anterior atual está zerado — esses lançamentos serão a nova composição do saldo (soma: '+fmt(somaLiquida)+').</div>';
+  } else if(diff>0.05){
     html+='<div class="info" style="background:var(--red-bg);border-color:#F5A3A3">⚠ A soma dos lançamentos ('+fmt(somaLiquida)+') não bate exatamente com o Saldo Anterior atual ('+fmt(sa)+') — diferença de '+fmt(diff)+'. Confira a planilha antes de confirmar.</div>';
   } else {
     html+='<div class="info" style="background:var(--teal-bg);border-color:#99E6DD">✓ A soma bate com o Saldo Anterior atual.</div>';
   }
-  html+='<div class="info">Ao confirmar: o Saldo Anterior vira R$ 0,00 e esses '+lancs.length+' lançamento(s) entram na tabela junto com os do mês, prontos pra conciliar. Baixas manuais, flags e "Baixa em Andamento" já confirmados nos lançamentos do mês são preservados.</div>';
+  var nAnt=0, mesesAnt={};
+  lancs.forEach(function(l){var mm=(l.data||'').slice(0,7); if(mm&&mm<contaDetMes){nAnt++; mesesAnt[mm]=1;}});
+  html+='<div class="info">Ao confirmar: o Saldo Anterior vira R$ 0,00. '+nAnt+' lançamento(s) entram nos meses anteriores ('+Object.keys(mesesAnt).sort().map(mesLabel).join(', ')+') e '+(lancs.length-nAnt)+' no mês aberto, prontos pra conciliar. Baixas manuais, flags e "Baixa em Andamento" já confirmados nos lançamentos do mês são preservados.</div>';
 
   document.getElementById('detSaldoAntPreview').innerHTML=html;
   document.getElementById('detSaldoAntP1').style.display='none';
@@ -6130,10 +6257,35 @@ function confirmarDetalharSaldoAnterior(){
   var razao=S.razao(curEmpId,contaDetMes);
   var razaoContaAtual=razao[contaDetCodigo];
   var lancsAtuais=(razaoContaAtual&&razaoContaAtual.lancamentos)||[];
-  var novosLancamentos=_detSaldoAntLancamentos.concat(lancsAtuais);
 
-  var res=substituirRazaoConta(contaDetCodigo,novosLancamentos);
-  if(!res.ok){toast(res.erro||'Erro ao substituir','err');return}
+  // Separa: lançamentos de meses ANTERIORES ao aberto vão para os próprios meses; o resto fica no mês aberto.
+  var doMesAberto=[], porMes={}, nAnt=0, nDup=0;
+  _detSaldoAntLancamentos.forEach(function(l){
+    var mm=(l.data||'').slice(0,7);
+    if(mm&&mm<contaDetMes){(porMes[mm]=porMes[mm]||[]).push(l);} else doMesAberto.push(l);
+  });
+  var contaDetObj=(getContaDetData().contaObj)||razaoContaAtual||{};
+  var nomeConta=contaDetObj.nome||contaDetCodigo;
+  var chave=function(l){return [l.data,l.numero||'',l.historico||'',Math.round((l.debito||0)*100),Math.round((l.credito||0)*100)].join('|');};
+  var compP=S.comp(curEmpId);
+  Object.keys(porMes).forEach(function(mm){
+    if(!compP[mm]) compP[mm]={contas:[],locked:false,implantacao:true};
+    var rz=S.razao(curEmpId,mm);
+    if(!rz[contaDetCodigo]) rz[contaDetCodigo]={classificacao:contaDetCodigo,nome:nomeConta,saldoAnterior:0,lancamentos:[]};
+    var existentes={}; (rz[contaDetCodigo].lancamentos||[]).forEach(function(x){existentes[chave(x)]=1;});
+    porMes[mm].forEach(function(l){
+      if(existentes[chave(l)]){nDup++;return;}
+      var nl=Object.assign({},l,{saldo:null,implantacao:true});
+      rz[contaDetCodigo].lancamentos.push(nl); nAnt++;
+    });
+    S.saveRazao(curEmpId,mm,rz);
+  });
+  S.saveComp(curEmpId,compP);
+
+  if(doMesAberto.length){
+    var res=substituirRazaoConta(contaDetCodigo,doMesAberto.concat(lancsAtuais));
+    if(!res.ok){toast(res.erro||'Erro ao substituir','err');return}
+  }
 
   // Zera o Saldo Anterior — foi completamente substituído pelos lançamentos detalhados.
   // Não é preciso recalcular o saldo dos lançamentos antigos: o valor que o Domínio já
@@ -6142,16 +6294,23 @@ function confirmarDetalharSaldoAnterior(){
   // o saldo corrido dos lançamentos novos dinamicamente (saldo:null) e emenda sem degrau
   // nos lançamentos antigos — ver renderContaDetTabela.
   var razao2=S.razao(curEmpId,contaDetMes);
-  if(razao2[contaDetCodigo]) razao2[contaDetCodigo].saldoAnterior=0;
+  if(razao2[contaDetCodigo]){
+    razao2[contaDetCodigo].saldoAnterior=0;
+    (razao2[contaDetCodigo].lancamentos||[]).forEach(function(x){x.saldo=null;}); // saldo corrido recalculado a partir de zero
+  }
   S.saveRazao(curEmpId,contaDetMes,razao2);
   var comp2=S.comp(curEmpId);
   var d2=comp2[contaDetMes];
   var contaObj2=d2&&(d2.contas||[]).find(function(c){return c.codigo===contaDetCodigo;});
-  if(contaObj2){contaObj2.saldoAnterior=0; S.saveComp(curEmpId,comp2);}
+  if(contaObj2){
+    contaObj2.saldoAnterior=0; contaObj2.saldoAnteriorManual=true;
+    contaObj2.saldoFinal=(contaObj2.debitos||0)-(contaObj2.creditos||0);
+    S.saveComp(curEmpId,comp2);
+  }
 
   closeModal('mDetalharSaldoAnterior');
   resetDetalharSaldoAnterior();
-  toast('Saldo Anterior detalhado: '+_detSaldoAntLancamentos.length+' lançamento(s) adicionado(s) ✓');
+  toast('Saldo Anterior implantado: '+nAnt+' lançamento(s) em meses anteriores, '+doMesAberto.length+' no mês aberto'+(nDup?(' ('+nDup+' repetido(s) ignorado(s))'):'')+' ✓');
 
   renderContaDetHeader();
   renderContaDetTabela();
@@ -6490,9 +6649,32 @@ function abrirContaDetalhe(mes, codigo){
     var el=document.getElementById(id); if(el)el.value='';
   });
   var st=document.getElementById('contaDetFiltroStatus'); if(st)st.value='';
+  contaDetF={}; _cdfFechaCal();
   goPage('conta');
 }
 
+// Vindo do Balancete (Demonstrativos Contábeis): abre direto a conta, no mês, para conciliar.
+function compAbrirContaPorEid(eid,mes,codigo){
+  var emp=compEmpsBase().find(function(e){return String(e.eid)===String(eid);});
+  if(!emp){ toast('Empresa não encontrada na Composição de Saldos','err'); return; }
+  curEmpId=emp.id; curMes='';
+  var comp=S.comp(curEmpId);
+  var temConta=!!(comp[mes]&&((comp[mes].contas||[]).some(function(c){return c.codigo===codigo;})||S.razao(curEmpId,mes)[codigo]));
+  if(!temConta){
+    goPage('comp'); renderComp();
+    toast('A conta '+codigo+' ainda não está na composição de '+mesLabel(mes)+' desta empresa — anexe o Livro Razão do mês.','err');
+    return;
+  }
+  abrirContaDetalhe(mes,codigo);
+}
+// Da conta, volta para o Balancete do mês no Demonstrativos Contábeis, já na linha da conta.
+function compVerNoBalancete(){
+  var emp=S.emps().find(function(e){return e.id===curEmpId;});
+  var eid=emp&&emp.eid;
+  if(eid==null||eid===''){ toast('Empresa sem número de cadastro','err'); return; }
+  try{ window.parent.postMessage({type:'abrirBalancete',eid:String(eid),mes:contaDetMes,codigo:contaDetCodigo},'*'); }
+  catch(e){ toast('Abra pelo site principal (JJR Controle) para usar este atalho','err'); }
+}
 function voltarComposicao(){
   goPage('comp');
 }
@@ -6532,7 +6714,8 @@ function renderContaDetHeader(){
   data.ajustes.forEach(function(a){totDeb+=a.debito||0;totCre+=a.credito||0;});
 
   var sa=contaObj?contaObj.saldoAnterior:(razaoConta?razaoConta.saldoAnterior:0);
-  var sf=sa+totDeb-totCre;
+  var saImpl=implNet(contaDetMes,contaDetCodigo); // lançamentos implantados em meses anteriores (Implantar Saldo Anterior)
+  var sf=sa+saImpl+totDeb-totCre;
 
   // Saldo Anterior pode ser marcado como conciliado pelo usuário
   var saAberto = d ? !(d.saldoAntConciliado && d.saldoAntConciliado[contaDetCodigo]) : true;
@@ -6556,6 +6739,16 @@ function renderContaDetHeader(){
   } else if(saAberto){
     totalAbertoCount=lancs.length;
   }
+  // Lançamentos implantados em meses anteriores que ainda estão em aberto também contam
+  if(data.conciliacao){
+    implLinhas(contaDetMes,contaDetCodigo).forEach(function(r){
+      if(r.status==='aberto'){
+        totalAbertoCount++;
+        if(tipo==='Passivo')saldoAberto+=((r.l.credito||0)-(r.l.debito||0));
+        else saldoAberto+=((r.l.debito||0)-(r.l.credito||0));
+      }
+    });
+  }
   // Ajustes não conciliados também contam como "aberto"
   var ajustesAbertos=data.ajustes.filter(function(a){return !a.conciliado;});
   ajustesAbertos.forEach(function(a){
@@ -6571,7 +6764,7 @@ function renderContaDetHeader(){
     (sa?' <button class="btn bo bsm" style="margin-top:4px;font-size:10px;padding:2px 6px" onclick="abrirDetalharSaldoAnteriorModal()" title="Substituir este valor único pela composição detalhada, lançamento a lançamento">📤 Detalhar</button>':'');
 
   cards.innerHTML=
-    '<div class="card"><div class="cl">Saldo Anterior</div><div class="cv sm'+(saAberto?'':' g')+'">'+fmt(sa)+'</div>'+saBtn+'</div>'+
+    '<div class="card"><div class="cl">Saldo Anterior</div><div class="cv sm'+(saAberto?'':' g')+'">'+fmt(sa)+'</div>'+(saImpl?'<div style="font-size:10.5px;color:var(--slate);margin-top:2px">+ implantado em meses anteriores: '+fmt(saImpl)+'</div>':'')+saBtn+'</div>'+
     '<div class="card"><div class="cl">Total Débito</div><div class="cv sm">'+fmt(totDeb)+'</div></div>'+
     '<div class="card"><div class="cl">Total Crédito</div><div class="cv sm">'+fmt(totCre)+'</div></div>'+
     '<div class="card"><div class="cl">Saldo Final</div><div class="cv sm g">'+fmt(sf)+'</div></div>'+
@@ -6598,7 +6791,104 @@ function toggleSaldoAntConciliado(){
 }
 
 
+// ── Filtros sob o título de cada coluna (pedido do usuário 05/11/2026) ──
+var contaDetF={}, _cdfTimer=null, _cdfFoco=null, _cdfCal={ini:null,fim:null};
+function cdfAtivo(){ return Object.keys(contaDetF).some(function(k){return !!contaDetF[k];}); }
+function cdfTxt(el){
+  contaDetF[el.dataset.k]=el.value;
+  _cdfFoco={id:el.id,pos:el.selectionStart};
+  clearTimeout(_cdfTimer); _cdfTimer=setTimeout(function(){renderContaDetTabela();},280);
+}
+function cdfStatus(v){ var st=document.getElementById('contaDetFiltroStatus'); if(st) st.value=v; renderContaDetTabela(); }
+function _cdfVal(filtro,valor){
+  var f=String(filtro||'').trim(); if(!f) return true;
+  var limpo=f.split('.').join('').split(',').join('.').split(' ').join('');
+  var n=parseFloat(limpo);
+  var soNum=true; for(var i=0;i<f.length;i++){ if('-0123456789., '.indexOf(f.charAt(i))<0){ soNum=false; break; } }
+  if(soNum&&!isNaN(n)) return Math.abs(Math.abs(valor||0)-Math.abs(n))<0.015;
+  return fmt(valor||0).toLowerCase().indexOf(f.toLowerCase())>=0;
+}
+function cdfPassa(r,docsNf){
+  var f=contaDetF, l=r.l;
+  function inc(a,b){ return String(a||'').toLowerCase().indexOf(String(b).toLowerCase().trim())>=0; }
+  if(f.num&&!inc(l.numero,f.num)) return false;
+  if(f.hist&&!inc(l.historico,f.hist)) return false;
+  if(f.doc){ var doc=(r.kind==='lanc'&&!r.isGrupo)?(docsNf[r.idx]!==undefined?docsNf[r.idx]:_extrairNumeroNF(l.historico)):''; if(!inc(doc,f.doc)) return false; }
+  if(f.cp&&!inc(l.ctapart,f.cp)) return false;
+  if(f.deb&&!_cdfVal(f.deb,l.debito)) return false;
+  if(f.cre&&!_cdfVal(f.cre,l.credito)) return false;
+  if(f.sal&&!_cdfVal(f.sal,r.saldoCalc)) return false;
+  if(f.crit&&!inc(r.matchDetalhe,f.crit)) return false;
+  if(f.de&&(l.data||'')<f.de) return false;
+  if(f.ate&&(l.data||'')>f.ate) return false;
+  return true;
+}
+function _cdfLinhaFiltros(){
+  function esc(v){ return String(v||'').split('"').join('&quot;'); }
+  function inp(k,ph){ return '<th><input class="cdf-i" id="cdf_'+k+'" data-k="'+k+'" value="'+esc(contaDetF[k])+'" placeholder="'+ph+'" oninput="cdfTxt(this)"></th>'; }
+  var stV=(document.getElementById('contaDetFiltroStatus')||{}).value||'';
+  function opt(v,t){ return '<option value="'+v+'"'+(stV===v?' selected':'')+'>'+t+'</option>'; }
+  var lbl='📅 Período';
+  function dm(d){ return d?d.split('-').reverse().join('/'):'…'; }
+  if(contaDetF.de||contaDetF.ate) lbl='📅 '+dm(contaDetF.de)+' – '+dm(contaDetF.ate);
+  return '<tr class="cdf-row"><th></th>'+
+    '<th><button class="cdf-i" id="cdfDataBtn" onclick="cdfAbrirCal(this)" style="cursor:pointer;text-align:left;white-space:nowrap">'+lbl+'</button></th>'+
+    inp('num','nº')+inp('hist','filtrar…')+inp('doc','doc')+'<th></th>'+inp('cp','conta')+inp('deb','débito')+inp('cre','crédito')+inp('sal','saldo')+
+    '<th><select class="cdf-i" onchange="cdfStatus(this.value)">'+opt('','Todos')+opt('aberto','Em aberto')+opt('baixado_exato','Conciliado (exato)')+opt('baixado_aprox','Conciliado (aprox.)')+opt('manual','Manual')+opt('flagged','Flagados')+'</select></th>'+
+    inp('crit','critério')+'<th></th><th></th><th></th></tr>';
+}
+// Dois calendários lado a lado: o da esquerda escolhe a data inicial, o da direita a final (podem ser do mesmo mês)
+function cdfAbrirCal(btn){
+  var pop=document.getElementById('cdfCalPop');
+  if(pop){ _cdfFechaCal(); return; }
+  var base=String(contaDetMes||'').split('-'), y=parseInt(base[0],10)||new Date().getFullYear(), m=(parseInt(base[1],10)||1)-1;
+  _cdfCal={ini:{y:y,m:m},fim:{y:y,m:m}};
+  if(contaDetF.de){ var p=contaDetF.de.split('-'); _cdfCal.ini={y:parseInt(p[0],10),m:parseInt(p[1],10)-1}; }
+  if(contaDetF.ate){ var p2=contaDetF.ate.split('-'); _cdfCal.fim={y:parseInt(p2[0],10),m:parseInt(p2[1],10)-1}; }
+  pop=document.createElement('div'); pop.id='cdfCalPop';
+  var rc=btn.getBoundingClientRect();
+  pop.style.cssText='position:fixed;z-index:9999;top:'+(rc.bottom+4)+'px;left:'+Math.max(8,Math.min(rc.left,window.innerWidth-560))+'px;background:var(--white);color:var(--ink);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.45);display:flex;gap:18px;flex-wrap:wrap;max-width:540px';
+  pop.onclick=function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    var a=b.dataset.a;
+    if(a==='mes'){ var c=_cdfCal[b.dataset.w]; c.m+=parseInt(b.dataset.d,10); if(c.m<0){c.m=11;c.y--;} if(c.m>11){c.m=0;c.y++;} _cdfRenderCal(); }
+    else if(a==='dia'){
+      if(b.dataset.w==='ini'){ contaDetF.de=b.dataset.v; if(contaDetF.ate&&contaDetF.ate<contaDetF.de) contaDetF.ate=contaDetF.de; }
+      else { contaDetF.ate=b.dataset.v; if(contaDetF.de&&contaDetF.de>contaDetF.ate) contaDetF.de=contaDetF.ate; }
+      renderContaDetTabela(); _cdfRenderCal();
+    }
+    else if(a==='limpar'){ contaDetF.de=''; contaDetF.ate=''; renderContaDetTabela(); _cdfRenderCal(); }
+    else if(a==='fechar'){ _cdfFechaCal(); }
+  };
+  document.body.appendChild(pop); _cdfRenderCal();
+  setTimeout(function(){ document.addEventListener('mousedown',_cdfFechaFora); },0);
+}
+function _cdfFechaCal(){ var pop=document.getElementById('cdfCalPop'); if(pop) pop.remove(); document.removeEventListener('mousedown',_cdfFechaFora); }
+function _cdfFechaFora(e){ var pop=document.getElementById('cdfCalPop'); if(pop&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('#cdfDataBtn'))) _cdfFechaCal(); }
+function _cdfCalHtml(w){
+  var c=_cdfCal[w], sel=w==='ini'?contaDetF.de:contaDetF.ate;
+  var nomes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var primeiro=new Date(c.y,c.m,1).getDay(), dias=new Date(c.y,c.m+1,0).getDate();
+  var bs='border:none;background:none;color:var(--ink);cursor:pointer;';
+  var h='<div style="width:230px"><div style="font-size:11px;color:var(--slate);margin-bottom:4px">'+(w==='ini'?'Data inicial':'Data final')+'</div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><button data-a="mes" data-w="'+w+'" data-d="-1" style="'+bs+'font-size:15px">◄</button><b style="font-size:13px">'+nomes[c.m]+' '+c.y+'</b><button data-a="mes" data-w="'+w+'" data-d="1" style="'+bs+'font-size:15px">►</button></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:11px">';
+  ['D','S','T','Q','Q','S','S'].forEach(function(x){ h+='<div style="color:var(--slate);padding:2px 0">'+x+'</div>'; });
+  for(var i=0;i<primeiro;i++) h+='<div></div>';
+  for(var d=1;d<=dias;d++){
+    var iso=c.y+'-'+String(c.m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var on=(iso===sel);
+    h+='<button data-a="dia" data-w="'+w+'" data-v="'+iso+'" style="'+bs+'padding:4px 0;border-radius:5px;font-size:12px;'+(on?'background:var(--teal);color:#fff;font-weight:700':'')+'">'+d+'</button>';
+  }
+  return h+'</div></div>';
+}
+function _cdfRenderCal(){
+  var pop=document.getElementById('cdfCalPop'); if(!pop) return;
+  pop.innerHTML=_cdfCalHtml('ini')+_cdfCalHtml('fim')+
+    '<div style="width:100%;display:flex;gap:8px;justify-content:flex-end"><button class="btn bo bsm" data-a="limpar">Limpar período</button><button class="btn bp bsm" data-a="fechar">Fechar</button></div>';
+}
 function limparFiltrosContaDet(){
+  contaDetF={}; _cdfFechaCal();
   ['contaDetFiltroData','contaDetFiltroHist','contaDetFiltroValor'].forEach(function(id){
     var el=document.getElementById(id); if(el)el.value='';
   });
@@ -6610,7 +6900,88 @@ function limparFiltrosContaDet(){
 // ajuste/reclassificação espelhado vindo de OUTRA conta, ou de qualquer mudança que não
 // tenha disparado um re-render nesta tela específica (a conta pode ter ficado aberta
 // numa aba enquanto a mudança aconteceu em outro lugar).
+// Saldo anterior editável à mão (sem justificativa): o operador às vezes concilia no sistema dele
+// e não quer trazer a composição anterior. Fica marcado como "editado" e o Razão não sobrescreve.
+function editarSaldoAnterior(){
+  var comp=S.comp(curEmpId); var d=comp[contaDetMes]; if(!d)return;
+  if(d.locked){toast('Mês fechado — reabra para alterar o saldo anterior','err');return}
+  var c=(d.contas||[]).find(function(x){return x.codigo===contaDetCodigo});
+  if(!c){toast('Conta não encontrada','err');return}
+  var atual=c.saldoAnterior||0;
+  var t=prompt('Novo saldo anterior desta conta.\nComo aparece na coluna Saldo: credor = negativo (ex.: -220,00).\nOu escreva com C/D no fim: "220 C" = credor, "220 D" = devedor.\nDeixe vazio para voltar ao saldo do Razão.',
+    String(atual).replace('.',','));
+  if(t===null)return;
+  t=t.trim();
+  if(t===''){
+    var rz=S.razao(curEmpId,contaDetMes)[contaDetCodigo];
+    c.saldoAnterior=(rz&&rz.saldoAnterior)||0; delete c.saldoAnteriorManual;
+  }else{
+    var m=t.match(/^(-)?\s*(?:R\$)?\s*([\d.]*\d(?:,\d+)?|\d+(?:\.\d+)?)\s*([cCdD])?$/);
+    if(!m){toast('Valor inválido','err');return}
+    var n=parseFloat(m[2].indexOf(',')>=0?m[2].replace(/\./g,'').replace(',','.'):m[2]);
+    if(isNaN(n)){toast('Valor inválido','err');return}
+    if(m[1])n=-n;
+    if(m[3]&&/c/i.test(m[3]))n=-Math.abs(n);
+    if(m[3]&&/d/i.test(m[3]))n=Math.abs(n);
+    c.saldoAnterior=Math.round(n*100)/100; c.saldoAnteriorManual=true;
+  }
+  c.saldoFinal=(c.saldoAnterior||0)+(c.debitos||0)-(c.creditos||0);
+  S.saveComp(curEmpId,comp);
+  _zerarSaldosCorridosConta();
+  renderContaDetHeader();
+  renderContaDetTabela();
+  toast('Saldo anterior atualizado ✓');
+}
+// Lançamentos implantados por "Implantar Saldo Anterior" em meses ANTERIORES ao mês aberto (compõem o saldo anterior).
+function implLinhas(mes,cod){
+  var out=[]; var comp=S.comp(curEmpId);
+  Object.keys(comp).sort().filter(function(x){return x<mes;}).forEach(function(pm){
+    var c=S.razao(curEmpId,pm)[cod]; if(!c||!c.lancamentos)return;
+    var pConcil=comp[pm]&&comp[pm].conciliacao&&comp[pm].conciliacao[cod];
+    c.lancamentos.forEach(function(l,i){
+      if(!l.implantacao)return;
+      var st=pConcil&&pConcil.lancamentos&&pConcil.lancamentos[i]?pConcil.lancamentos[i].status:'aberto';
+      out.push({l:l,status:st,mes:pm,idx:i});
+    });
+  });
+  return out;
+}
+function implNet(mes,cod){
+  var t=0; implLinhas(mes,cod).forEach(function(r){t+=(r.l.debito||0)-(r.l.credito||0);});
+  return Math.round(t*100)/100;
+}
+// Publica o Saldo Final de cada conta do mês (o mesmo número do cartão "Saldo Final" da conta) para o Balancete
+// (Demonstrativos Contábeis) conferir. Chave por número da empresa (eid); só grava se mudou.
+function compPublicarSaldosMes(m,contas){
+  try{
+    var emp=S.emps().find(function(e){return e.id===curEmpId;});
+    var eid=emp&&emp.eid; if(eid==null||eid==='')return;
+    var razao=S.razao(curEmpId,m); var d=S.comp(curEmpId)[m]; var aj=(d&&d.ajustes)||{};
+    var out={};
+    (contas||[]).forEach(function(c){
+      var rc=razao[c.codigo], sf;
+      if(rc){
+        var td=0,tc=0;
+        (rc.lancamentos||[]).forEach(function(l){td+=l.debito||0;tc+=l.credito||0;});
+        (aj[c.codigo]||[]).forEach(function(a){td+=a.debito||0;tc+=a.credito||0;});
+        sf=(c.saldoAnterior!=null?c.saldoAnterior:(rc.saldoAnterior||0))+implNet(m,c.codigo)+td-tc;
+      } else sf=c.saldoFinal;
+      out[c.codigo]=Math.round((sf||0)*100)/100;
+    });
+    var k='comp_saldos_eid_'+eid+'_'+m;
+    if(JSON.stringify(S.g(k))!==JSON.stringify(out)) S.s(k,out);
+  }catch(e){ console.warn('compPublicarSaldosMes',e); }
+}
+// Zera o "saldo" gravado em cada lançamento do mês desta conta → a tela recalcula o corrido a partir do Saldo Anterior atual.
+function _zerarSaldosCorridosConta(){
+  var rz=S.razao(curEmpId,contaDetMes);
+  if(rz[contaDetCodigo]){
+    (rz[contaDetCodigo].lancamentos||[]).forEach(function(x){x.saldo=null;});
+    S.saveRazao(curEmpId,contaDetMes,rz);
+  }
+}
 function atualizarSaldoCorridoConta(){
+  _zerarSaldosCorridosConta();
   renderContaDetHeader();
   renderContaDetTabela();
   toast('Saldo atualizado ✓');
@@ -6808,12 +7179,46 @@ function _renderCardsReplica(itens){
     '<div class="card"><div class="cl">Total Crédito</div><div class="cv sm">'+fmt(totCre)+'</div></div>'+
     '<div class="card"><div class="cl">Saldo Líquido</div><div class="cv sm g">'+fmt(totDeb-totCre)+'</div></div>';
 }
+// Imprime só a relação (Data, Número, Histórico, Débito, Crédito, Saldo), com o nome e o código da conta — não a tela inteira (pedido do usuário 05/11/2026)
+var _replicaTitulo='';
+function imprimirRelacaoReplica(){
+  var tb=document.querySelector('#contaDetBody table.ledger-table');
+  if(!tb){ toast('Nada para imprimir nesta tela','err'); return; }
+  var data=getContaDetData();
+  var nomeConta=data.contaObj?data.contaObj.nome:(data.razaoConta?data.razaoConta.nome:'');
+  var emp=S.emps().find(function(e){return e.id===curEmpId;});
+  var t=tb.cloneNode(true);
+  var rows=[].slice.call(t.querySelectorAll('tr'));
+  var btnCols={};
+  rows.forEach(function(tr){ if(tr.children.length>1) [].forEach.call(tr.children,function(td,i){ if(td.querySelector('button')) btnCols[i]=1; }); });
+  var idxs=Object.keys(btnCols).map(Number).sort(function(a,b){return b-a;});
+  rows.forEach(function(tr){
+    if(tr.children.length>1){ idxs.forEach(function(i){ if(tr.children[i]) tr.removeChild(tr.children[i]); }); }
+    else if(tr.children.length===1&&tr.children[0].colSpan>1){ tr.children[0].colSpan=Math.max(1,tr.children[0].colSpan-idxs.length); }
+  });
+  [].forEach.call(t.querySelectorAll('colgroup'),function(c){c.remove();});
+  t.removeAttribute('style'); t.removeAttribute('class');
+  [].forEach.call(t.querySelectorAll('[style]'),function(el){ el.removeAttribute('style'); });
+  var tit=String(_replicaTitulo||'Relação').replace(/^[^A-Za-zÀ-ú]+/,'');
+  var w=window.open('','_blank');
+  if(!w){ toast('O navegador bloqueou a janela de impressão — permita pop-ups para este site','err'); return; }
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+tit+' — '+contaDetCodigo+'</title><style>'+
+    'body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:18px}h2{margin:0 0 2px;font-size:16px}.sub{font-size:12px;margin-bottom:10px}'+
+    'table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #999;padding:3px 6px;text-align:left;vertical-align:top}th{background:#e5e5e5;font-size:10.5px;text-transform:uppercase}'+
+    'td:nth-last-child(-n+3){text-align:right;white-space:nowrap}tr{page-break-inside:avoid}@page{size:A4 landscape;margin:10mm}</style></head><body>'+
+    '<h2>'+tit+' — '+nomeConta+' ('+contaDetCodigo+')</h2>'+
+    '<div class="sub">'+(emp?((emp.eid?'['+emp.eid+'] ':'')+emp.nome+' · '):'')+mesLabel(contaDetMes)+' · emitido em '+new Date().toLocaleDateString('pt-BR')+'</div>'+
+    t.outerHTML+'</body></html>');
+  w.document.close(); w.focus();
+  setTimeout(function(){ w.print(); },300);
+}
 function _cabecalhoReplica(titulo,extraBtnHtml){
+  _replicaTitulo=titulo;
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
     '<h3 style="margin:0;color:var(--ink)">'+titulo+' — '+contaDetCodigo+'</h3>'+
     '<div style="display:flex;gap:6px">'+
       (extraBtnHtml||'')+
-      '<button class="btn bo bsm" onclick="window.print()">🖨 Imprimir</button>'+
+      '<button class="btn bo bsm" onclick="imprimirRelacaoReplica()">🖨 Imprimir</button>'+
       '<button class="btn bo bsm" onclick="renderContaDetTabela()">← Voltar ao Em Aberto/Aprox.</button>'+
     '</div></div>';
 }
@@ -7135,7 +7540,7 @@ function renderContaDetTabela(){
   // acumulado de ajustes/reclassificações — assim um ajuste passa a impactar
   // visivelmente o saldo de todas as linhas seguintes, como no Razão real.
   (function(){
-    var saldoBase=contaObj?contaObj.saldoAnterior:(razaoConta?razaoConta.saldoAnterior:0);
+    var saldoBase=(contaObj?contaObj.saldoAnterior:(razaoConta?razaoConta.saldoAnterior:0))+implNet(contaDetMes,contaDetCodigo);
     var ultimoSaldoRazao=saldoBase;
     var offsetAjustes=0;
     rows.forEach(function(r){
@@ -7150,7 +7555,24 @@ function renderContaDetTabela(){
     });
   })();
 
+  // Coluna Saldo acompanha o que ainda está EM ABERTO (pedido do usuário 05/11/2026): conforme os itens são conciliados, saem da lista e o
+  // saldo corrido recalcula só com o que sobrou — a última linha fecha com o "Saldo em aberto" do cartão (mesma regra do cabeçalho).
+  // Ao olhar só os conciliados (filtro de status), mantém o saldo corrido original do Razão.
+  if(!(fStatus==='baixado_exato'||fStatus==='manual')){
+    (function(){
+      var saAb=(contaObj?contaObj.saldoAnterior:(razaoConta?razaoConta.saldoAnterior:0))||0;
+      var saConc=!!(d&&d.saldoAntConciliado&&d.saldoAntConciliado[contaDetCodigo]);
+      var run=saConc?0:saAb;
+      implLinhas(contaDetMes,contaDetCodigo).forEach(function(x){ if(x.status==='aberto') run+=(x.l.debito||0)-(x.l.credito||0); });
+      rows.forEach(function(r){
+        if(r.status==='aberto'||r.status==='parcelado'){ run+=(r.l.debito||0)-(r.l.credito||0); }
+        r.saldoCalc=Math.round(run*100)/100;
+      });
+    })();
+  }
+
   var rowsFiltered=rows.filter(function(r){
+    if(!cdfPassa(r,docsNf))return false;
     if(fData&&!(r.l.data||'').startsWith(fData))return false;
     if(fHist&&!(r.l.historico||'').toLowerCase().includes(fHist.toLowerCase()))return false;
     if(fVal){
@@ -7197,10 +7619,11 @@ function renderContaDetTabela(){
   // Saldo Anterior
   var sa=contaObj?contaObj.saldoAnterior:(razaoConta?razaoConta.saldoAnterior:0);
   var saConciliado=!!(d&&d.saldoAntConciliado&&d.saldoAntConciliado[contaDetCodigo]);
-  var saIncluded = sa!==0 && (fStatus==='flagged' ||
+  var saManual=!!(contaObj&&contaObj.saldoAnteriorManual);
+  var saIncluded = (sa!==0||saManual) && (fStatus==='flagged' ||
     ((fStatus===''||fStatus==='aberto')&&!saConciliado) ||
     ((fStatus==='baixado_exato'||fStatus==='manual')&&saConciliado));
-  if(fHist||fVal||fData) saIncluded=false; // SALDO ANTERIOR doesn't match text/value/date filters
+  if(fHist||fVal||fData||cdfAtivo()) saIncluded=false; // SALDO ANTERIOR doesn't match text/value/date filters
 
   var html='<table class="ledger-table"><thead><tr>'+
     '<th><input type="checkbox" id="contaDetSelAll" onchange="toggleSelAllLanc(this)"></th>'+
@@ -7210,21 +7633,21 @@ function renderContaDetTabela(){
     '<th style="text-align:center">Baixa em<br>Andamento <input type="checkbox" id="baixaAndamentoSelAll" onchange="toggleSelAllBaixaAndamento(this)" title="Marcar/desmarcar todos os itens filtrados" style="vertical-align:middle;margin-left:4px"></th>'+
     '<th style="text-align:center">Saldo<br>Anterior <input type="checkbox" id="saldoAnteriorSelAll" onchange="toggleSelAllSaldoAnteriorSel(this)" title="Marcar/desmarcar todos os itens filtrados" style="vertical-align:middle;margin-left:4px"></th>'+
     '<th></th>'+
-    '</tr></thead><tbody>';
+    '</tr>'+_cdfLinhaFiltros()+'</thead><tbody>';
 
   if(saIncluded){
     var saCls=saConciliado?'ledger-row-exato':'';
     var saBaixaAndCk=baixaAndamento['SA']?' checked':'';
     var saSaldoAntSelCk=saldoAnteriorSel['SA']?' checked':'';
     html+='<tr class="'+saCls+'" data-saldo-ant="1" style="font-weight:600">'+
-      '<td></td>'+
+      '<td><input type="checkbox" class="contaDetChk" data-sa="1" title="Selecionar o saldo anterior (entra em Conciliar/Desconciliar selecionados)"></td>'+
       '<td colspan="8">SALDO ANTERIOR</td>'+
       '<td class="tr">'+fmt(sa)+'</td>'+
       '<td><span class="concil-badge '+(saConciliado?'cb-exato':'cb-aberto')+'">'+(saConciliado?'Conciliado':'Em aberto')+'</span></td>'+
-      '<td></td>'+
+      '<td>'+(saManual?'<span style="font-size:10px;color:#b45309;font-weight:600">editado</span>':'')+'</td>'+
       '<td style="text-align:center"><input type="checkbox" class="baixaAndChk" data-idx="SA"'+saBaixaAndCk+'></td>'+
       '<td style="text-align:center"><input type="checkbox" class="saldoAntSelChk" data-idx="SA"'+saSaldoAntSelCk+'></td>'+
-      '<td></td></tr>';
+      '<td><button class="btn bo bsm" style="font-size:11px;padding:2px 7px" title="Alterar o saldo anterior desta conta (sem justificativa)" onclick="editarSaldoAnterior()">✏ Editar</button></td></tr>';
   }
 
   // Lançamentos de meses anteriores em aberto
@@ -7290,10 +7713,16 @@ function renderContaDetTabela(){
     '</tr>';
   });
 
+  if(!rowsFiltered.length&&!saIncluded) html+='<tr><td colspan="15" style="text-align:center;padding:18px;color:var(--slate)">Nenhum lançamento com esses filtros</td></tr>';
   html+='</tbody></table>';
-  if(!rowsFiltered.length&&!saIncluded)html='<div class="empty"><div class="et">Nenhum lançamento com esses filtros</div></div>';
 
   body.innerHTML=html;
+  // linha de filtros gruda logo abaixo da linha de títulos; devolve o foco ao campo que estava sendo digitado
+  (function(){
+    var th1=body.querySelector('thead tr'); var hh=th1?th1.offsetHeight:34;
+    [].forEach.call(body.querySelectorAll('thead tr.cdf-row th'),function(th){ th.style.top=hh+'px'; });
+    if(_cdfFoco&&_cdfFoco.id){ var el=document.getElementById(_cdfFoco.id); if(el){ el.focus(); try{ el.setSelectionRange(_cdfFoco.pos,_cdfFoco.pos); }catch(e){} } _cdfFoco=null; }
+  })();
 
   // Wire up action cells
   var trs=body.querySelectorAll('tbody tr');
@@ -7653,10 +8082,18 @@ function getSelectedLancRows(){
 
 function bulkConciliar(novoStatus){
   var sel=getSelectedLancRows();
-  if(!sel.length){toast('Selecione ao menos um lançamento','err');return}
+  var saMarcado=!!document.querySelector('.contaDetChk[data-sa]:checked'); // linha de Saldo Anterior marcada
+  if(!sel.length&&!saMarcado){toast('Selecione ao menos um lançamento','err');return}
   var comp=S.comp(curEmpId);
   var d=comp[contaDetMes]; if(!d)return;
   var changed=0;
+  if(saMarcado){
+    if(!d.saldoAntConciliado) d.saldoAntConciliado={};
+    d.saldoAntConciliado[contaDetCodigo]=(novoStatus==='conciliar');
+    if(novoStatus==='conciliar'&&d.saldoAnteriorSel&&d.saldoAnteriorSel[contaDetCodigo]) delete d.saldoAnteriorSel[contaDetCodigo]['SA'];
+    if(novoStatus==='conciliar'&&d.baixaAndamento&&d.baixaAndamento[contaDetCodigo]) delete d.baixaAndamento[contaDetCodigo]['SA'];
+    changed++;
+  }
   sel.forEach(function(r){
     if(r.kind==='ajuste'){
       var a=(d.ajustes&&d.ajustes[contaDetCodigo]&&d.ajustes[contaDetCodigo][r.idx]);
@@ -7831,7 +8268,8 @@ async function ca2Boot(){
     }
   }
   ca2Ready = true;
-  if(pendingNavPage){ goPage(pendingNavPage); pendingNavPage = null; }
+  if(pendingAbrirConta){ var _pa=pendingAbrirConta; pendingAbrirConta=null; compAbrirContaPorEid(_pa.eid,_pa.mes,_pa.codigo); }
+  else if(pendingNavPage){ goPage(pendingNavPage); pendingNavPage = null; }
   else { renderComp(); }
 }
 

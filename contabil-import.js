@@ -417,6 +417,45 @@
     }catch(e){ if(e&&e.name==='AbortError') return; console.error('daPasta',e); toast('Erro ao ler a pasta: '+(e.message||e),'err'); }
   }
 
+  // ── "Verificar pasta" da tela inicial dos Demonstrativos: lê Balancetes e DREs (PDF do Domínio) de TODAS as empresas
+  // com o MESMO leitor da importação por dentro da empresa (sem IA). A empresa é identificada pelo CNPJ do cabeçalho do PDF,
+  // não pelo nome do arquivo. Arquivo já importado (mesmo conteúdo) é pulado; validação que falha ou CNPJ desconhecido não importa nada. ──
+  async function verificarPastaGlobal(raiz){
+    var rel={vistos:0,novos:0,jaTinha:0,bloqueados:[],erros:[]};
+    var tipos=['TRIAL_BALANCE','INCOME_STATEMENT'];
+    for(var ti=0;ti<tipos.length;ti++){
+      var tipo=tipos[ti], dirTipo=null;
+      for(var i=0;i<PASTAS[tipo].length&&!dirTipo;i++){ try{ dirTipo=await raiz.getDirectoryHandle(PASTAS[tipo][i]); }catch(e){} }
+      if(!dirTipo) continue;
+      var hs={}, from=0;
+      for(;;){
+        var r=await _supaClient.from('accounting_imports').select('file_hash').eq('document_type',tipo).range(from,from+999);
+        if(r.error) throw r.error;
+        (r.data||[]).forEach(function(x){ hs[x.file_hash]=1; });
+        if(!r.data||r.data.length<1000) break; from+=1000;
+      }
+      for await (var ent of dirTipo.entries()){
+        if(ent[1].kind!=='directory') continue;
+        for await (var ar of ent[1].entries()){
+          if(ar[1].kind!=='file'||!String(ar[0]).toLowerCase().endsWith('.pdf')) continue;
+          rel.vistos++;
+          try{
+            var f=await ar[1].getFile();
+            var h=await sha256Hex(await f.arrayBuffer());
+            if(hs[h]){ rel.jaTinha++; continue; }
+            var d=await processarArquivo(f,null,tipo);
+            if(d.erro){ rel.erros.push(ar[0]+': '+d.erro); continue; }
+            if(d.bloqueado){ rel.bloqueados.push(ar[0]+': '+d.bloqueado.mensagem); continue; }
+            if((d.validacoes||[]).length){ rel.bloqueados.push(ar[0]+': validações aritméticas falharam — abra a empresa e importe pelo campo para conferir'); continue; }
+            if(tipo==='TRIAL_BALANCE') await salvarBalancete(d); else await salvarDRE(d);
+            hs[h]=1; rel.novos++;
+          }catch(e){ rel.erros.push(ar[0]+': '+((e&&e.message)||e)); }
+        }
+      }
+    }
+    return rel;
+  }
+
   // ── abrir o que está salvo ──
   async function aba(eid,tipo){
     eid=String(eid);
@@ -480,21 +519,40 @@
     if(!sums.length){ el.innerHTML=vazio('Nenhum Balancete importado ainda. Use <b>Importar Balancete</b> ou <b>Ler da pasta</b>.'); return; }
     sums.sort(function(a,b){ return a.period_end<b.period_end?1:-1; });
     var chave=function(x){ return x.period_start+'|'+x.period_end; };
+    if(s.competencia){ var _sc=sums.filter(function(x){ return String(x.competence||x.period_end||'').slice(0,7)===s.competencia; })[0]; if(_sc) s.periodo=chave(_sc); s.competencia=''; }
     if(!s.periodo||!sums.some(function(x){ return chave(x)===s.periodo; })) s.periodo=chave(sums[0]);
     var sm=sums.filter(function(x){ return chave(x)===s.periodo; })[0], ps=sm.period_start, pe=sm.period_end;
     var contas=await pag('trial_balance_accounts','code,classification,description,is_analytic,level,prev_balance,prev_side,debit,credit,balance,balance_side',[['eq','empresa_eid',eid],['eq','period_start',ps],['eq','period_end',pe]]);
     contas.sort(function(a,b){ return String(a.classification).localeCompare(String(b.classification),'pt-BR',{numeric:true})||String(a.code).localeCompare(String(b.code),'pt-BR',{numeric:true}); });
     var res=function(t,c,l,a){ return c==null?null:{tipo:t,cents:Math.round(Number(c)*100),lado:l,assinado:Math.round(Number(a)*100)}; };
+    // Conferência com a Composição de Saldos (05/11/2026): saldo final da conta na composição do mês × saldo atual do Balancete
+    var ym=String(sm.competence||pe||'').slice(0,7), saldosComp=null;
+    try{ if(typeof _democSaldosComposicao==='function') saldosComp=_democSaldosComposicao(eid,ym.slice(0,4),ym.slice(5,7)); }catch(e){ saldosComp=null; }
+    // Totais para conferência (pedido do usuário 05/11/2026): conta-raiz de cada grupo (1 Ativo, 2 Passivo, 3 Receitas, 4 Despesas); sem a raiz, soma das analíticas do grupo
+    var totGrupo=function(g){
+      var raiz=contas.filter(function(c){ return String(c.classification)===g; })[0];
+      if(raiz) return {v:Number(raiz.balance||0), l:raiz.balance_side};
+      var sg=0, achou=false; contas.forEach(function(c){ if(c.is_analytic&&String(c.classification).split('.')[0]===g){ achou=true; sg+=(c.balance_side==='C'?-1:1)*Number(c.balance||0); } });
+      return achou?{v:Math.abs(sg), l:sg<0?'C':'D'}:null;
+    };
+    var cxTot=function(rot,g){ var t=totGrupo(g); return '<div style="border:1px solid var(--border);border-radius:8px;padding:8px 14px;min-width:170px;background:var(--white)"><div style="font-size:11px;color:var(--slate)">'+rot+'</div><div style="font-size:15px;font-weight:700;'+MONO+'">'+(t?('R$ '+nf(t.v)+(t.l?' '+t.l:'')):'—')+'</div></div>'; };
+    var caixasTot='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">'+cxTot('Total do Ativo','1')+cxTot('Total do Passivo (inclui PL)','2')+cxTot('Total das Receitas','3')+cxTot('Total das Despesas','4')+'</div>';
     var busca=String(s.busca||'').toLowerCase();
     var vis=contas.filter(function(c){ if(s.so==='analiticas'&&!c.is_analytic) return false; if(s.so==='sinteticas'&&c.is_analytic) return false; return !busca||(String(c.description||'').toLowerCase().indexOf(busca)>=0||String(c.code).indexOf(busca)>=0||String(c.classification).indexOf(busca)>=0); });
-    var h='<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:10px">'
+    var h=caixasTot+'<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:10px">'
       +'<div><div style="font-size:11px;color:var(--slate)">Balancete</div><select class="si" onchange="'+vzCall(eid,T,'{periodo:this.value}')+'">'+sums.map(function(x){ return optHtml(chave(x),(x.competence?x.competence.slice(5)+'/'+x.competence.slice(0,4)+' · ':'')+brDeIso(x.period_start)+' a '+brDeIso(x.period_end),chave(x)===s.periodo); }).join('')+'</select></div>'
       +'<div><div style="font-size:11px;color:var(--slate)">Contas</div><select class="si" onchange="'+vzCall(eid,T,'{so:this.value}')+'">'+optHtml('todas','Todas (sintéticas e analíticas)',s.so==='todas')+optHtml('analiticas','Só analíticas',s.so==='analiticas')+optHtml('sinteticas','Só sintéticas',s.so==='sinteticas')+'</select></div>'
       +'<div><div style="font-size:11px;color:var(--slate)">Buscar conta</div><input class="fi" style="width:220px" value="'+esc2(s.busca||'')+'" placeholder="nome, código ou classificação + Enter" onchange="'+vzCall(eid,T,'{busca:this.value}')+'"></div></div>'
       +'<div style="font-size:13px;margin-bottom:8px">Resultado do <b>mês</b>: '+tagRes(res(sm.monthly_result_type,sm.monthly_result_amount,sm.monthly_result_side,sm.monthly_result_signed))+'<br>Resultado do <b>exercício</b>: '+tagRes(res(sm.exercise_result_type,sm.exercise_result_amount,sm.exercise_result_side,sm.exercise_result_signed))+'</div>';
     h+='<div style="font-size:12px;color:var(--slate);margin-bottom:6px">'+vis.length+' de '+contas.length+' conta(s)</div>'
-      +'<div style="max-height:560px;overflow:auto;border:1px solid var(--border);border-radius:6px"><table class="luc-t" style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr>'+thH('Classificação')+thH('Código')+thH('Descrição')+thH('Saldo anterior','right')+thH('Débito','right')+thH('Crédito','right')+thH('Saldo atual','right')+'</tr></thead><tbody>'
-      +vis.map(function(c,i){ var neg=!c.is_analytic; return '<tr style="background:'+(i%2?'var(--bg)':'var(--white)')+(neg?';font-weight:700':'')+'">'+tdH(esc2(c.classification),'left',MONO)+tdH(esc2(c.code),'left',MONO)+tdH(esc2(c.description||''),'left','padding-left:'+(8+Math.max(0,(c.level||1)-1)*10)+'px')+tdH(nfLado(c.prev_balance,c.prev_side),'right',MONO)+tdH(nf(c.debit),'right',MONO)+tdH(nf(c.credit),'right',MONO)+tdH(nfLado(c.balance,c.balance_side),'right',MONO)+'</tr>'; }).join('')+'</tbody></table></div>';
+      +'<div style="max-height:560px;overflow:auto;border:1px solid var(--border);border-radius:6px"><table class="luc-t" style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr>'+thH('Classificação')+thH('Código')+thH('Descrição')+thH('Saldo anterior','right')+thH('Débito','right')+thH('Crédito','right')+thH('Saldo atual','right')+thH('Saldo na Composição','right')+thH('Conferência','center')+'</tr></thead><tbody>'
+      +vis.map(function(c,i){ var neg=!c.is_analytic;
+        var cls=String(c.classification||''), vc=(saldosComp&&Object.prototype.hasOwnProperty.call(saldosComp,cls))?Number(saldosComp[cls]):null;
+        var sa=(c.balance_side==='C'?-1:1)*Number(c.balance||0), incompat=(vc!==null&&Math.abs(sa-vc)>0.01);
+        var cod=cls.replace(/[^0-9A-Za-z._-]/g,'');
+        var desc=esc2(c.description||'');
+        if(c.is_analytic&&cod) desc='<a href="#" onclick="abrirContaNaComposicao('+"'"+esc2(eid)+"','"+ym+"','"+cod+"'"+');return false" title="Abrir esta conta na Composição de Saldos (conciliação)" style="color:var(--teal);text-decoration:none;border-bottom:1px dotted var(--teal)">'+desc+'</a>';
+        return '<tr data-cod="'+cod+'" style="background:'+(incompat?'rgba(239,68,68,.16)':(i%2?'var(--bg)':'var(--white)'))+(neg?';font-weight:700':'')+'">'+tdH(esc2(c.classification),'left',MONO)+tdH(esc2(c.code),'left',MONO)+tdH(desc,'left','padding-left:'+(8+Math.max(0,(c.level||1)-1)*10)+'px')+tdH(nfLado(c.prev_balance,c.prev_side),'right',MONO)+tdH(nf(c.debit),'right',MONO)+tdH(nf(c.credit),'right',MONO)+tdH(nfLado(c.balance,c.balance_side),'right',MONO)+tdH(vc!==null?nf(Math.abs(vc))+(vc<0?' C':(vc>0?' D':'')):'','right',MONO)+tdH(vc===null?'':(incompat?'Incompatível':'Compatível'),'center','font-size:11.5px;font-weight:700;color:'+(incompat?'#DC2626':'#16A34A'))+'</tr>'; }).join('')+'</tbody></table></div>';
     el.innerHTML=h;
   }
 
@@ -519,5 +577,5 @@
     el.innerHTML=h;
   }
 
-  root.CtbImport={abrir:abrir, fechar:fechar, escolheu:escolheu, salvar:salvar, painel:painel, aba:aba, daPasta:daPasta, vz:vz, conciliarSalvo:conciliarSalvo, _st:function(){ return st; }, _processar:processarArquivo, _montarLinhasRazao:montarLinhasRazao};
+  root.CtbImport={verificarPastaGlobal:verificarPastaGlobal, irParaCompetencia:function(eid,ym){ var s=vst['TRIAL_BALANCE|'+eid]=vst['TRIAL_BALANCE|'+eid]||{periodo:'',so:'todas',busca:''}; s.competencia=ym; }, abrir:abrir, fechar:fechar, escolheu:escolheu, salvar:salvar, painel:painel, aba:aba, daPasta:daPasta, vz:vz, conciliarSalvo:conciliarSalvo, _st:function(){ return st; }, _processar:processarArquivo, _montarLinhasRazao:montarLinhasRazao};
 })(typeof window!=='undefined'?window:this);

@@ -904,7 +904,8 @@ html.dark-mode span.af-sem-txt-badge, :root[data-theme="dark"] span.af-sem-txt-b
 <script src="fopag-lote.js?v=1"></script>
 <script src="calc-motor.js?v=19"></script>
 <script src="calc-ui.js?v=27"></script>
-<script src="analises.js?v=5"></script>
+<script src="analises-explicacoes.js?v=1"></script>
+<script src="analises.js?v=6"></script>
 <script>
 /* Campos "Adicionar empresa" / "— Escolha uma empresa —" (pedido do usuário 24/10/2026: "em todo site, onde houver esses botões de adicionar empresas, deve-se dar pra pesquisar por nome ou ID").
    Todo <select> cuja 1ª opção é "Escolha/Selecione uma empresa" ganha uma caixinha de busca logo acima: digitar filtra as empresas por NOME ou ID e a lista abre mostrando só as que batem;
@@ -1010,7 +1011,7 @@ html.dark-mode span.af-sem-txt-badge, :root[data-theme="dark"] span.af-sem-txt-b
 </script>
 <script src="pride-fluxo-parser.js?v=1"></script>
 <script src="contabil-parsers.js?v=1"></script>
-<script src="contabil-import.js?v=2"></script>
+<script src="contabil-import.js?v=5"></script>
 <script src="itau-extrato-parsers.js?v=1"></script>
 <script src="extrato-generico.js?v=1"></script>
 <script src="supabase-config.js"></script>
@@ -1091,7 +1092,7 @@ html.dark-mode span.af-sem-txt-badge, :root[data-theme="dark"] span.af-sem-txt-b
   <div class="ni" id="n-parcelamentos" onclick="goPage('parcelamentos')"><span class="ic">🗓️</span>Parcelamentos</div>
   <div class="ni" id="n-imoveis" onclick="goPage('imoveis')"><span class="ic">🏢</span>Imóveis</div>
   <div class="ni" id="n-emprestimos" onclick="goPage('emprestimos')"><span class="ic">🏦</span>Empréstimos</div>
-  <div class="ni" id="n-compsaldos" onclick="goPage('comp-hub')"><span class="ic">⊞</span>Composição de Saldos</div>
+  <div class="ni" id="n-compsaldos" onclick="goCompPage('comp')"><span class="ic"><img src="assets/puzzle-composicao.svg" alt="" style="height:16px;width:16px;vertical-align:middle"></span>Composição de Saldos</div>
   <div class="ni" id="n-democ" onclick="goPage('democ')"><span class="ic">📒</span>Demonstrativos Contábeis</div>
   <div class="ni" id="n-analises" onclick="goPage('analises')"><span class="ic">🔬</span>Análises Contábeis</div>
   <div class="ni" id="n-fiscal" onclick="goPage('fiscal-hub')"><span class="ic">🧾</span>Controle Fiscal</div>
@@ -1116,7 +1117,12 @@ html.dark-mode span.af-sem-txt-badge, :root[data-theme="dark"] span.af-sem-txt-b
 
 <div class="page" id="page-home">
   <div class="ptitle" style="margin-bottom:4px">Início</div>
-  <div class="psub" style="margin-bottom:18px">Escolha um módulo</div>
+  <div class="psub" style="margin-bottom:10px">Escolha um módulo</div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+    <span style="font-size:11.5px;color:var(--slate)">Arraste um módulo e solte em cima de outro: ele passa a ficar antes dele.</span>
+    <button class="btn bo bsm" onclick="homeOrdemAlfabetica()" title="Organiza os módulos de A a Z">A–Z Ordem alfabética</button>
+    <button class="btn bo bsm" onclick="homeOrdemOriginal()" title="Volta à ordem padrão do menu">↺ Ordem original</button>
+  </div>
   <div id="homeCardsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px"></div>
 </div>
 
@@ -3715,7 +3721,7 @@ janela, não cancela nada, então o chip deixa reabrir pra ver o resultado. -->
 
 <!-- ═══ COMPOSIÇÃO DE SALDOS (iframe) ═══ -->
 <div class="page" id="page-comp" style="display:none;padding:0;height:calc(100vh - 52px)">
-  <div class="crumb-voltar" style="padding:10px 20px;border-bottom:1px solid var(--border);flex-shrink:0"><button class="btn bo bsm" onclick="goPage('comp-hub')">← Voltar à Composição de Saldos</button></div>
+  <div class="crumb-voltar" id="compCrumbVoltar" style="display:none;padding:10px 20px;border-bottom:1px solid var(--border);flex-shrink:0"><button class="btn bo bsm" onclick="goCompPage('comp')">← Voltar à lista de empresas</button></div>
   <iframe id="compIframe" style="width:100%;flex:1;border:none" allowfullscreen></iframe>
 </div>
 
@@ -3759,7 +3765,7 @@ janela, não cancela nada, então o chip deixa reabrir pra ver o resultado. -->
     <div id="appFinCards" style="display:flex;gap:12px;padding-right:8px"></div>
   </div>
   <div class="psub">Situação atual de cada empresa, calculada pelo selo de Automação das contas correntes (Visão Geral): todas com Automação = Automação; parte sim, parte não = Híbrido; nenhuma = Extrato</div>
-  <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+  <div style="display:none">
     <select id="appFinFiltroResp" class="si" onchange="renderAppFinanceiro()" style="min-width:150px">
       <option value="">Todos responsáveis</option>
     </select>
@@ -3781,6 +3787,14 @@ janela, não cancela nada, então o chip deixa reabrir pra ver o resultado. -->
           <th style="background:var(--ink2);color:#fff;white-space:nowrap;min-width:100px">Resp</th>
           <th style="background:var(--ink2);color:#fff;white-space:nowrap;min-width:120px">Tributação</th>
           <th style="background:var(--ink2);color:#fff;white-space:nowrap;min-width:140px">Situação</th>
+        </tr>
+        <tr id="appFinFilterRow" style="background:var(--ink2)">
+          <th style="background:var(--ink2);padding:4px 6px"><input class="si" id="appFinHId" placeholder="ID" oninput="renderAppFinanceiro()" style="width:100%;min-width:48px;font-size:11px;padding:3px 6px"></th>
+          <th style="background:var(--ink2);padding:4px 6px"><input class="si" id="appFinHEmp" placeholder="Filtrar empresa…" oninput="renderAppFinanceiro()" style="width:100%;font-size:11px;padding:3px 6px"></th>
+          <th style="background:var(--ink2);padding:4px 6px"><input class="si" id="appFinHCnpj" placeholder="CNPJ" oninput="renderAppFinanceiro()" style="width:100%;font-size:11px;padding:3px 6px"></th>
+          <th style="background:var(--ink2);padding:4px 6px"><select class="si" id="appFinHResp" onchange="renderAppFinanceiro()" style="width:100%;font-size:11px;padding:3px 4px"><option value="">Todos</option></select></th>
+          <th style="background:var(--ink2);padding:4px 6px"><select class="si" id="appFinHTrib" onchange="renderAppFinanceiro()" style="width:100%;font-size:11px;padding:3px 4px"><option value="">Todas</option></select></th>
+          <th style="background:var(--ink2);padding:4px 6px"><select class="si" id="appFinHSit" onchange="renderAppFinanceiro()" style="width:100%;font-size:11px;padding:3px 4px"><option value="">Todas</option><option value="Automação">Automação</option><option value="Híbrido">Híbrido</option><option value="Extrato">Extrato</option></select></th>
         </tr>
       </thead>
       <tbody id="appFinTbody"></tbody>
@@ -7142,7 +7156,7 @@ function renderHomeCards(){
   const grid=document.getElementById('homeCardsGrid');
   if(!grid) return;
   const itens=[...document.querySelectorAll('aside .ni')];
-  grid.innerHTML=itens.map(ni=>{
+  const _cards=itens.map(ni=>{
     const onclick=ni.getAttribute('onclick')||'';
     const icEl=ni.querySelector('.ic');
     const icone=icEl?.textContent||'📄';
@@ -7159,11 +7173,50 @@ function renderHomeCards(){
     // a variação de claro/escuro interna, então os detalhes continuam
     // visíveis. Chip com fundo teal bem claro (var(--teal-bg)) pra dar
     // contraste sem apagar o glifo.
-    return `<div onclick="${esc(onclick)}" style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:16px 12px;text-align:center;cursor:pointer;transition:transform .1s,box-shadow .1s;display:flex;flex-direction:column;align-items:center;gap:8px" onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.12)'" onmouseleave="this.style.transform='';this.style.boxShadow=''">
-      ${icImg?`<div style="min-width:40px;height:40px;padding:0 8px;border-radius:10px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center"><img src="${icImg.src}" alt="" style="height:24px"></div>`:`<div style="width:40px;height:40px;border-radius:10px;background:var(--teal-bg);display:flex;align-items:center;justify-content:center;font-size:22px"><span style="filter:grayscale(1) sepia(1) saturate(6) hue-rotate(188deg) brightness(.92)">${icone}</span></div>`}
+    return {k:texto,h:`<div data-home-key="${esc(texto)}" draggable="true" onclick="${esc(onclick)}" style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:16px 12px;text-align:center;cursor:pointer;transition:transform .1s,box-shadow .1s;display:flex;flex-direction:column;align-items:center;gap:8px" onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.12)'" onmouseleave="this.style.transform='';this.style.boxShadow=''">
+      ${icImg?`<div style="min-width:40px;height:40px;padding:0 8px;border-radius:10px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center"><img src="${icImg.src}" alt="" style="height:24px"></div>`:`<div style="width:40px;height:40px;border-radius:10px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px"><span>${icone}</span></div>`}
       <div style="font-size:12.5px;font-weight:600;color:var(--ink)">${esc(texto)}</div>
-    </div>`;
-  }).join('');
+    </div>`};
+  });
+  // ordem escolhida pelo usuário (arrastar/alfabética); módulo novo ou fora da lista salva vai para o fim, na ordem do menu
+  const _ordem=S.g('home_ordem_'+_homeUid())||[];
+  const _pos=k=>{ const i=Array.isArray(_ordem)?_ordem.indexOf(k):-1; return i<0?1e6:i; };
+  const _orig=new Map(_cards.map((c,i)=>[c.k,i]));
+  _cards.sort((a,b)=>(_pos(a.k)-_pos(b.k))||(_orig.get(a.k)-_orig.get(b.k)));
+  grid.innerHTML=_cards.map(c=>c.h).join('');
+  _homeLigarArrastar(grid);
+}
+// ── Organizar a tela inicial (pedido do usuário 05/11/2026): só muda a ORDEM de exibição dos cards; nada de dados é tocado.
+// A ordem fica guardada por usuário (lista de nomes de módulo); sem ela, vale a ordem do menu.
+function _homeUid(){ try{ return (currentUser&&(currentUser.id||currentUser.nome))||'padrao'; }catch(e){ return 'padrao'; } }
+function _homeSalvarOrdem(grid){
+  try{ S.s('home_ordem_'+_homeUid(), [...grid.querySelectorAll('[data-home-key]')].map(c=>c.dataset.homeKey)); }catch(e){ console.warn('ordem home',e); }
+}
+function _homeLigarArrastar(grid){
+  let arrastando=null;
+  grid.querySelectorAll('[data-home-key]').forEach(card=>{
+    card.addEventListener('dragstart',e=>{ arrastando=card; card.style.opacity='.4'; try{ e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',card.dataset.homeKey); }catch(_){} });
+    card.addEventListener('dragend',()=>{ card.style.opacity=''; grid.querySelectorAll('[data-home-key]').forEach(c=>{ c.style.outline=''; }); arrastando=null; });
+    card.addEventListener('dragover',e=>{ if(!arrastando||arrastando===card) return; e.preventDefault(); card.style.outline='2px dashed var(--teal)'; });
+    card.addEventListener('dragleave',()=>{ card.style.outline=''; });
+    card.addEventListener('drop',e=>{ e.preventDefault(); card.style.outline=''; if(!arrastando||arrastando===card) return; grid.insertBefore(arrastando,card); _homeSalvarOrdem(grid); });
+  });
+  if(!grid._homeDropFim){   // soltar numa área vazia da grade: vai para o fim
+    grid._homeDropFim=true;
+    grid.addEventListener('dragover',e=>{ if(e.target===grid) e.preventDefault(); });
+    grid.addEventListener('drop',e=>{ if(e.target!==grid) return; e.preventDefault(); const c=grid.querySelector('[data-home-key][style*="opacity"]'); if(c){ grid.appendChild(c); _homeSalvarOrdem(grid); } });
+  }
+}
+function homeOrdemAlfabetica(){
+  const grid=document.getElementById('homeCardsGrid'); if(!grid) return;
+  [...grid.querySelectorAll('[data-home-key]')].sort((a,b)=>a.dataset.homeKey.localeCompare(b.dataset.homeKey,'pt-BR')).forEach(c=>grid.appendChild(c));
+  _homeSalvarOrdem(grid);
+  toast('Módulos em ordem alfabética ✓','ok');
+}
+function homeOrdemOriginal(){
+  try{ S.s('home_ordem_'+_homeUid(), []); }catch(e){}
+  renderHomeCards();
+  toast('Ordem original do menu restaurada ✓','ok');
 }
 function _empVisivelNoFech(e,f){
   f=f||S.fechAtual(); if(!f) return true; const m=String(f).slice(0,7);
@@ -7942,10 +7995,25 @@ function _empJaFoiPresumido(e){
   if(/presumido/i.test(e.reg||'')) return true;
   return Object.keys(e.tribMes||{}).some(k=>/presumido/i.test(e.tribMes[k]||''));
 }
+// ── Tarefa automática "Composição de Saldos" (pedido do usuário 05/11/2026): nasce sozinha em TODA empresa ativa que ainda não saiu do escritório
+// e só é COBRADA a partir de 10/2026 (de 09/2026 para trás aparece como "não se aplica").
+const TAREFA_COMP_SALDOS_NOME='Composição de Saldos';
+const TAREFA_COMP_SALDOS_DESDE='2026-10';
+function _ehTarefaCompSaldos(item){ return String((item&&item.nome)||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim()==='composicao de saldos'; }
+function _empAtivaSemSaida(e){
+  if(!e||e.status==='ex') return false;
+  if(e.dataSaida) return false;
+  const fs=e.fechamentoStatus; if(fs&&fs.tipo&&fs.tipo!=='ativo') return false;
+  return true;
+}
 function _chkComTarefasAuto(eid,c){
   try{
     if(!c) return c;
     if(!Array.isArray(c.tarefas)) c.tarefas=[];
+    if(!c.tarefas.some(_ehTarefaCompSaldos)){
+      const e0=S.empsRaw().find(x=>String(x.eid)===String(eid));
+      if(_empAtivaSemSaida(e0)) c.tarefas.push({nome:TAREFA_COMP_SALDOS_NOME,info:'',meses:{},formato:''});
+    }
     if(!c.tarefas.some(_ehTarefaDemoTrim)){
       const e=S.empsRaw().find(x=>String(x.eid)===String(eid));
       if(_empJaFoiPresumido(e)) c.tarefas.push({nome:TAREFA_DEMO_TRIM_NOME,info:'',meses:{},formato:''});
@@ -7955,6 +8023,7 @@ function _chkComTarefasAuto(eid,c){
 }
 function foraDoTrimestre(item,m,eid){
   const mm=m.substring(5,7);
+  if(_ehTarefaCompSaldos(item)&&m<TAREFA_COMP_SALDOS_DESDE) return true; // não cobrada de 09/2026 para trás
   if(eid!==undefined&&eid!==null&&_ehTarefaDemoTrim(item)&&!_empPresumidoNoTrimestre(eid,m)) return true;
   if(isTrimestralItem(item) && !MESES_TRIMESTRE.includes(mm)) return true;
   if(isSoDezembroItem(item) && mm!=='12') return true;
@@ -9641,7 +9710,7 @@ const DEMOC_TIPOS_CONTAS={
   balancete:{label:'Balancete', labelPlural:'Balancetes', labelPluralMin:'balancetes', edgeFn:'democ-extrair-balancete'},
   dre:{label:'DRE', labelPlural:'DREs', labelPluralMin:'DREs', edgeFn:'democ-extrair-dre'},
 };
-const DEMOC_TIPOS_ORDEM=['balancete','dre','razao','faturamento','notas'];
+const DEMOC_TIPOS_ORDEM=['balancete','dre','faturamento','notas']; // 'razao' (aba Livros Razão) retirada a pedido do usuário em 05/11/2026; os dados já salvos continuam guardados
 function _democLabelTipo(tipo){ if(tipo==='faturamento') return 'Faturamento'; if(tipo==='razao') return 'Livro Razão'; if(tipo==='notas') return 'Nota Explicativa'; return DEMOC_TIPOS_CONTAS[tipo].label; }
 function _democLabelPluralTipo(tipo){ if(tipo==='faturamento') return 'Relatórios de Faturamento'; if(tipo==='razao') return 'Livros Razão'; if(tipo==='notas') return 'Notas Explicativas'; return DEMOC_TIPOS_CONTAS[tipo].labelPlural; }
 function _democEdgeFnTipo(tipo){ return tipo==='faturamento'?'luc-extrair-faturamento':DEMOC_TIPOS_CONTAS[tipo].edgeFn; }
@@ -9822,6 +9891,8 @@ function _democFmtDataHora(iso){
   return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 }
 function _democRenderLogSubstituicoes(){
+  return ''; // histórico de atualizações automáticas retirado da tela a pedido do usuário (05/11/2026); os registros continuam guardados
+
   var log=democGetLogSubstituicoes();
   if(!log.length) return '';
   var admin=isAdmin(currentUser);
@@ -10192,6 +10263,23 @@ async function democVerificarPasta(){
   if(btn){ btn.disabled=true; btn.textContent='Verificando pasta…'; }
 
   try{
+    // Balancete e DRE em PDF: mesmo leitor da importação por dentro da empresa (sem IA, identifica a empresa pelo CNPJ do PDF)
+    let relNovo=null;
+    try{
+      if(window.CtbImport&&CtbImport.verificarPastaGlobal){
+        if(btn) btn.textContent='Lendo Balancetes e DREs…';
+        relNovo=await CtbImport.verificarPastaGlobal(handleRaiz);
+      }
+    }catch(e){ console.error('verificarPastaGlobal',e); toast('Erro ao ler Balancetes/DREs da pasta: '+(e.message||e),'err'); }
+    if(relNovo){
+      const msgs=[];
+      if(relNovo.novos) msgs.push(relNovo.novos+' Balancete(s)/DRE(s) importado(s)');
+      if(relNovo.bloqueados.length) msgs.push(relNovo.bloqueados.length+' não importado(s): '+relNovo.bloqueados.slice(0,3).join(' | '));
+      if(relNovo.erros.length) msgs.push(relNovo.erros.length+' erro(s): '+relNovo.erros.slice(0,2).join(' | '));
+      if(msgs.length) toast(msgs.join(' — '),(relNovo.bloqueados.length||relNovo.erros.length)?'err':'ok');
+      else if(relNovo.vistos) toast(relNovo.vistos+' PDF(s) de Balancete/DRE na pasta, todos já importados.','ok');
+      renderDemoc();
+    }
     // 1ª passada: só nomes de arquivo + data de modificação (instantâneo,
     // não abre conteúdo nenhum) — decide o que precisa ser reaberto de verdade.
     const pendentes=[]; // {tipo,eid,ano,mes,fh,nome,lastModified}
@@ -10209,6 +10297,7 @@ async function democVerificarPasta(){
           // leitor sem IA) — faturamento continua só em .pdf.
           const ehExtensaoValida=nomeMin.endsWith('.pdf')||((tipo==='balancete'||tipo==='dre')&&(nomeMin.endsWith('.xlsx')||nomeMin.endsWith('.xls')));
           if(!ehExtensaoValida) continue;
+          if((tipo==='balancete'||tipo==='dre')&&nomeMin.endsWith('.pdf')) continue; // PDF de Balancete/DRE: lido pelo leitor novo (sem IA), logo abaixo
           totalArquivos++;
           const info=_democParsearNomeArquivoPasta(nomeArq);
           if(!info){ semPadrao++; continue; }
@@ -10812,6 +10901,7 @@ function _democRenderContasSecao(tipo, eid){
   var docsAntigos=democGetDocsLista(tipo,eid), tipoCtb=tipo==='balancete'?'TRIAL_BALANCE':'INCOME_STATEMENT';
   var novo=_democRenderCtbAba(eid,tipoCtb,DEMOC_TIPOS_CONTAS[tipo].label,tipo==='balancete'?'Balancete':'DRE',tipo==='balancete'?'Importa todas as contas (sintéticas e analíticas), o resumo e os resultados do mês e do exercício.':'Importa todas as linhas da DRE (contas, grupos, subtotais e resultado).');
   var pend=democGetNovasContasPendentes(tipo,eid).length;
+  if(tipo==='balancete') return novo; // seção "modo antigo" retirada a pedido do usuário em 05/11/2026 (dados antigos continuam guardados)
   return novo+'<details style="margin-top:18px;border-top:1px solid var(--border);padding-top:10px"'+((docsAntigos.length||pend)?' open':'')+'><summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--slate)">Registros anteriores e importação por Excel/IA (modo antigo)'+(docsAntigos.length?' — '+docsAntigos.length+' mês(es)':'')+'</summary><div style="margin-top:10px">'+_democRenderContasSecaoAntigo(tipo,eid)+'</div></details>';
 }
 function _democRenderContasSecaoAntigo(tipo, eid){
@@ -10878,6 +10968,54 @@ function _democContasAcumuladas(tipo,eid,ano,mesLimite){
   });
   return acumulado;
 }
+// Saldos finais da Composição de Saldos por conta no mês (gravados pela própria Composição: comp_saldos_eid_<eid>_<aaaa-mm>).
+// Usa o que já está em memória e confere na nuvem (no máximo 1x a cada 20s por mês); se mudou, redesenha.
+var _democSaldosCompChecado={};
+function _democSaldosComposicao(eid,ano,mes){
+  var k='comp_saldos_eid_'+eid+'_'+ano+'-'+String(mes).padStart(2,'0');
+  var v=S.g(k);
+  var agora=Date.now();
+  if(!_democSaldosCompChecado[k]||agora-_democSaldosCompChecado[k]>20000){
+    _democSaldosCompChecado[k]=agora;
+    try{
+      _supaClient.from('dados_app').select('value').eq('key',k).maybeSingle().then(function(r){
+        var nv=r&&r.data?r.data.value:null;
+        if(nv&&typeof nv==='object'&&JSON.stringify(nv)!==JSON.stringify(S.g(k))){ cccCache[k]=nv; try{ renderDemoc(); }catch(e){} }
+      });
+    }catch(e){}
+  }
+  return (v&&typeof v==='object')?v:null;
+}
+// Link Balancete → conta na Composição de Saldos (já na tela de conciliação da conta, no mês)
+function abrirContaNaComposicao(eid,ym,cod){
+  goPage('comp');
+  var iframe=document.getElementById('compIframe'); if(!iframe) return;
+  var msg={type:'abrirConta',eid:String(eid),mes:ym,codigo:cod};
+  var enviar=function(){ try{ iframe.contentWindow.postMessage(msg,'*'); }catch(e){} };
+  var pronto=false;
+  try{ pronto=iframe.contentWindow.location.href.indexOf('composicao.html')>=0 && iframe.contentDocument.readyState==='complete'; }catch(e){}
+  if(pronto) enviar();
+  else iframe.addEventListener('load',function(){ setTimeout(enviar,50); },{once:true});
+}
+// Link conta (Composição) → linha da conta no Balancete do mês (Demonstrativos Contábeis)
+// A Composição avisa se está na lista inicial de empresas (sem botão de voltar) ou dentro de uma empresa/tela (com botão)
+window.addEventListener('message',function(ev){ var m=ev&&ev.data; if(m&&m.type==='compCrumb'){ var c=document.getElementById('compCrumbVoltar'); if(c) c.style.display=m.visivel?'':'none'; } });
+window.addEventListener('message',function(ev){
+  var m=ev&&ev.data; if(!m||m.type!=='abrirBalancete') return;
+  try{
+    var eid=String(m.eid), partes=String(m.mes||'').split('-');
+    _democEidAtual=eid; _democTipoAtivo='balancete';
+    try{ if(window.CtbImport&&CtbImport.irParaCompetencia) CtbImport.irParaCompetencia(eid,String(m.mes)); }catch(e){}
+    goPage('democ');
+    var cod=String(m.codigo||'').replace(/[^0-9A-Za-z._-]/g,'');
+    var tent=0, timer=setInterval(function(){
+      tent++;
+      var tr=document.querySelector('#democContainer tr[data-cod="'+cod+'"]');
+      if(tr){ clearInterval(timer); tr.scrollIntoView({block:'center'}); tr.style.outline='2px solid var(--teal)'; setTimeout(function(){ tr.style.outline=''; },4000); }
+      else if(tent>16) clearInterval(timer);
+    },250);
+  }catch(e){ console.error('abrirBalancete',e); }
+});
 function _democRenderPagerEContas(tipo,eid,docs){
   docs=docs||democGetDocsLista(tipo,eid);
   if(!docs.length) return '<div style="color:var(--slate);font-size:12.5px;margin-top:10px">Nenhum documento anexado ainda.</div>';
@@ -10888,6 +11026,8 @@ function _democRenderPagerEContas(tipo,eid,docs){
   var dados=democGetDoc(tipo,eid,atual.ano,atual.mes);
   var mostraAcumulado=(tipo==='dre');
   var acumulado=mostraAcumulado?_democContasAcumuladas(tipo,eid,atual.ano,atual.mes):null;
+  // Conferência com a Composição de Saldos (pedido do usuário 05/11/2026): saldo final da conta na composição do mês × Saldo Atual do Balancete.
+  var saldosComp=(tipo==='balancete')?_democSaldosComposicao(eid,atual.ano,atual.mes):null;
   var h='<div style="display:flex;align-items:center;gap:10px;margin-top:12px;margin-bottom:8px;flex-wrap:wrap">'
     +'<button class="btn bo bsm" '+(idx<=0?'disabled':'')+' onclick="democMesVisNavegar(\''+tipo+'\',\''+eid+'\',-1)">◄</button>'
     +'<div style="font-weight:700;min-width:130px;text-align:center;color:#1E3558">'+(LUC_MESES_FULL[parseInt(atual.mes,10)-1]||atual.mes)+'/'+atual.ano+'</div>'
@@ -10915,20 +11055,28 @@ function _democRenderPagerEContas(tipo,eid,docs){
         +'<th style="padding:6px 10px;text-align:right;background:var(--ink2);color:#fff">Débito</th>'
         +'<th style="padding:6px 10px;text-align:right;background:var(--ink2);color:#fff">Crédito</th>'
         +'<th style="padding:6px 10px;text-align:right;background:var(--ink2);color:#fff">Saldo Atual</th>'
+        +'<th style="padding:6px 10px;text-align:right;background:var(--ink2);color:#fff" title="Saldo final da conta na Composição de Saldos (último dia do mês)">Saldo na Composição</th>'
+        +'<th style="padding:6px 10px;text-align:center;background:var(--ink2);color:#fff">Conferência</th>'
       ):'<th style="padding:6px 10px;text-align:right;background:var(--ink2);color:#fff">Saldo do mês</th>')
     +(mostraAcumulado?'<th style="padding:6px 10px;text-align:right;background:var(--ink2);color:#fff">Acumulado no ano</th>':'')
     +'</tr></thead><tbody>';
   dados.contas.forEach(function(c,i){
     var chaveConta=c.codigo_analitico||('nome:'+c.nome_conta);
     var saldoAtual=c.saldo_atual!=null?c.saldo_atual:c.saldo; // fallback pra documento importado no formato antigo
-    h+='<tr style="background:'+(i%2===0?'var(--white)':'var(--bg)')+'">'
+    var _vComp=(saldosComp&&c.codigo_analitico&&Object.prototype.hasOwnProperty.call(saldosComp,c.codigo_analitico))?saldosComp[c.codigo_analitico]:null;
+    var _incompat=(ehBalanceteDetalhado&&_vComp!==null&&Math.abs((parseFloat(saldoAtual)||0)-_vComp)>0.01);
+    var _codLnk=String(c.codigo_analitico||'').replace(/[^0-9A-Za-z._-]/g,'');
+    var _podeLnk=(ehBalanceteDetalhado&&_codLnk&&c.tipo!=='sintetica');
+    h+='<tr data-cod="'+_codLnk+'" style="background:'+(_incompat?'rgba(239,68,68,.16)':(i%2===0?'var(--white)':'var(--bg)'))+'">'
       +'<td style="padding:5px 10px;font-family:var(--mono)">'+esc(c.codigo_analitico||'')+'</td>'
-      +'<td style="padding:5px 10px">'+esc(c.nome_conta||'')+'</td>'
+      +'<td style="padding:5px 10px">'+(_podeLnk?'<a href="#" onclick="abrirContaNaComposicao(\''+eid+'\',\''+atual.ano+'-'+String(atual.mes).padStart(2,'0')+'\',\''+_codLnk+'\');return false" title="Abrir esta conta na Composição de Saldos (conciliação)" style="color:var(--teal);text-decoration:none;border-bottom:1px dotted var(--teal)">'+esc(c.nome_conta||'')+'</a>':esc(c.nome_conta||''))+'</td>'
       +(ehBalanceteDetalhado?(
           '<td style="padding:5px 10px;text-align:right;font-family:var(--mono)">'+(c.saldo_anterior!=null?_fmt(c.saldo_anterior):'—')+'</td>'
           +'<td style="padding:5px 10px;text-align:right;font-family:var(--mono)">'+(c.debito!=null?_fmt(c.debito):'—')+'</td>'
           +'<td style="padding:5px 10px;text-align:right;font-family:var(--mono)">'+(c.credito!=null?_fmt(c.credito):'—')+'</td>'
           +'<td style="padding:5px 10px;text-align:right;font-family:var(--mono)">'+(saldoAtual!=null?_fmt(saldoAtual):'—')+'</td>'
+          +'<td style="padding:5px 10px;text-align:right;font-family:var(--mono)">'+(_vComp!==null?_fmt(_vComp):'')+'</td>'
+          +'<td style="padding:5px 10px;text-align:center;font-size:11.5px;font-weight:700;color:'+(_incompat?'#DC2626':'#16A34A')+'">'+(_vComp===null?'':(_incompat?'Incompatível':'Compatível'))+'</td>'
         ):'<td style="padding:5px 10px;text-align:right;font-family:var(--mono)">'+(saldoAtual!=null?_fmt(saldoAtual):'—')+'</td>')
       +(mostraAcumulado?'<td style="padding:5px 10px;text-align:right;font-family:var(--mono)">'+_fmt(acumulado[chaveConta]||0)+'</td>':'')
       +'</tr>';
@@ -15389,6 +15537,19 @@ function _convMpSetStatus(alvo,msg,tipo){
   el.style.color=cor;
   el.textContent=msg;
 }
+const CONV_MP_NF_EMPRESAS=['203']; // empresas cujo relatório de Vendas BR recebe o nº da NF de venda no fim do histórico
+// Nomes "compatíveis" mesmo com parte cortada ou abreviada (pedido do usuário 05/11/2026): o nome mais curto precisa estar inteiro dentro do mais longo,
+// aceitando prefixo (ex.: "SILV" ~ "SILVA") e inicial (ex.: "J" ~ "JOSE"). Pelo menos 2 palavras batendo (ou 1 palavra com 5+ letras quando o nome só tem uma).
+function _convMpNomesCompativeis(a,b){
+  const ign=new Set(['DA','DE','DO','DAS','DOS','E','D']); // 'D' sozinho = "da/de/do" cortado no fim do campo
+  const tok=t=>_convMpRemoverAcentos(String(t||'')).toUpperCase().split(/[^A-Z]+/).filter(w=>w&&!ign.has(w));
+  const A=tok(a), B=tok(b); if(!A.length||!B.length) return false;
+  const [curto,longo]=A.length<=B.length?[A,B]:[B,A];
+  const casa=(t,u)=>t===u||(t.length>=3&&u.length>=3&&(u.startsWith(t)||t.startsWith(u)))||(t.length===1&&u.startsWith(t))||(u.length===1&&t.startsWith(u));
+  const usados=new Set(); let ok=0;
+  for(const t of curto){ const i=longo.findIndex((u,k)=>!usados.has(k)&&casa(t,u)); if(i<0) return false; usados.add(i); ok++; }
+  return curto.length>=2?ok>=2:(curto[0].length>=5);
+}
 async function processarConvMp(alvo){
   const btn=document.getElementById('convMpBtnProcessar_'+alvo);
   _convMpSetStatus(alvo,'','');
@@ -15451,6 +15612,45 @@ async function processarConvMp(alvo){
       return;
     }
 
+    // ── NF no histórico (pedido do usuário 05/11/2026, só Taylu #203): cada venda do relatório é amarrada a UMA NF de venda do site por CPF/CNPJ (ou nome) + valor bruto + data
+    // da venda = data de emissão; o nº da NF vai no FIM do histórico ("… - NF 8750"). Duas NFs possíveis, ou a mesma NF para duas vendas = não coloca (fica sem NF). ──
+    let nfsVenda=null, nfAviso='';
+    const _eidMp=String(_convMpResolveAlvo(alvo).eidMatriz||'');
+    if(CONV_MP_NF_EMPRESAS.includes(_eidMp)){ // por enquanto só a Taylu; para outra empresa usar o mesmo recurso, acrescente o nº dela aqui
+      try{
+        const _p2=n=>String(n).padStart(2,'0');
+        const iniNf=deAno+'-'+_p2(deMes)+'-01', fimNf=ateAno+'-'+_p2(ateMes)+'-'+_p2(new Date(ateAno,ateMes,0).getDate());
+        const { data: nfsRaw, error: eNf } = await _lancctbFetchTudo(()=>_supaClient.from('notas_fiscais').select('numero,cnpj_destinatario,nome_destinatario,valor_total,data_emissao,natureza_operacao')
+          .eq('empresa_eid',_eidMp).eq('direcao','venda').gte('data_emissao',iniNf).lte('data_emissao',fimNf+'T23:59:59'));
+        if(eNf) throw eNf;
+        nfsVenda=(nfsRaw||[]).map(n=>({ numero:String(n.numero||'').replace(/^0+(?=\d)/,''), doc:String(n.cnpj_destinatario||'').replace(/\D/g,''), nome:n.nome_destinatario||'', valor:Number(n.valor_total), data:String(n.data_emissao||'').slice(0,10),
+          ret:/RETORNO|DEVOLU/.test(_convMpRemoverAcentos(String(n.natureza_operacao||'')).toUpperCase()), cancelada:false }));
+        // Venda cancelada por devolução/retorno: NF de "Retorno/Devolução" do mesmo cliente e mesmo valor anula a NF de venda anterior mais recente ainda não anulada;
+        // a que vale é a PRÓXIMA venda (ex.: 8775 anulada pelo retorno 8835, vale a 8838). Retornos nunca são candidatos.
+        const _chaveCli=n=>n.doc||_convMpRemoverAcentos(n.nome).toUpperCase().replace(/[^A-Z]+/g,' ').trim();
+        const _ordenadas=[...nfsVenda].sort((a,b)=>(a.data<b.data?-1:a.data>b.data?1:(parseInt(a.numero,10)||0)-(parseInt(b.numero,10)||0)));
+        _ordenadas.filter(n=>n.ret).forEach(rt=>{
+          const alvoNf=[..._ordenadas].reverse().find(v=>!v.ret&&!v.cancelada&&_chaveCli(v)===_chaveCli(rt)&&Math.abs(v.valor-rt.valor)<0.005&&(v.data<rt.data||(v.data===rt.data&&(parseInt(v.numero,10)||0)<(parseInt(rt.numero,10)||0))));
+          if(alvoNf) alvoNf.cancelada=true;
+        });
+      }catch(eN){ console.warn('NFs de venda (Vendas BR):',eN); nfAviso=' (não consegui ler as NFs de venda — histórico sem número de NF)'; }
+    }
+    const _nfDaVenda=(docRaw,compradorTxt,valorBruto,dataIso)=>{
+      if(!nfsVenda||!(valorBruto>0)) return null;
+      const doc=String(docRaw||'').replace(/\D/g,'');
+      const casa=n=>!n.ret&&!n.cancelada&&Math.abs(n.valor-valorBruto)<0.005&&((doc.length>=11&&n.doc&&n.doc===doc)||_convMpNomesCompativeis(n.nome,compradorTxt));
+      let cands=nfsVenda.filter(n=>n.data===dataIso&&casa(n));
+      if(!cands.length){
+        // a NF do dia da venda foi anulada por um retorno? então vale a próxima venda do mesmo cliente/valor, até 3 dias depois
+        const anuladaNoDia=nfsVenda.some(n=>n.data===dataIso&&n.cancelada&&Math.abs(n.valor-valorBruto)<0.005&&((doc.length>=11&&n.doc&&n.doc===doc)||_convMpNomesCompativeis(n.nome,compradorTxt)));
+        if(anuladaNoDia){
+          const lim=new Date(dataIso+'T00:00:00'); lim.setDate(lim.getDate()+3); const limIso=lim.getFullYear()+'-'+String(lim.getMonth()+1).padStart(2,'0')+'-'+String(lim.getDate()).padStart(2,'0');
+          cands=nfsVenda.filter(n=>n.data>dataIso&&n.data<=limIso&&casa(n));
+        }
+      }
+      const nums=[...new Set(cands.map(c=>c.numero))];
+      return nums.length===1?nums[0]:null;
+    };
     const linhas=[];
     for(let r=headerRowIdx+1;r<aoa.length;r++){
       const row=aoa[r];
@@ -15470,6 +15670,9 @@ async function processarConvMp(alvo){
       const cpfFormatado=cpfCnpj?('CPF '+_convMpFormatarCpfCnpj(cpfCnpj)):'';
       const numVenda=idxVenda>=0?(row[idxVenda]||''):'';
       const dataBr=_convMpFmtDataBr(dataObj);
+      const _rb=typeof receitaProdutos==='number'?receitaProdutos:parseFloat(String(receitaProdutos).replace(/\./g,'').replace(',','.'));
+      const _dIso=dataObj.getFullYear()+'-'+String(dataObj.getMonth()+1).padStart(2,'0')+'-'+String(dataObj.getDate()).padStart(2,'0');
+      const nfNum=_nfDaVenda(cpfCnpj,comprador,_rb,_dIso);
 
       idxOps.forEach(({op,idx})=>{
         if(idx<0)return;
@@ -15478,8 +15681,19 @@ async function processarConvMp(alvo){
         const numVal=typeof val==='number'?val:parseFloat(String(val).replace(/\./g,'').replace(',','.'));
         if(!isFinite(numVal))return;
         linhas.push({dataEditada:dataBr,operacao:op,valor:numVal,
-          historico:`${op} - ${comprador} (${cpfFormatado}) - nº da venda ${numVenda}`});
+          historico:`${op} - ${comprador} (${cpfFormatado}) - nº da venda ${numVenda}`,nfNum:nfNum||'',saleKey:r});
       });
+    }
+    // fecha a amarração: NF usada por mais de uma venda = ambígua, não entra
+    let vendasComNf=0, vendasSemNf=0;
+    if(nfsVenda){
+      const usoNf=new Map(); linhas.forEach(l=>{ if(l.nfNum){ if(!usoNf.has(l.nfNum)) usoNf.set(l.nfNum,new Set()); usoNf.get(l.nfNum).add(l.saleKey); } });
+      const vistas=new Set(), vistasSem=new Set();
+      linhas.forEach(l=>{
+        if(l.nfNum&&usoNf.get(l.nfNum).size===1){ l.historico+=' NF '+l.nfNum; vistas.add(l.saleKey); }
+        else { l.nfNum=''; vistasSem.add(l.saleKey); }
+      });
+      vendasComNf=vistas.size; vendasSemNf=[...vistasSem].filter(k=>!vistas.has(k)).length;
     }
 
     if(!linhas.length){
@@ -15495,7 +15709,7 @@ async function processarConvMp(alvo){
     const semDebitoCredito=linhas.filter(l=>{const c=(cfg.contas||{})[l.operacao]||{};return !c.debito||!c.credito;});
 
     _convMpResultados[alvo]={linhas,resumo,cfg:JSON.parse(JSON.stringify(cfg)),periodo:{deVal,ateVal},arquivo:file.name,
-      validacoes:{totalLinhas:linhas.length,semDebitoCredito:semDebitoCredito.length}};
+      validacoes:{totalLinhas:linhas.length,semDebitoCredito:semDebitoCredito.length,nfAtiva:!!nfsVenda,vendasComNf,vendasSemNf,nfAviso}};
 
     renderConvMpLista();
     toast('Arquivo processado com sucesso!','ok');
@@ -15519,6 +15733,7 @@ function renderConvMpResultado(alvo,resultado){
   });
   html+=`<div style="margin-top:10px;font-size:11px;color:var(--slate)">
     <div>✓ ${validacoes.totalLinhas} linhas geradas</div>
+    ${validacoes.nfAtiva?`<div style="color:${validacoes.vendasComNf?'#16a34a':'var(--slate)'}">✓ ${validacoes.vendasComNf} venda(s) amarrada(s) à NF (nº no fim do histórico) · ${validacoes.vendasSemNf} sem NF encontrada</div>`:''}${validacoes.nfAviso?`<div style="color:#d97706">⚠${esc(validacoes.nfAviso)}</div>`:''}
     ${validacoes.semDebitoCredito>0?`<div style="color:#dc2626">⚠ ${validacoes.semDebitoCredito} linha(s) sem conta débito/crédito configurada</div>`:'<div style="color:#16a34a">✓ Todas as linhas têm conta débito e crédito</div>'}
   </div>
   <div style="margin-top:10px;display:flex;gap:6px">
@@ -34553,6 +34768,64 @@ async function _lancctbPassadaNfNoHistorico(eid,contaId,log,restringirPeriodo){
   }catch(e){ console.warn('NF no histórico do banco:',e); }
   return out;
 }
+// ── TAYLU (#203) × MERCADO PAGO: nome do fornecedor + valor + data (pedido do usuário 05/11/2026) ──────────────────────────────────────────────────────
+// Saída do Mercado Pago cujo histórico traz o NOME do fornecedor ("Pagamento com QR Pix PTD COMERCIO DE PECAS LTDA - …") e que bate, ao mesmo tempo, com UMA parcela pendente de NF de ENTRADA ou
+// SERVIÇO TOMADO (direção compra) desse mesmo fornecedor: valor EXATO e vencimento da parcela NO MESMO DIA do pagamento → amarra sozinho. Só a Taylu e só contas Mercado Pago.
+// Conservador: se houver 2+ parcelas candidatas, 2+ lançamentos disputando a mesma parcela, nome com palavra distintiva faltando ou qualquer diferença de valor, NÃO mexe (fica pendente).
+async function _lancctbPassadaMpNfTaylu(eid,contaId,log,restringirPeriodo){
+  const out={ conciliadas:0, ignoradas:[] };
+  if(String(eid)!=='203') return out;
+  try{
+    const { data: ag } = await _supaClient.from('agencias_bancarias').select('banco_nome,descricao,conta_contabil_id,plano_contas(classificacao)').eq('id',contaId).single();
+    if(!ag||!ag.conta_contabil_id||!/mercado\s*pago/i.test(String(ag.banco_nome||'')+' '+String(ag.descricao||''))) return out;
+    const { data: ents } = await _lancctbFetchTudo(()=>_lancctbAplicarFiltroPeriodoSe(restringirPeriodo,_supaClient.from('lancamentos_extrato').select('id,data_pagamento,valor_saida,historico_bancario,conta_bancaria_id')
+      .eq('empresa_eid',eid).eq('conta_bancaria_id',contaId).eq('status_conciliacao','pendente').gt('valor_saida',0).order('data_pagamento',{ascending:true})));
+    if(!(ents||[]).length) return out;
+    const { data: parcsTodas } = await _lancctbFetchTudo(()=>_supaClient.from('notas_fiscais_parcelas').select(LANCCTB_SEL_PARCELA_MOTOR).eq('empresa_eid',eid).eq('status_conciliacao','pendente'));
+    const parcs=(parcsTodas||[]).filter(p=>p.notas_fiscais&&p.notas_fiscais.direcao==='compra'&&p.data_vencimento);
+    if(!parcs.length) return out;
+    if(log) log('Mercado Pago × NF de entrada/serviço tomado (nome + valor + data)…');
+    const r2=v=>Math.round(v*100)/100;
+    // 1) candidatas por lançamento
+    const pares=[]; const usoParcela=new Map();
+    for(const l of ents){
+      const valor=r2(Number(l.valor_saida)); const toksHist=_lancctbIdentTokens(l.historico_bancario||'');
+      const cands=parcs.filter(p=>{
+        if(String(p.data_vencimento).slice(0,10)!==String(l.data_pagamento).slice(0,10)) return false;
+        if(Math.abs(r2(Number(_lancctbNfValorParaMatching(p,valor)))-valor)>=0.005) return false;
+        const tn=_lancctbIdentTokens(p.notas_fiscais.nome_emitente||'');
+        if(!tn.length) return false;
+        return tn.every(t=>toksHist.some(h=>_lancctbIdentCasa(t,h)));   // TODAS as palavras distintivas do nome da NF aparecem no histórico
+      });
+      if(cands.length!==1) continue;
+      pares.push({ l, p:cands[0] }); usoParcela.set(cands[0].id,(usoParcela.get(cands[0].id)||0)+1);
+    }
+    const ok=pares.filter(x=>usoParcela.get(x.p.id)===1);
+    if(!ok.length) return out;
+    const { data: contaBancoInfo } = { data:{ conta_contabil_id:ag.conta_contabil_id, plano_contas:ag.plano_contas } };
+    const { data: contasFixas } = await _supaClient.from('plano_contas').select('id,numero_conta,classificacao').eq('empresa_eid',eid).in('numero_conta',['10000','10001']);
+    const contaSaidaNF=(contasFixas||[]).find(c=>c.numero_conta==='10001');
+    if(!contaSaidaNF){ out.ignoradas.push({ motivo:'conta 10001 não cadastrada no Plano de Contas' }); return out; }
+    for(const { l, p } of ok){
+      const nf=p.notas_fiscais; const valor=r2(Number(l.valor_saida));
+      const cnpjT=nf.cnpj_emitente||null, nomeT=nf.nome_emitente||'';
+      const { data: regraOv } = await _supaClient.from('regras_matching').select('conta_contabil_id,plano_contas(classificacao)').eq('empresa_eid',eid).eq('ativo',true).eq('tipo_regra','cliente_fornecedor').eq('cnpj_cpf_gatilho',cnpjT||'__nenhum__').maybeSingle();
+      const contaId2=regraOv?regraOv.conta_contabil_id:contaSaidaNF.id, classif2=regraOv?regraOv.plano_contas.classificacao:contaSaidaNF.classificacao;
+      const hist=`Pagamento a ${nomeT||cnpjT||''} - NF ${nf.numero||''} - parcela ${p.numero_parcela}`.trim();
+      const base={ empresa_eid:eid, data:l.data_pagamento, historico:hist, cliente_fornecedor_nome:nomeT||null, cnpj_cpf:cnpjT, lancamento_extrato_id:l.id, origem_match:'regra' };
+      const linhas=[
+        { ...base, classificacao:contaBancoInfo.plano_contas.classificacao, conta_contabil_id:contaBancoInfo.conta_contabil_id, tipo:'C', valor },
+        { ...base, classificacao:classif2, conta_contabil_id:contaId2, tipo:'D', valor, nf_parcela_id:p.id }
+      ];
+      const { error } = await _supaClient.rpc('criar_lancamento_partida_dobrada',{ linhas });
+      if(error){ out.ignoradas.push({ id:l.id, motivo:'erro ao gravar: '+error.message }); continue; }
+      await _supaClient.from('notas_fiscais_parcelas').update({ status_conciliacao:'conciliado', lancamento_extrato_id:l.id }).eq('id',p.id);
+      await _supaClient.from('lancamentos_extrato').update({ status_conciliacao:'conciliado' }).eq('id',l.id);
+      out.conciliadas++;
+    }
+  }catch(e){ console.warn('Mercado Pago × NF Taylu:',e); }
+  return out;
+}
 async function _lancctbRodarMatching(eid,contaId,statusCb,modo='completo',restringirPeriodo=false){
   const chaveExec=`${eid}|${contaId}`;
   if(_lancctbMatchingEmExecucao.has(chaveExec)){
@@ -34569,6 +34842,7 @@ async function _lancctbRodarMatching(eid,contaId,statusCb,modo='completo',restri
   const cb=(m)=>{ const t=rotulo+': '+m; atual.msg=t; _lancctbBarraProc(t); if(statusCb) statusCb(t); };
   try{
     if(modo==='completo'||modo==='comprovantes_recebimento'||modo==='notas_fiscais'){ try{ const ag0=(await _supaClient.from('agencias_bancarias').select('banco_codigo,banco_nome,descricao').eq('id',contaId).single()).data; if(!_lancctbContaSemNfVinculo(ag0)||String(eid)==='250'){ const rN=await _lancctbPassadaNfNoHistorico(eid,contaId,cb,restringirPeriodo); if(rN.conciliadas){ cb('NF citada no histórico: '+rN.conciliadas+' entrada(s) conciliada(s)'+(rN.saldos?', '+rN.saldos+' saldo(s) em parcela do mês seguinte':'')); toast(rN.conciliadas+' entrada(s) amarrada(s) pela NF citada no histórico'+(rN.saldos?' ('+rN.saldos+' saldo(s) viraram parcela do mês seguinte)':'')+'.','ok'); } } }catch(eN){ console.warn('Passada NF no histórico:',eN); } }
+    if(String(eid)==='203'&&(modo==='completo'||modo==='comprovantes_pagamento'||modo==='notas_fiscais')){ try{ const rT=await _lancctbPassadaMpNfTaylu(eid,contaId,cb,restringirPeriodo); if(rT.conciliadas){ cb('Mercado Pago × NF: '+rT.conciliadas+' pagamento(s) amarrado(s) por nome + valor + data'); toast(rT.conciliadas+' pagamento(s) do Mercado Pago amarrado(s) à NF (nome do fornecedor + valor + data).','ok'); } }catch(eT){ console.warn('Passada MP × NF Taylu:',eT); } }
     return await _lancctbRodarMatchingInterno(eid,contaId,cb,modo,restringirPeriodo);
   } finally {
     _lancctbMatchingEmExecucao.delete(chaveExec);
@@ -38649,6 +38923,7 @@ function _lancctbEtapaBloqueio(id){
   for(const et of LANCCTB_ETAPAS){
     if(et.id===id) return '';
     if(et.id==='fluxo'&&_lancctbTemFluxoCache[String(_lancctbEidAtual)]===false) continue; // empresa sem Fluxo de Caixa
+    if(et.id==='fluxo'){ const _agSel=(_lancctbRegistroAgenciasCache||[]).find(ag=>String(ag.id)===String(_lancctbExtratoContaSel)); if(_agSel&&_lancctbContaSemFluxo(_agSel)) continue; } // conta sem Fluxo (o botão Processar Fluxo nem aparece nela): não exige (pedido do usuário 05/11/2026)
     if(et.id==='transf'&&(_lancctbRegistroAgenciasCache||[]).length<2) continue; // empresa com 1 só conta bancária: não existe transferência entre contas (pedido do usuário 27/10/2026)
     if(!feitas[et.id]) return et.rot;
   }
@@ -48035,17 +48310,23 @@ async function _lancctbParsearExtratoBTGPactualCC(pdf){
   const pagina1=await pdf.getPage(1);
   const itens1=await _lancctbExtrairItensPagina(pagina1);
   const texto1=itens1.map(i=>i.str).join(' ').replace(/\s+/g,' ');
-  if(!/Conta corrente\s*-\s*PJ/i.test(texto1)) return null;
+  // 2 modelos do mesmo banco: (A) "Conta corrente - PJ" / "Período do extrato: dd/mm/aaaa - dd/mm/aaaa" (22/09/2026) e (B) "Extrato conta corrente" / "Período de dd/mm/aaaa a dd/mm/aaaa"
+  // com "Resumo do saldo" e a tabela "Lançamentos" (Valentina Boconi 204, set/2026 — o leitor genérico misturava as linhas de histórico). A tabela e as colunas são as mesmas.
+  const _btgModeloA=/Conta corrente\s*-\s*PJ/i.test(texto1);
+  const _btgModeloB=/Extrato conta corrente/i.test(texto1)&&/Descri[çc][ãa]o do lan[çc]amento/i.test(texto1)&&/Entradas\/Sa[íi]das/i.test(texto1);
+  if(!_btgModeloA&&!_btgModeloB) return null;
   if(!/BTG\s*Pactual/i.test(texto1)) return null;
 
-  const mPeriodo=texto1.match(/Per[íi]odo do extrato:\s*(\d{2})\/(\d{2})\/(\d{4})\s*-\s*(\d{2})\/(\d{2})\/(\d{4})/i);
+  const mPeriodo=texto1.match(/Per[íi]odo do extrato:\s*(\d{2})\/(\d{2})\/(\d{4})\s*-\s*(\d{2})\/(\d{2})\/(\d{4})/i)||texto1.match(/Per[íi]odo de\s*(\d{2})\/(\d{2})\/(\d{4})\s*a\s*(\d{2})\/(\d{2})\/(\d{4})/i);
   // Competência = mês/ano do FIM do período (não a data de geração do PDF, que pode ser do mês seguinte).
   const competencia=mPeriodo?mPeriodo[6]+'-'+mPeriodo[5]:null;
 
   // Faixas de coluna (coordenadas nativas do PDF — mesmas usadas por _lancctbAgruparLinhasPorY em toda
   // a tela): Data < 100 · Descrição 100–490 · Entradas/Saídas 490–660 · Saldo ≥ 660.
   const ehData=s=>/^\d{2}\/\d{2}\/\d{4}$/.test(String(s).trim());
-  const ehValor=s=>/^-?\d[\d.]*,\d{2}$/.test(String(s).trim());
+  // modelo A traz só o número ("1.234,56"); modelo B traz "R$ 2.032,75" e "- R$ 11.834,58" num item só
+  const ehValor=s=>/^-?\s*(R\$\s*)?\d[\d.]*,\d{2}$/.test(String(s).trim());
+  const _numBR=s=>_lancctbParseValorBR(String(s).replace(/[^\d.,]/g,''));
   const linhaData=L=>L.itens.find(i=>i.x<100&&ehData(i.str));
   const linhaValor=L=>L.itens.find(i=>i.x>=490&&i.x<660&&ehValor(i.str));
   const linhaSaldo=L=>L.itens.filter(i=>i.x>=660).map(i=>i.str).join('').trim();
@@ -48059,6 +48340,16 @@ async function _lancctbParsearExtratoBTGPactualCC(pdf){
   for(let p=1;p<=pdf.numPages;p++){
     const itens=p===1?itens1:await _lancctbExtrairItensPagina(await pdf.getPage(p));
     const linhas=_lancctbAgruparLinhasPorY(itens);
+    // Descrição de um lançamento pode ocupar até 3 linhas: parte ANTES da linha da data, parte NA linha (ex.: o código E2E "16A7535A…") e parte DEPOIS — o banco centraliza o bloco verticalmente.
+    // Cada linha só-de-descrição pertence à linha-âncora (a da data) MAIS PRÓXIMA no eixo y (valor máximo: 22 pt); assim nenhum lançamento "rouba" a descrição do vizinho (Valentina Boconi 204, set/2026).
+    const _ancoras=[]; linhas.forEach((L,ix)=>{ if(linhaData(L)) _ancoras.push(ix); });
+    const _descDaAncora=new Map();
+    linhas.forEach((L,ix)=>{
+      if(linhaData(L)||!ehDescPura(L)) return;
+      let melhor=-1, dmin=1e9; _ancoras.forEach(a=>{ const d=Math.abs(linhas[a].y-L.y); if(d<dmin){ dmin=d; melhor=a; } });
+      if(melhor>=0&&dmin<=22){ if(!_descDaAncora.has(melhor)) _descDaAncora.set(melhor,[]); _descDaAncora.get(melhor).push({y:L.y,txt:linhaDesc(L)}); }
+      else if(_ancoras.length&&L.y<=linhas[_ancoras[0]].y+22&&L.y>=linhas[_ancoras[_ancoras.length-1]].y-22) avisos.push('Linha de descrição sem lançamento próximo — ignorada: '+linhaDesc(L)); // fora da faixa da tabela (resumo/gráfico da pág. 1, rodapé) é só ruído
+    });
     for(let i=0;i<linhas.length;i++){
       const L=linhas[i];
       const itData=linhaData(L);
@@ -48069,7 +48360,7 @@ async function _lancctbParsearExtratoBTGPactualCC(pdf){
       const descPropria=linhaDesc(L);
       if(!itValor){
         // Sem valor de Entradas/Saídas → marcador de saldo (abertura/fechamento), nunca movimentação.
-        const saldoNum=saldoStr?_lancctbParseValorBR(saldoStr):null;
+        const saldoNum=saldoStr?(/^\s*-/.test(saldoStr)?-1:1)*_numBR(saldoStr):null;
         if(/abertura/i.test(descPropria)) saldoAnteriorDoc=saldoNum;
         else if(/fechamento/i.test(descPropria)) saldoFinalDoc=saldoNum;
         else if(descPropria) avisos.push('Linha com data e saldo mas sem "Entradas/Saídas", e sem ser abertura/fechamento — ignorada: '+descPropria);
@@ -48081,24 +48372,20 @@ async function _lancctbParsearExtratoBTGPactualCC(pdf){
       // inteira); sem essa checagem, um lançamento de 1 linha só "roubava" a descrição do PRÓXIMO
       // lançamento (ex: "Pix enviado para Andreia Peixoto Cruz" grudava com "Pix recebido de Bytedance...").
       let historico;
-      if(descPropria){
-        historico=descPropria;
-      } else {
-        let partes=[];
-        const anterior=linhas[i-1];
-        if(anterior&&!anterior._usada&&ehDescPura(anterior)){ partes.push(linhaDesc(anterior)); anterior._usada=true; }
-        const seguinte=linhas[i+1];
-        if(seguinte&&!seguinte._usada&&ehDescPura(seguinte)){ partes.push(linhaDesc(seguinte)); seguinte._usada=true; }
-        historico=partes.join(' ').replace(/\s+/g,' ').trim();
+      {
+        const viz=(_descDaAncora.get(i)||[]);
+        const antes=viz.filter(v=>v.y>L.y).sort((a,b)=>b.y-a.y).map(v=>v.txt);
+        const depois=viz.filter(v=>v.y<=L.y).sort((a,b)=>b.y-a.y).map(v=>v.txt);
+        historico=[...antes,descPropria,...depois].filter(Boolean).join(' ').replace(/\s+/g,' ').trim();
       }
       if(!historico){ avisos.push('Lançamento de '+itData.str+' sem descrição reconstruída — mantido, revise.'); }
-      const valor=_lancctbParseValorBR(itValor.str.replace(/^-/,''));
+      const valor=_numBR(itValor.str);
       const negativo=itValor.str.trim().startsWith('-');
       seqOrigem++;
       registros.push({
         data:dataIso, historico: historico||'(sem descrição)',
         valor_entrada: negativo?0:valor, valor_saida: negativo?valor:0,
-        documento:null, _seq:seqOrigem, _pagina:p, _saldoLinha:saldoStr?_lancctbParseValorBR(saldoStr):null,
+        documento:null, _seq:seqOrigem, _pagina:p, _saldoLinha:saldoStr?(/^\s*-/.test(saldoStr)?-1:1)*_numBR(saldoStr):null,
       });
     }
   }
@@ -63644,6 +63931,15 @@ function _appFinEmpsFiltradas(){
     if(filtroResp&&respEmpMes(e)!==filtroResp) return false;
     if(filtroApp&&_appFinSit(e)!==filtroApp) return false;
     if(busca&&!((e.nome||'').toLowerCase().includes(busca)||(e.cnpj||'').includes(busca))) return false;
+    // filtros sob o título de cada coluna
+    const _v=id=>(document.getElementById(id)?.value||'').trim();
+    const hId=_v('appFinHId').toLowerCase(), hEmp=_v('appFinHEmp').toLowerCase(), hCnpj=_v('appFinHCnpj').replace(/\D/g,''), hResp=_v('appFinHResp'), hTrib=_v('appFinHTrib'), hSit=_v('appFinHSit');
+    if(hId&&!String(e.eid||'').toLowerCase().includes(hId)) return false;
+    if(hEmp&&!(e.nome||'').toLowerCase().includes(hEmp)) return false;
+    if(hCnpj&&!String(e.cnpj||'').replace(/\D/g,'').includes(hCnpj)) return false;
+    if(hResp&&respEmpMes(e)!==hResp) return false;
+    if(hTrib&&(e.reg||'')!==hTrib) return false;
+    if(hSit&&_appFinSit(e)!==hSit) return false;
     return true;
   });
 }
@@ -63656,6 +63952,18 @@ async function renderAppFinanceiro(){
     resps.forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;respSel.appendChild(o);});
     respSel.setAttribute('data-filled','1');
   }
+  const hResp=document.getElementById('appFinHResp');
+  if(hResp && !hResp.hasAttribute('data-filled')){
+    [...new Set(S.emps().map(e=>respEmpMes(e)).filter(Boolean))].sort().forEach(r=>{ const o=document.createElement('option'); o.value=r; o.textContent=r; hResp.appendChild(o); });
+    hResp.setAttribute('data-filled','1');
+  }
+  const hTrib=document.getElementById('appFinHTrib');
+  if(hTrib && !hTrib.hasAttribute('data-filled')){
+    [...new Set(S.emps().map(e=>e.reg).filter(Boolean))].sort().forEach(r=>{ const o=document.createElement('option'); o.value=r; o.textContent=r; hTrib.appendChild(o); });
+    hTrib.setAttribute('data-filled','1');
+  }
+  const _r1=document.querySelector('#appFinHeaderRow'), _r2=document.getElementById('appFinFilterRow');
+  if(_r1&&_r2){ const hh=_r1.offsetHeight||36; [].forEach.call(_r2.children,th=>{ th.style.position='sticky'; th.style.top=hh+'px'; th.style.zIndex='3'; }); }
   if(!_appFinSituacao){ tbody.innerHTML='<tr><td colspan="6" style="padding:14px">Carregando situação das contas…</td></tr>'; }
   try{ await _appFinCarregarSituacao(); }
   catch(err){ tbody.innerHTML='<tr><td colspan="6" style="padding:14px;color:var(--red)">Não consegui ler as contas correntes ('+esc(err.message||err)+'). Tente de novo.</td></tr>'; return; }
