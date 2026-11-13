@@ -25,7 +25,7 @@
     return true;
   }
   const fmtCpf = c => { c = dig(c); return c.length === 11 ? c.slice(0, 3) + '.' + c.slice(3, 6) + '.' + c.slice(6, 9) + '-' + c.slice(9) : c; };
-  const S_ = () => root.S;
+  const S_ = () => { if (typeof S === 'undefined') throw new Error('S indisponível'); return S; }; // S é const global do site (não fica em window.S)
   const lerLista = () => { try { const v = S_().g('kcbm_pf_lista'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
   const gravarLista = l => { try { S_().s('kcbm_pf_lista', l); } catch (e) { console.warn('PF: lista não salvou', e); } };
   const novoDados = () => ({ saldoIni: { mes: '2026-11', pagar: 0, receber: 0 }, cartoes: [], pagar: [], receber: [], entradas: [], gastos: [], extrato: [] });
@@ -89,7 +89,7 @@
     if (l.classe) return l.valor < 0 ? 'D Despesa — ' + (l.classe.categoria || 'Gastos') + ' · C ' + banco : 'D ' + banco + ' · C Receita — ' + (l.classe.categoria || 'Entradas');
     return '';
   }
-  root.__kcbmPfTeste = { dividir, faturaDaCompra, gerarParcelas, saldoMes, faturasDoCartao, limiteUsado, lancamentoTexto, cpfValido, somaMes, num };
+  root.__kcbmPfTeste = { lerLista, gravarLista, lerDados, gravarDados, dividir, faturaDaCompra, gerarParcelas, saldoMes, faturasDoCartao, limiteUsado, lancamentoTexto, cpfValido, somaMes, num };
 
   // ───────────── estado e tela ─────────────
   const ST = { pf: null, aba: 'entradas', mesSaldo: null, mesLista: hoje().slice(0, 7), cartaoSel: null, mesFatura: null };
