@@ -210,7 +210,7 @@
   // seleção de tipo de gasto/receita (cadastro universal)
   const tiposDe = nat => lerTipos().filter(t => t.natureza === nat).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   const selTipo = (id, nat, atual) => { const ts = tiposDe(nat); return ts.length ? sel(id, [['', '— escolha —']].concat(ts.map(t => [t.nome, t.nome])), atual || '') + (atual && !ts.some(t => t.nome === atual) ? '<div style="font-size:11px;color:#b45309">"' + E(atual) + '" não está mais na lista de tipos.</div>' : '') : '<div style="font-size:12px;color:#b45309">Nenhum tipo de ' + nat + ' cadastrado — cadastre em “Tipos de gasto / receita” (na lista de pessoas físicas).</div><input type="hidden" id="' + id + '" value="">'; };
-  const navMes = (mes, pref) => '<div style="display:flex;align-items:center;gap:6px">' + B('‹', pref + '(-1)') + '<b style="min-width:150px;text-align:center">' + rotMes(mes) + '</b>' + B('›', pref + '(1)') + '</div>';
+  const navMes = (mes) => '<div style="display:flex;align-items:center;gap:6px"><b style="min-width:150px" title="O mês vem da data lá em cima, no topo do site">' + rotMes(mes) + '</b></div>';
   // campo de pessoa (fornecedor/cliente) com sugestões do cadastro universal
   const datalistTerc = (id, tipo) => '<datalist id="' + id + '">' + lerTerceiros().filter(t => t.tipo === tipo || t.tipo === 'ambos').sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map(t => '<option value="' + E(t.nome) + '">').join('') + '</datalist>';
   function registrarTerceiro(nome, tipo) { // todo fornecedor/cliente digitado entra no cadastro universal
@@ -268,7 +268,7 @@
   }
   // ── Entradas / Gastos ──
   function abaMov(d, tipo) {
-    const ent = tipo === 'entradas', mes = ST.mesLista, itens = (d[tipo] || []).filter(x => x.data.slice(0, 7) === mes).sort((a, b) => a.data.localeCompare(b.data));
+    const ent = tipo === 'entradas', mes = fechMes(), itens = (d[tipo] || []).filter(x => x.data.slice(0, 7) === mes).sort((a, b) => a.data.localeCompare(b.data));
     const total = itens.reduce((a, x) => a + cents(x.valor), 0) / 100;
     const linhas = itens.map(x => '<tr>' + td(br(x.data)) + td(E(x.descricao)) + td(E(x.categoria || '')) + td(E(x.banco || '')) + td(R$(x.valor), 1) + td(x.extratoId ? '<span title="Veio do extrato">🏦</span>' : '') + '<td style="' + TD + ';text-align:right">' + B('✏️', "kcbmPf.movForm('" + tipo + "','" + x.id + "')") + ' ' + B('🗑', "kcbmPf.movExcluir('" + tipo + "','" + x.id + "')") + '</td></tr>');
     return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">' + navMes(mes, 'kcbmPf.mesLista') + '<div style="margin-left:auto">' + B(ent ? '+ Nova entrada' : '+ Novo gasto', "kcbmPf.movForm('" + tipo + "')", 'bp') + '</div></div>'
@@ -277,7 +277,7 @@
   }
   // ── Extrato bancário ──
   function abaExtrato(d) {
-    const mes = ST.mesLista, itens = (d.extrato || []).filter(x => x.data.slice(0, 7) === mes).sort((a, b) => a.data.localeCompare(b.data) || (a.criado || 0) - (b.criado || 0));
+    const mes = fechMes(), itens = (d.extrato || []).filter(x => x.data.slice(0, 7) === mes).sort((a, b) => a.data.localeCompare(b.data) || (a.criado || 0) - (b.criado || 0));
     const ent = itens.filter(x => x.valor > 0).reduce((a, x) => a + cents(x.valor), 0) / 100, sai = itens.filter(x => x.valor < 0).reduce((a, x) => a + cents(x.valor), 0) / 100;
     const linhas = itens.map(x => {
       const lanc = lancamentoTexto(x, x.banco), pend = !lanc;
@@ -326,7 +326,7 @@
   }
   // ── Saldo a pagar / a receber (depois dos cartões): faturas que vencem no mês + contas fora do cartão ──
   function abaSaldo(d) {
-    const mesIni = mesInicio(d), mesMax = somaMes(fechMes(), LIMITE_MESES); let m = (ST.mesSaldo && ST.mesSaldo >= mesIni) ? ST.mesSaldo : mesIni; if (m > mesMax) m = mesMax; ST.mesSaldo = m;
+    const mesIni = mesInicio(d), mesMax = somaMes(fechMes(), LIMITE_MESES); let m = fechMes(); if (m < mesIni) m = mesIni; if (m > mesMax) m = mesMax; ST.mesSaldo = m;
     const fats = faturasQueVencemNoMes(d, m), totFat = fats.reduce((a, f) => a + f.aberto, 0), sp = saldoMes(d, 'pagar', m, { semCartao: true }), sr = saldoMes(d, 'receber', m);
     const blocoContas = (tipo, tit, s) => {
       const pag = tipo === 'pagar';
@@ -336,7 +336,7 @@
         + tabela([{ t: 'Vencimento' }, { t: pag ? 'Fornecedor' : 'Cliente' }, { t: 'Parcela' }, { t: 'Situação' }, { t: 'Valor', r: 1 }], abertas, 'Nada em aberto até o fim deste mês.') + '</div>';
     };
     const fatTab = tabela([{ t: 'Cartão' }, { t: 'Fatura' }, { t: 'Vencimento' }, { t: 'Total', r: 1 }, { t: 'Em aberto', r: 1 }], fats.map(f => '<tr>' + td('<span style="display:inline-flex;align-items:center;gap:6px">' + bandeiraSvg(f.cartao.bandeira, 16) + E(f.cartao.nome) + '</span>') + td(rotMes(f.fatura)) + td(br(f.venc)) + td(R$(f.total), 1) + td('<b style="color:' + (f.aberto > 0.004 ? '#dc2626' : 'var(--teal)') + '">' + R$(f.aberto) + '</b>', 1) + '</tr>'), 'Nenhuma fatura vence neste mês.');
-    return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px"><div style="display:flex;align-items:center;gap:6px">' + (m > mesIni ? B('‹', 'kcbmPf.mesSaldo(-1)') : '<button class="btn bo bsm" disabled style="opacity:.35">‹</button>') + '<b style="min-width:150px;text-align:center">' + rotMes(m) + '</b>' + (m < mesMax ? B('›', 'kcbmPf.mesSaldo(1)') : '<button class="btn bo bsm" disabled style="opacity:.35">›</button>') + '</div><div style="margin-left:auto">' + B('⚙ Saldos iniciais', 'kcbmPf.saldoIniForm()') + '</div></div>'
+    return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px"><div style="display:flex;align-items:center;gap:6px">' + '<b style="min-width:150px" title="O mês vem da data lá em cima, no topo do site">' + rotMes(m) + '</b>' + (fechMes() < mesIni ? '<span style="font-size:11.5px;color:var(--slate)">(o mês do topo é anterior ao mês inicial dos saldos)</span>' : '') + '</div><div style="margin-left:auto">' + B('⚙ Saldos iniciais', 'kcbmPf.saldoIniForm()') + '</div></div>'
       + '<div style="font-size:12px;color:var(--slate);margin-bottom:10px">Projeção mês a mês por até 5 anos, a partir do Fechamento Atual. Inclui as recorrências. O que não foi baixado no extrato continua acumulando nos meses seguintes. Começa em ' + rotMes(mesIni) + '.</div>'
       + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">' + [['💳 Faturas que vencem no mês', totFat, '#dc2626'], ['🧾 Contas a pagar (saldo no fim do mês)', sp.final, '#dc2626'], ['💰 Contas a receber (saldo no fim do mês)', sr.final, 'var(--teal)']].map(x => '<div style="flex:1 1 220px;border:1px solid var(--border);border-radius:10px;padding:10px 14px"><div style="font-size:11.5px;color:var(--slate)">' + x[0] + '</div><div style="font-size:1.15rem;font-weight:700;color:' + x[2] + '">' + R$(x[1]) + '</div></div>').join('') + '</div>'
       + '<div style="font-weight:700;margin-bottom:6px">💳 Cartões de crédito — faturas que vencem neste mês</div>' + fatTab
@@ -398,7 +398,7 @@
     // ── extrato ──
     extratoForm() {
       modal('Lançar no extrato bancário', campo('Data', inp('kpfData', hoje(), 'date')) + campo('Banco / conta', inp('kpfBanco', '', 'text', 'maxlength="60" placeholder="Ex.: Caixa, Bradesco, Nubank..."')) + campo('Histórico', inp('kpfHist', '', 'text', 'maxlength="140"')) + campo('Tipo', sel('kpfTipo', [['sai', 'Saída (pagamento)'], ['ent', 'Entrada (recebimento)']], 'sai')) + campo('Valor (R$)', inp('kpfValor', '', 'text', 'inputmode="decimal"')),
-        m => { const v = num(val(m, 'kpfValor')); if (!val(m, 'kpfData') || !(v > 0)) { root.toast('Informe a data e um valor maior que zero.', 'err'); return false; } const dd = dadosAtual(); dd.extrato.push({ id: uid(), criado: Date.now(), data: val(m, 'kpfData'), banco: (val(m, 'kpfBanco') || '').trim(), hist: (val(m, 'kpfHist') || '').trim(), valor: val(m, 'kpfTipo') === 'sai' ? -v : v, baixa: null, classe: null }); gravarDados(ST.pf, dd); ST.mesLista = val(m, 'kpfData').slice(0, 7); render(); });
+        m => { const v = num(val(m, 'kpfValor')); if (!val(m, 'kpfData') || !(v > 0)) { root.toast('Informe a data e um valor maior que zero.', 'err'); return false; } const dd = dadosAtual(); dd.extrato.push({ id: uid(), criado: Date.now(), data: val(m, 'kpfData'), banco: (val(m, 'kpfBanco') || '').trim(), hist: (val(m, 'kpfHist') || '').trim(), valor: val(m, 'kpfTipo') === 'sai' ? -v : v, baixa: null, classe: null }); gravarDados(ST.pf, dd); render(); });
     },
     async importarPdf() {
       const inpf = document.createElement('input'); inpf.type = 'file'; inpf.accept = 'application/pdf,.pdf';
@@ -420,7 +420,7 @@
           let banco = val(m, 'kpfBancoI'); if (banco === 'Outro') banco = (val(m, 'kpfBancoO') || '').trim() || 'Outro';
           const d2 = dadosAtual(), ja2 = new Set(d2.extrato.map(l => l.data + '|' + cents(l.valor) + '|' + norm(l.hist))); let n = 0;
           novas.forEach(x => { const k = x.data + '|' + cents(x.valor) + '|' + norm(x.hist); if (ja2.has(k)) return; ja2.add(k); d2.extrato.push({ id: uid(), criado: Date.now() + n, data: x.data, banco, hist: x.hist, valor: x.valor, baixa: null, classe: null }); n++; });
-          gravarDados(ST.pf, d2); if (novas.length) ST.mesLista = novas[0].data.slice(0, 7); render(); root.toast(n + ' lançamento(s) importado(s). Agora é só classificar.', 'ok');
+          gravarDados(ST.pf, d2); render(); root.toast(n + ' lançamento(s) importado(s). Agora é só classificar.', 'ok');
         }, 'Importar', 720);
       };
       inpf.click();
