@@ -142,7 +142,7 @@
   // ───────────── estado e telas ─────────────
   const ST = { pf: null, aba: 'pagar', mesSaldo: null, mesLista: hoje().slice(0, 7), cartaoSel: null, mesFatura: null, tela: 'lista' };
   const el = () => document.getElementById('page-kcbm-pf');
-  const ABAS = [['pagar', '🧾 Contas a pagar'], ['receber', '💰 Contas a receber'], ['extrato', '🏦 Extrato bancário'], ['entradas', '⬇ Entradas'], ['gastos', '⬆ Gastos'], ['cartoes', '💳 Cartões de crédito'], ['saldo', '⚖ Saldo a pagar / a receber']];
+  const ABAS = [['pagar', '🧾 Contas a pagar'], ['receber', '💰 Contas a receber'], ['extrato', '🏦 Extrato bancário'], ['cartoes', '💳 Cartões de crédito'], ['saldo', '⚖ Saldo a pagar / a receber']];
   const B = (txt, on, cls, ttl) => '<button class="btn ' + (cls || 'bo') + ' bsm" ' + (ttl ? 'title="' + E(ttl) + '" ' : '') + 'onclick="' + on + '">' + txt + '</button>';
   const IN = 'width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--ink);font:inherit;font-size:13px';
   const TH = 'padding:7px 9px;text-align:left;font-size:11.5px;white-space:nowrap;background:var(--ink2);color:#fff';
@@ -421,7 +421,7 @@
     // ── contas a pagar / receber ──
     tituloForm(tipo) {
       const d = dadosAtual(), pag = tipo === 'pagar';
-      const corpo = campo('Data da ' + (pag ? 'compra / lançamento' : 'venda / lançamento'), inp('kpfData', hoje(), 'date')) + campo(pag ? 'Fornecedor' : 'Cliente', inp('kpfQuem', '', 'text', 'maxlength="100" list="kpfDL" autocomplete="off"') + datalistTerc('kpfDL', pag ? 'fornecedor' : 'cliente'), 'Comece a digitar para puxar do cadastro; se for novo, ele entra no cadastro sozinho.') + campo(pag ? 'Tipo de gasto' : 'Tipo de receita', selTipo('kpfTipoG', pag ? 'gasto' : 'receita', '')) + campo('Valor (R$)', inp('kpfValor', '', 'text', 'inputmode="decimal"'))
+      const corpo = campo('Data', inp('kpfData', hoje(), 'date')) + campo(pag ? 'Fornecedor' : 'Cliente', inp('kpfQuem', '', 'text', 'maxlength="100" list="kpfDL" autocomplete="off"') + datalistTerc('kpfDL', pag ? 'fornecedor' : 'cliente'), 'Comece a digitar para puxar do cadastro; se for novo, ele entra no cadastro sozinho.') + campo(pag ? 'Tipo de gasto' : 'Tipo de receita', selTipo('kpfTipoG', pag ? 'gasto' : 'receita', '')) + campo('Valor (R$)', inp('kpfValor', '', 'text', 'inputmode="decimal"'))
         + campo('Forma de ' + (pag ? 'pagamento' : 'recebimento'), sel('kpfForma', (pag ? [['avista', 'À vista / boleto'], ['cartao', 'Cartão de crédito'], ['carne', 'Carnê'], ['outro', 'Outro']] : [['avista', 'À vista / boleto'], ['carne', 'Carnê'], ['outro', 'Outro']]), 'avista'))
         + (pag ? '<div id="kpfCartaoBox" style="display:none">' + campo('Cartão', d.cartoes.length ? sel('kpfCartao', d.cartoes.map(c => [c.id, c.nome + (c.bandeira ? ' — ' + c.bandeira : '')]), d.cartoes[0].id) : '<div style="font-size:12px;color:#b45309">Nenhum cartão cadastrado — cadastre na aba Cartões de crédito.</div>') + '</div>' : '')
         + campo('Recorrente (todo mês)?', '<label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="kpfRec"> Sim — repete todo mês, projetado 5 anos à frente</label>')
