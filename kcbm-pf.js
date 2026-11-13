@@ -344,7 +344,7 @@
     }
     return mu;
   }
-  const saldoBanco = (d, b, mes) => { const fim = mes + '-31'; let s0 = cents(b.saldoIni || 0); (d.extrato || []).forEach(l => { if (l.bancoId === b.id && l.data <= fim && (!b.saldoIniData || l.data >= b.saldoIniData)) s0 += cents(l.valor); }); return s0 / 100; };
+  const saldoBanco = (d, b, mes) => { const fim = mes + '-31'; let s0 = cents(b.saldoIni || 0); (d.extrato || []).forEach(l => { if (l.bancoId === b.id && l.data <= fim && (!b.saldoIniData || l.data > b.saldoIniData)) s0 += cents(l.valor); }); return s0 / 100; };
   function abaBancos(d) {
     const mes = fechMes(), sel = ST.bancoSel || '';
     const cards = (d.bancos || []).map(b => {
@@ -356,17 +356,34 @@
       + ((d.bancos || []).length ? '<div style="font-size:12px;color:var(--slate);margin:-4px 0 10px">Clique no banco para ver o extrato dele no mês. ' + (sel ? '' : '<b>Nenhum selecionado: mostrando todos.</b> ') + (sel ? B('Ver todos', "kcbmPf.bancoSel('')") : '') + '</div>' : '<div style="font-size:12.5px;color:var(--slate);margin-bottom:10px">Adicione o seu primeiro banco para importar extratos.</div>');
   }
   function abaExtrato(d) { return abaBancos(d) + abaExtratoLista(d); }
+  // saldo da conta depois de cada linha do extrato (saldo inicial + lançamentos depois da data do saldo inicial, na ordem do extrato)
+  function saldosCorrentes(d) {
+    const out = {};
+    (d.bancos || []).forEach(b => {
+      let s0 = cents(b.saldoIni || 0);
+      (d.extrato || []).filter(l => l.bancoId === b.id).sort((a, c) => a.data.localeCompare(c.data) || (a.criado || 0) - (c.criado || 0)).forEach(l => {
+        if (b.saldoIniData && l.data <= b.saldoIniData) { out[l.id] = null; return; }
+        s0 += cents(l.valor); out[l.id] = s0 / 100;
+      });
+    });
+    return out;
+  }
   function abaExtratoLista(d) {
     const mes = fechMes(), itens = (d.extrato || []).filter(x => x.data.slice(0, 7) === mes && (!ST.bancoSel || x.bancoId === ST.bancoSel)).sort((a, b) => a.data.localeCompare(b.data) || (a.criado || 0) - (b.criado || 0));
     const ent = itens.filter(x => x.valor > 0).reduce((a, x) => a + cents(x.valor), 0) / 100, sai = itens.filter(x => x.valor < 0).reduce((a, x) => a + cents(x.valor), 0) / 100;
-    const linhas = itens.map(x => {
-      const lanc = lancamentoTexto(x, x.banco), pend = !lanc;
-      return '<tr>' + '<td style="' + TD + '">' + (pend ? '<input type="checkbox" class="kpfSelL" data-id="' + x.id + '">' : '') + '</td>' + td(br(x.data)) + td(E(x.banco || '')) + td(E(x.hist)) + '<td style="' + TD + ';text-align:right;white-space:nowrap;color:' + cor(x.valor) + '">' + R$(x.valor) + '</td>'
-        + td(pend ? '<span style="color:#b45309">— pendente —</span>' : '<span style="font-size:11.5px">' + E(lanc) + '</span>') + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + (pend ? B('Baixar / classificar', "kcbmPf.extratoBaixar('" + x.id + "')", 'bp') : B('↩ Desfazer', "kcbmPf.extratoDesfazer('" + x.id + "')")) + ' ' + B('🗑', "kcbmPf.extratoExcluir('" + x.id + "')") + '</td></tr>';
+    const sc = saldosCorrentes(d), mesAnt = somaMes(mes, -1);
+    const antLin = (d.bancos || []).filter(b => !ST.bancoSel || b.id === ST.bancoSel).filter(b => Number(b.saldoIni) || (d.extrato || []).some(l => l.bancoId === b.id && l.data.slice(0, 7) <= mesAnt)).map(b => {
+      const v = saldoBanco(d, b, mesAnt), rot = (b.saldoIniData && b.saldoIniData.slice(0, 7) === mesAnt) ? 'Saldo inicial em ' + br(b.saldoIniData) : 'Saldo anterior (fim de ' + rotMes(mesAnt) + ')';
+      return '<tr style="background:rgba(127,127,127,.10);font-style:italic"><td style="' + TD + '"></td>' + td(br(mes + '-01')) + td(E(b.nome)) + td(rot) + td('') + '<td style="' + TD + ';text-align:right;white-space:nowrap;font-weight:700;color:' + cor(v) + '">' + R$(v) + '</td>' + td('') + td('') + '</tr>';
     });
+    const linhas = antLin.concat(itens.map(x => {
+      const lanc = lancamentoTexto(x, x.banco), pend = !lanc;
+      return '<tr>' + '<td style="' + TD + '">' + (pend ? '<input type="checkbox" class="kpfSelL" data-id="' + x.id + '">' : '') + '</td>' + td(br(x.data)) + td(E(x.banco || '')) + td(E(x.hist)) + '<td style="' + TD + ';text-align:right;white-space:nowrap;color:' + cor(x.valor) + '">' + R$(x.valor) + '</td>' + '<td style="' + TD + ';text-align:right;white-space:nowrap;font-weight:600;color:' + (sc[x.id] == null ? 'var(--slate)' : cor(sc[x.id])) + '">' + (sc[x.id] == null ? '' : R$(sc[x.id])) + '</td>'
+        + td(pend ? '<span style="color:#b45309">— pendente —</span>' : '<span style="font-size:11.5px">' + E(lanc) + '</span>') + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + (pend ? B('Baixar / classificar', "kcbmPf.extratoBaixar('" + x.id + "')", 'bp') : B('↩ Desfazer', "kcbmPf.extratoDesfazer('" + x.id + "')")) + ' ' + B('🗑', "kcbmPf.extratoExcluir('" + x.id + "')") + '</td></tr>';
+    }));
     return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">' + navMes(mes, 'kcbmPf.mesLista') + '<div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">' + B('📄 Importar extrato (PDF)', 'kcbmPf.importarPdf()', 'bp', 'Sobe o PDF do extrato; o site lê e você classifica') + B('+ Lançar à mão', 'kcbmPf.extratoForm()') + B('⚡ Baixa automática', 'kcbmPf.baixaAuto()', 'bo', 'Dá baixa nas contas cujo valor e vencimento batem com a linha do extrato') + B('✔ Classificar selecionadas', 'kcbmPf.extratoLote()', 'bo', 'Classifica várias linhas pendentes de uma vez') + '</div></div>'
       + '<div style="font-size:12px;color:var(--slate);margin-bottom:8px">Cada linha do extrato forma um <b>lançamento contábil</b>: dar baixa numa conta a pagar/receber, ou classificar como gasto/entrada (com o tipo cadastrado). Valor positivo = entrada; negativo = saída.</div>'
-      + tabela([{ t: '<input type="checkbox" onchange="document.querySelectorAll(\'.kpfSelL\').forEach(c=>c.checked=this.checked)" title="Marcar todas as pendentes">' }, { t: 'Data' }, { t: 'Banco' }, { t: 'Histórico' }, { t: 'Valor', r: 1 }, { t: 'Lançamento contábil' }, { t: '' }], linhas, 'Nenhuma linha de extrato neste mês.')
+      + tabela([{ t: '<input type="checkbox" onchange="document.querySelectorAll(\'.kpfSelL\').forEach(c=>c.checked=this.checked)" title="Marcar todas as pendentes">' }, { t: 'Data' }, { t: 'Banco' }, { t: 'Histórico' }, { t: 'Valor', r: 1 }, { t: 'Saldo', r: 1 }, { t: 'Lançamento contábil' }, { t: '' }], linhas, 'Nenhuma linha de extrato neste mês.')
       + '<div style="text-align:right;margin-top:8px;font-size:13px">Entradas <b style="color:var(--teal)">' + R$(ent) + '</b> · Saídas <b style="color:#dc2626">' + R$(sai) + '</b> · Resultado <b>' + R$(ent + sai) + '</b></div>';
   }
   // ── Baixa automática: linha do extrato que paga exatamente o valor de algo que vencia no dia (ou até 3 dias antes). Inclui faturas de cartão. ──
