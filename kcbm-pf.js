@@ -120,8 +120,8 @@
     (dados.pagar || []).forEach(it => { if (it.forma !== 'cartao' || it.cartaoId !== cartaoId) return; (it.parcelas || []).forEach(p => { const k = p.fatura; if (!k) return; (mapa[k] = mapa[k] || { fatura: k, venc: p.venc, total: 0, pago: 0, linhas: [] }); mapa[k].total += cents(p.valor); if (p.pago) mapa[k].pago += cents(p.valor); mapa[k].linhas.push({ item: it, p }); }); });
     return Object.keys(mapa).sort().map(k => { const f = mapa[k]; return { fatura: f.fatura, venc: f.venc, total: f.total / 100, pago: f.pago / 100, aberto: (f.total - f.pago) / 100, linhas: f.linhas }; });
   }
-  // Limite em uso NO MÊS de referência: soma o que ainda está em aberto nas faturas que vencem nesse mês ou depois (as anteriores contam como pagas). Sem mês = tudo em aberto.
-  const limiteUsado = (dados, cartaoId, mes) => faturasDoCartao(dados, cartaoId).reduce((a, f) => (!mes || f.venc.slice(0, 7) >= mes) ? a + f.aberto : a, 0);
+  // Limite em uso NO MÊS de referência: soma o que está em aberto nas faturas que vencem até esse mês (o mês inteiro já conta como comprometido; o que não foi pago acumula). Faturas de meses depois ainda não pesam. Sem mês = tudo em aberto.
+  const limiteUsado = (dados, cartaoId, mes) => faturasDoCartao(dados, cartaoId).reduce((a, f) => (!mes || f.venc.slice(0, 7) <= mes) ? a + f.aberto : a, 0);
   // Faturas que VENCEM no mês, de todos os cartões (para a aba Saldo).
   function faturasQueVencemNoMes(dados, mes) {
     const out = []; (dados.cartoes || []).forEach(c => faturasDoCartao(dados, c.id).forEach(f => { if (f.venc.slice(0, 7) === mes) out.push({ cartao: c, ...f }); })); return out;
