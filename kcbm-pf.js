@@ -137,7 +137,7 @@
     if (l.classe) return l.valor < 0 ? 'D Despesa — ' + (l.classe.categoria || 'Gastos') + ' · C ' + banco : 'D ' + banco + ' · C Receita — ' + (l.classe.categoria || 'Entradas');
     return '';
   }
-  root.__kcbmPfTeste = { bandeiraSvg, lerLista, gravarLista, lerDados, gravarDados, dividir, faturaDaCompra, gerarParcelas, estenderRecorrencia, garantirRecorrencias, alterarValorParcela, encerrarRecorrencia, saldoMes, faturasDoCartao, faturasQueVencemNoMes, ajusteDeFatura, limiteUsado, lancamentoTexto, cpfValido, somaMes, num, mesInicio };
+  root.__kcbmPfTeste = { temaCartao, get CORES_CARTAO() { return CORES_CARTAO; }, bandeiraSvg, lerLista, gravarLista, lerDados, gravarDados, dividir, faturaDaCompra, gerarParcelas, estenderRecorrencia, garantirRecorrencias, alterarValorParcela, encerrarRecorrencia, saldoMes, faturasDoCartao, faturasQueVencemNoMes, ajusteDeFatura, limiteUsado, lancamentoTexto, cpfValido, somaMes, num, mesInicio };
 
   // Símbolo de cada bandeira (desenho simples em SVG, sem imagem externa). Bandeira própria/desconhecida: cartão genérico com as iniciais.
   function bandeiraSvg(nome, h) {
@@ -156,6 +156,19 @@
     if (n === 'aura') return cab('<rect width="48" height="30" rx="4" fill="#00A859"/>' + txt('AURA', 24, 19, 11, '#fff'));
     const ini = (nome || '?').trim().split(/\s+/).map(x => x[0]).join('').slice(0, 3).toUpperCase();
     return cab('<rect width="48" height="30" rx="4" fill="#64748B"/><rect y="6" width="48" height="5" fill="#334155"/>' + txt(E(ini), 24, 23, 10, '#fff'));
+  }
+  // Cores do cartão (30 opções). O texto do cartão vira branco nas cores escuras e escuro nas claras.
+  const CORES_CARTAO = [
+    ['Vermelho', '#DC2626'], ['Vermelho-tijolo', '#B91C1C'], ['Avermelhado suave', '#C2554D'], ['Rosa antigo', '#B8636E'], ['Pink', '#E11D74'], ['Rosa claro', '#F4A6B8'],
+    ['Laranja', '#EA580C'], ['Laranja suave', '#F2994A'], ['Âmbar', '#F59E0B'], ['Amarelo', '#FACC15'], ['Mostarda', '#C9A227'], ['Lima', '#84CC16'],
+    ['Verde', '#16A34A'], ['Verde escuro', '#166534'], ['Verde-água', '#0D9488'], ['Menta', '#6EE7B7'], ['Ciano', '#06B6D4'], ['Azul-céu', '#38BDF8'],
+    ['Azul', '#2563EB'], ['Azul-marinho', '#1E3A8A'], ['Índigo', '#4338CA'], ['Roxo', '#7E22CE'], ['Lilás', '#A78BFA'], ['Berinjela', '#581C87'],
+    ['Marrom', '#92400E'], ['Café', '#5B3A29'], ['Cinza', '#6B7280'], ['Grafite', '#1F2937'], ['Preto', '#111827'], ['Prata', '#CBD5E1']
+  ];
+  function temaCartao(cor) {
+    if (!/^#[0-9a-f]{6}$/i.test(cor || '')) return { bg: 'var(--white)', fg: 'var(--ink)', mut: 'var(--slate)', neg: '#dc2626', pos: 'var(--teal)', borda: 'var(--border)', sel: 'var(--teal)' };
+    const r = parseInt(cor.slice(1, 3), 16), g = parseInt(cor.slice(3, 5), 16), b = parseInt(cor.slice(5, 7), 16), escuro = (0.299 * r + 0.587 * g + 0.114 * b) < 150;
+    return escuro ? { bg: cor, fg: '#fff', mut: 'rgba(255,255,255,.78)', neg: '#FECACA', pos: '#fff', borda: 'rgba(0,0,0,.25)', sel: '#fff' } : { bg: cor, fg: '#111827', mut: 'rgba(17,24,39,.72)', neg: '#991B1B', pos: '#14532D', borda: 'rgba(0,0,0,.18)', sel: '#111827' };
   }
   // ───────────── estado e telas ─────────────
   const ST = { pf: null, aba: 'pagar', mesSaldo: null, mesLista: hoje().slice(0, 7), cartaoSel: null, mesFatura: null, tela: 'lista' };
@@ -286,9 +299,9 @@
   // ── Cartões ──
   function abaCartoes(d) {
     const cards = d.cartoes.map(c => {
-      const usado = limiteUsado(d, c.id), disp = (Number(c.limite) || 0) - usado, sel2 = ST.cartaoSel === c.id;
-      return '<div onclick="kcbmPf.cartaoSel(\'' + c.id + '\')" style="cursor:pointer;min-width:230px;flex:0 1 270px;border:2px solid ' + (sel2 ? 'var(--teal)' : 'var(--border)') + ';border-radius:12px;padding:12px 14px;background:var(--white)"><div style="display:flex;justify-content:space-between;align-items:center"><b style="display:flex;align-items:center;gap:8px">' + bandeiraSvg(c.bandeira, 24) + E(c.nome) + '</b><span onclick="event.stopPropagation()">' + B('✏️', "kcbmPf.cartaoForm('" + c.id + "')") + '</span></div>'
-        + '<div style="font-size:12px;color:var(--slate);margin:4px 0">' + E(c.bandeira || 'Bandeira não informada') + ' · fecha dia ' + c.fechamento + ' · vence dia ' + c.vencimento + '</div><div style="font-size:12.5px;line-height:1.6">Limite <b>' + R$(c.limite) + '</b><br>Em uso <b style="color:#dc2626">' + R$(usado) + '</b><br>Disponível <b style="color:' + (disp < 0 ? '#dc2626' : 'var(--teal)') + '">' + R$(disp) + '</b></div></div>';
+      const usado = limiteUsado(d, c.id), disp = (Number(c.limite) || 0) - usado, sel2 = ST.cartaoSel === c.id, tm = temaCartao(c.cor);
+      return '<div onclick="kcbmPf.cartaoSel(\'' + c.id + '\')" style="cursor:pointer;min-width:230px;flex:0 1 270px;border:' + (sel2 ? '3px' : '2px') + ' solid ' + (sel2 ? tm.sel : tm.borda) + ';border-radius:12px;padding:12px 14px;background:' + tm.bg + ';color:' + tm.fg + '"><div style="display:flex;justify-content:space-between;align-items:center"><b style="display:flex;align-items:center;gap:8px">' + bandeiraSvg(c.bandeira, 24) + E(c.nome) + '</b><span onclick="event.stopPropagation()">' + B('✏️', "kcbmPf.cartaoForm('" + c.id + "')") + '</span></div>'
+        + '<div style="font-size:12px;color:' + tm.mut + ';margin:4px 0">' + E(c.bandeira || 'Bandeira não informada') + ' · fecha dia ' + c.fechamento + ' · vence dia ' + c.vencimento + '</div><div style="font-size:12.5px;line-height:1.6">Limite <b>' + R$(c.limite) + '</b><br>Em uso <b style="color:' + tm.neg + '">' + R$(usado) + '</b><br>Disponível <b style="color:' + (disp < 0 ? tm.neg : tm.pos) + '">' + R$(disp) + '</b></div></div>';
     }).join('');
     let det = ''; const c = d.cartoes.find(x => x.id === ST.cartaoSel);
     if (c) {
@@ -483,10 +496,12 @@
     // ── cartões ──
     cartaoForm(id) {
       const d = dadosAtual(), c = id ? d.cartoes.find(x => x.id === id) : null, todas = BANDEIRAS.concat(lerBandeirasProprias().filter(b => BANDEIRAS.indexOf(b) < 0)), atualB = c ? c.bandeira : 'Mastercard';
-      const m = modal(c ? 'Editar cartão' : 'Novo cartão de crédito', campo('Nome do cartão', inp('kpfNomeC', c ? c.nome : '', 'text', 'maxlength="60" placeholder="Ex.: Nubank, Itaú Platinum"')) + campo('Bandeira', sel('kpfBand', todas.map(b => [b, b]).concat([['__outra', '➕ Outra bandeira (criar)…']]), todas.indexOf(atualB) >= 0 ? atualB : 'Mastercard')) + '<div id="kpfBandBox" style="display:none">' + campo('Nome da nova bandeira', inp('kpfBandN', '', 'text', 'maxlength="40"'), 'Fica salva na lista e aparece nos próximos cartões.') + '</div>' + campo('Limite (R$)', inp('kpfLim', c ? String(c.limite).replace('.', ',') : '', 'text', 'inputmode="decimal"')) + campo('Dia de fechamento da fatura', inp('kpfFech', c ? c.fechamento : '25', 'number', 'min="1" max="31"')) + campo('Dia de vencimento da fatura', inp('kpfVencC', c ? c.vencimento : '5', 'number', 'min="1" max="31"'), 'Compra feita até o dia do fechamento entra na fatura que fecha no mês; depois, na seguinte.'),
+      const m = modal(c ? 'Editar cartão' : 'Novo cartão de crédito', campo('Nome do cartão', inp('kpfNomeC', c ? c.nome : '', 'text', 'maxlength="60" placeholder="Ex.: Nubank, Itaú Platinum"')) + campo('Bandeira', sel('kpfBand', todas.map(b => [b, b]).concat([['__outra', '➕ Outra bandeira (criar)…']]), todas.indexOf(atualB) >= 0 ? atualB : 'Mastercard')) + '<div id="kpfBandBox" style="display:none">' + campo('Nome da nova bandeira', inp('kpfBandN', '', 'text', 'maxlength="40"'), 'Fica salva na lista e aparece nos próximos cartões.') + '</div>' + campo('Cor do cartão', '<input type="hidden" id="kpfCor" value="' + E(c && c.cor || '') + '"><div id="kpfCores" style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px">' + '<button type="button" data-cor="" title="Sem cor (branco)" style="height:26px;border-radius:6px;border:2px solid var(--border);background:var(--white);cursor:pointer;font-size:10px;color:var(--slate)">sem</button>' + CORES_CARTAO.map(x => '<button type="button" data-cor="' + x[1] + '" title="' + x[0] + '" style="height:26px;border-radius:6px;border:2px solid transparent;background:' + x[1] + ';cursor:pointer;color:' + (temaCartao(x[1]).fg) + ';font-size:13px;font-weight:700"></button>').join('') + '</div><div id="kpfCorNome" style="font-size:11px;color:var(--slate);margin-top:4px"></div>', 'Escolha uma das 30 cores. Em cores escuras a letra do cartão fica branca sozinha.') + campo('Limite (R$)', inp('kpfLim', c ? String(c.limite).replace('.', ',') : '', 'text', 'inputmode="decimal"')) + campo('Dia de fechamento da fatura', inp('kpfFech', c ? c.fechamento : '25', 'number', 'min="1" max="31"')) + campo('Dia de vencimento da fatura', inp('kpfVencC', c ? c.vencimento : '5', 'number', 'min="1" max="31"'), 'Compra feita até o dia do fechamento entra na fatura que fecha no mês; depois, na seguinte.'),
         m2 => { const nome = (val(m2, 'kpfNomeC') || '').trim(), f = Math.floor(num(val(m2, 'kpfFech'))), v = Math.floor(num(val(m2, 'kpfVencC'))); let band = val(m2, 'kpfBand'); if (band === '__outra') { band = (val(m2, 'kpfBandN') || '').trim(); if (!band) { root.toast('Digite o nome da nova bandeira.', 'err'); return false; } const bp = lerBandeirasProprias(); if (BANDEIRAS.indexOf(band) < 0 && bp.indexOf(band) < 0) gravarChave('kcbm_pf_bandeiras', bp.concat([band])); }
-          if (!nome || !(f >= 1 && f <= 31) || !(v >= 1 && v <= 31)) { root.toast('Informe o nome e os dias de fechamento e vencimento (1 a 31).', 'err'); return false; } const dd = dadosAtual(); const novo = { id: c ? c.id : uid(), nome, bandeira: band, limite: num(val(m2, 'kpfLim')), fechamento: f, vencimento: v }; dd.cartoes = c ? dd.cartoes.map(x => x.id === c.id ? novo : x) : dd.cartoes.concat([novo]); if (!c) ST.cartaoSel = novo.id; gravarDados(ST.pf, dd); render(); });
+          if (!nome || !(f >= 1 && f <= 31) || !(v >= 1 && v <= 31)) { root.toast('Informe o nome e os dias de fechamento e vencimento (1 a 31).', 'err'); return false; } const dd = dadosAtual(); const novo = { id: c ? c.id : uid(), nome, bandeira: band, cor: val(m2, 'kpfCor') || '', limite: num(val(m2, 'kpfLim')), fechamento: f, vencimento: v }; dd.cartoes = c ? dd.cartoes.map(x => x.id === c.id ? novo : x) : dd.cartoes.concat([novo]); if (!c) ST.cartaoSel = novo.id; gravarDados(ST.pf, dd); render(); });
       const at = () => { m.querySelector('#kpfBandBox').style.display = val(m, 'kpfBand') === '__outra' ? '' : 'none'; }; m.querySelector('#kpfBand').onchange = at; at();
+      const marcarCor = () => { const v = val(m, 'kpfCor') || ''; m.querySelectorAll('#kpfCores button').forEach(b => { const on = (b.dataset.cor || '') === v; b.style.borderColor = on ? '#111827' : (b.dataset.cor ? 'transparent' : 'var(--border)'); b.style.boxShadow = on ? '0 0 0 2px #fff inset' : ''; b.textContent = on && b.dataset.cor ? '✓' : ''; }); const nm = CORES_CARTAO.find(x => x[1] === v); m.querySelector('#kpfCorNome').textContent = nm ? 'Cor escolhida: ' + nm[0] : 'Sem cor (branco)'; };
+      m.querySelectorAll('#kpfCores button').forEach(b => { b.onclick = () => { m.querySelector('#kpfCor').value = b.dataset.cor || ''; marcarCor(); }; }); marcarCor();
     },
     faturaAjuste(cartaoId, fatura) {
       const d = dadosAtual(), f = faturasDoCartao(d, cartaoId).find(x => x.fatura === fatura); if (!f) return;
