@@ -1,6 +1,6 @@
 /* KCBM — módulo PESSOA FÍSICA (só existe no KCBM; o JJR Controle não tem nem recebe este arquivo).
    Lista de pessoas físicas; ao abrir uma, as abas: Contas a pagar · Contas a receber · Extrato bancário · Entradas · Gastos · Cartões de crédito · Saldo a pagar/receber.
-   Cadastros UNIVERSAIS (valem para todas as pessoas): Tipos de gasto/receita, Fornecedores e clientes, bandeiras de cartão.
+   Cadastros UNIVERSAIS (valem para todas as pessoas): Tipos de gasto/receita, A quem pago / de quem recebo, Por quem pago, bandeiras de cartão.
    Dados guardados no banco do KCBM (S.g/S.s): kcbm_pf_lista, kcbm_pf_<id> (por pessoa), kcbm_pf_tipos, kcbm_pf_terceiros, kcbm_pf_bandeiras. Nada é apagado sem confirmar. */
 (function (root) {
   'use strict';
@@ -33,6 +33,10 @@
   const lerLista = () => { const v = lerChave('kcbm_pf_lista', []); return Array.isArray(v) ? v : []; };
   const gravarLista = l => gravarChave('kcbm_pf_lista', l);
   const lerTipos = () => { const v = lerChave('kcbm_pf_tipos', []); return Array.isArray(v) ? v : []; };
+  const lerPorQuem = () => { const v = lerChave('kcbm_pf_porquem', []); return Array.isArray(v) ? v : []; };
+  const seloPorQuem = it => (it && it.porQuem) ? ' <span title="Por quem eu pago" style="display:inline-block;background:#fde047;color:#422006;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:99px;margin-left:4px;white-space:nowrap">' + E(it.porQuem) + '</span>' : '';
+  const datalistPorQuem = id => '<datalist id="' + id + '">' + lerPorQuem().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map(t => '<option value="' + E(t.nome) + '">').join('') + '</datalist>';
+  function registrarPorQuem(nome) { nome = (nome || '').trim(); if (!nome) return; const l = lerPorQuem(); if (l.some(t => norm(t.nome) === norm(nome))) return; gravarChave('kcbm_pf_porquem', l.concat([{ id: uid(), nome }])); }
   const lerTerceiros = () => { const v = lerChave('kcbm_pf_terceiros', []); return Array.isArray(v) ? v : []; };
   const BANDEIRAS = ['Mastercard', 'Visa', 'Elo', 'American Express', 'Hipercard', 'Diners Club', 'Discover', 'Cabal', 'Sorocred', 'JCB', 'Aura'];
   const lerBandeirasProprias = () => { const v = lerChave('kcbm_pf_bandeiras', []); return Array.isArray(v) ? v : []; };
@@ -245,7 +249,7 @@
         + '<td style="' + TD + ';text-align:right;white-space:nowrap" onclick="event.stopPropagation()">' + B('Abrir', "kcbmPf.abrir('" + p.id + "')", 'bp') + ' ' + B('✏️', "kcbmPf.editarPessoa('" + p.id + "')", 'bo', 'Editar nome/CPF') + ' ' + B('🗑', "kcbmPf.excluirPessoa('" + p.id + "')", 'bo', 'Excluir esta pessoa e todos os dados dela (pede confirmação)') + '</td></tr>';
     });
     el().innerHTML = '<div style="padding:18px 22px 40px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><img src="assets/pessoa-fisica.svg" alt="" style="height:28px;width:28px"><div style="font-size:1.3rem;font-weight:700">Pessoa Física</div>'
-      + '<div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">' + B('🏷 Tipos de gasto / receita', "kcbmPf.tela('tipos')") + B('👥 Fornecedores e clientes', "kcbmPf.tela('terceiros')") + B('⬇ Exportar dados', 'kcbmPf.exportar()', 'bo', 'Baixa um arquivo com tudo deste módulo (para levar ao Fluxo PF ou guardar como backup)') + B('+ Nova pessoa física', 'kcbmPf.novaPessoa()', 'bp') + '</div></div>'
+      + '<div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">' + B('🏷 Tipos de gasto / receita', "kcbmPf.tela('tipos')") + B('👥 A quem pago / de quem recebo', "kcbmPf.tela('terceiros')") + B('🧒 Por quem pago', "kcbmPf.tela('porquem')") + B('⬇ Exportar dados', 'kcbmPf.exportar()', 'bo', 'Baixa um arquivo com tudo deste módulo (para levar ao Fluxo PF ou guardar como backup)') + B('+ Nova pessoa física', 'kcbmPf.novaPessoa()', 'bp') + '</div></div>'
       + '<div style="font-size:12.5px;color:var(--slate);margin-bottom:10px">Cadastre a pessoa e abra para lançar contas a pagar/receber, extrato, cartões e ver o saldo. Os valores são do mês do topo (' + rotMes(fechMes()) + '): tudo que ainda não foi pago ou recebido até o fim do mês, incluindo as faturas de cartão. Saldo total = a receber − a pagar (verde positivo, vermelho negativo).</div>'
       + tabela([{ t: 'Pessoa' }, { t: 'CPF' }, { t: 'Saldo a pagar', r: 1 }, { t: 'Saldo a receber', r: 1 }, { t: 'Saldo total', r: 1 }, { t: '' }], linhas, 'Nenhuma pessoa física cadastrada. Clique em "+ Nova pessoa física".') + '</div>';
   }
@@ -263,11 +267,18 @@
       + '<div style="font-size:12.5px;color:var(--slate);margin-bottom:10px">Cadastro único: vale para <b>todas as pessoas físicas</b>. Os tipos de gasto aparecem nas contas a pagar e nos gastos; os de receita, nas contas a receber e nas entradas.</div>'
       + tabela([{ t: 'Nome' }, { t: 'É' }, { t: '' }], linhas, 'Nenhum tipo cadastrado. Clique em "+ Novo tipo".') + '</div>';
   }
+  function telaPorQuem() {
+    const ts = lerPorQuem().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const linhas = ts.map(t => '<tr>' + td(seloPorQuem({ porQuem: t.nome })) + '<td style="' + TD + ';text-align:right">' + B('✏️', "kcbmPf.porQuemForm('" + t.id + "')") + ' ' + B('🗑', "kcbmPf.porQuemExcluir('" + t.id + "')") + '</td></tr>');
+    el().innerHTML = '<div style="padding:18px 22px 40px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">' + B('← Pessoas físicas', "kcbmPf.tela('lista')") + '<div style="font-size:1.25rem;font-weight:700">🧒 Por quem pago</div><div style="margin-left:auto">' + B('+ Novo', 'kcbmPf.porQuemForm()', 'bp') + '</div></div>'
+      + '<div style="font-size:12.5px;color:var(--slate);margin-bottom:10px">Pessoas que usam um gasto que você paga (ex.: um filho no futebol). Ao lançar uma conta a pagar você escolhe aqui, e o nome aparece como um selinho amarelo ao lado de <b>a quem pago</b>. Cadastro único para todas as pessoas.</div>'
+      + tabela([{ t: 'Nome' }, { t: '' }], linhas, 'Ninguém cadastrado ainda. Clique em "+ Novo" (ou digite o nome direto ao lançar uma conta).') + '</div>';
+  }
   function telaTerceiros() {
     const ts = lerTerceiros().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-    const linhas = ts.map(t => '<tr>' + td('<b>' + E(t.nome) + '</b>') + td({ fornecedor: 'Fornecedor', cliente: 'Cliente', ambos: 'Fornecedor e cliente' }[t.tipo] || '') + td(E(t.doc || '')) + '<td style="' + TD + ';text-align:right">' + B('✏️', "kcbmPf.tercForm('" + t.id + "')") + ' ' + B('🗑', "kcbmPf.tercExcluir('" + t.id + "')") + '</td></tr>');
-    el().innerHTML = '<div style="padding:18px 22px 40px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">' + B('← Pessoas físicas', "kcbmPf.tela('lista')") + '<div style="font-size:1.25rem;font-weight:700">👥 Fornecedores e clientes</div><div style="margin-left:auto">' + B('+ Novo', 'kcbmPf.tercForm()', 'bp') + '</div></div>'
-      + '<div style="font-size:12.5px;color:var(--slate);margin-bottom:10px">Cadastro único para todas as pessoas. Todo fornecedor ou cliente que você digitar numa conta a pagar/receber entra aqui sozinho, e depois aparece como sugestão ao cadastrar de novo.</div>'
+    const linhas = ts.map(t => '<tr>' + td('<b>' + E(t.nome) + '</b>') + td({ fornecedor: 'A quem pago', cliente: 'De quem recebo', ambos: 'Os dois' }[t.tipo] || '') + td(E(t.doc || '')) + '<td style="' + TD + ';text-align:right">' + B('✏️', "kcbmPf.tercForm('" + t.id + "')") + ' ' + B('🗑', "kcbmPf.tercExcluir('" + t.id + "')") + '</td></tr>');
+    el().innerHTML = '<div style="padding:18px 22px 40px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">' + B('← Pessoas físicas', "kcbmPf.tela('lista')") + '<div style="font-size:1.25rem;font-weight:700">👥 A quem pago / de quem recebo</div><div style="margin-left:auto">' + B('+ Novo', 'kcbmPf.tercForm()', 'bp') + '</div></div>'
+      + '<div style="font-size:12.5px;color:var(--slate);margin-bottom:10px">Cadastro único para todas as pessoas. Quem recebe o seu dinheiro (<b>a quem pago</b>) e quem lhe paga (<b>de quem recebo</b>) entra aqui sozinho quando você lança uma conta, e depois aparece como sugestão ao cadastrar de novo.</div>'
       + tabela([{ t: 'Nome' }, { t: 'Tipo' }, { t: 'CPF/CNPJ' }, { t: '' }], linhas, 'Ninguém cadastrado ainda.') + '</div>';
   }
 
@@ -376,7 +387,7 @@
   function movimentosAno(d) {
     const out = [];
     [['pagar', 'fornecedor'], ['receber', 'cliente']].forEach(([tipo, campo]) => (d[tipo] || []).forEach(it => (it.parcelas || []).forEach(p => {
-      if (!p.venc) return; out.push({ data: p.venc, rec: tipo === 'receber', nome: String(it[campo] || '') + (it.parcelado ? ' (' + p.n + '/' + it.n + ')' : '') + (it.forma === 'cartao' ? ' · cartão' : ''), valor: Number(p.valor) || 0, pago: !!p.pago });
+      if (!p.venc) return; out.push({ data: p.venc, rec: tipo === 'receber', porQuem: it.porQuem || '', nome: String(it[campo] || '') + (it.parcelado ? ' (' + p.n + '/' + it.n + ')' : '') + (it.forma === 'cartao' ? ' · cartão' : ''), valor: Number(p.valor) || 0, pago: !!p.pago });
     })));
     (d.entradas || []).forEach(x => { if (x.data) out.push({ data: x.data, rec: true, nome: String(x.descricao || x.categoria || ''), valor: Math.abs(Number(x.valor) || 0), pago: true }); });
     (d.gastos || []).forEach(x => { if (x.data) out.push({ data: x.data, rec: false, nome: String(x.descricao || x.categoria || ''), valor: Math.abs(Number(x.valor) || 0), pago: true }); });
@@ -397,7 +408,7 @@
           const mes = ano + '-' + p2(m), li = ms.filter(x => x.data.slice(0, 7) === mes).sort((a, b) => a.data.localeCompare(b.data) || (a.rec === b.rec ? 0 : a.rec ? -1 : 1)); if (!li.length) continue;
           const r2 = li.filter(x => x.rec).reduce((a, x) => a + cents(x.valor), 0) / 100, g2 = li.filter(x => !x.rec).reduce((a, x) => a + cents(x.valor), 0) / 100;
           det += '<tr style="background:rgba(127,127,127,.12)"><td colspan="4" style="' + TD + ';font-weight:700">' + rotMes(mes) + '</td><td style="' + TD + ';text-align:right;white-space:nowrap">Receitas <b style="color:var(--teal)">' + R$(r2) + '</b> · Gastos <b style="color:#dc2626">' + R$(-g2) + '</b> · Resultado <b>' + R$((cents(r2) - cents(g2)) / 100) + '</b></td></tr>'
-            + li.map(x => '<tr>' + td(br(x.data)) + td(x.rec ? '<span style="color:var(--teal)">Receita</span>' : '<span style="color:#dc2626">Gasto</span>') + td(E(x.nome)) + td(x.pago ? (x.rec ? 'recebido' : 'pago') : '<span style="color:var(--slate)">em aberto</span>') + td('<span style="color:' + (x.rec ? 'var(--teal)' : '#dc2626') + '">' + R$(x.rec ? x.valor : -x.valor) + '</span>', 1) + '</tr>').join('');
+            + li.map(x => '<tr>' + td(br(x.data)) + td(x.rec ? '<span style="color:var(--teal)">Receita</span>' : '<span style="color:#dc2626">Gasto</span>') + td(E(x.nome) + seloPorQuem({ porQuem: x.porQuem })) + td(x.pago ? (x.rec ? 'recebido' : 'pago') : '<span style="color:var(--slate)">em aberto</span>') + td('<span style="color:' + (x.rec ? 'var(--teal)' : '#dc2626') + '">' + R$(x.rec ? x.valor : -x.valor) + '</span>', 1) + '</tr>').join('');
         }
         html += '<tr><td colspan="5" style="padding:0;background:rgba(127,127,127,.06)"><div style="padding:6px 12px 12px 30px">' + (det ? '<table style="width:100%;border-collapse:collapse"><tr><th style="' + TD + ';text-align:left">Data</th><th style="' + TD + ';text-align:left">Tipo</th><th style="' + TD + ';text-align:left">Quem pagou / a quem paguei</th><th style="' + TD + ';text-align:left">Situação</th><th style="' + TD + ';text-align:right">Valor</th></tr>' + det + '</table>' : '<div style="color:var(--slate);font-size:12.5px;padding:8px">Sem movimento neste ano.</div>') + '</div></td></tr>';
       }
@@ -419,13 +430,13 @@
         const sit = quit ? '<span style="color:var(--teal)">paga</span>' : (r.atras ? '<span style="color:#dc2626">atrasada</span>' : 'em aberto');
         const acao = quit ? (f.linhas.some(x => x.p.baixaFatura) ? B('↩ Desfazer', "kcbmPf.faturaDesfazBaixa('" + c.id + "','" + f.fatura + "')") : '') : B('✔ Dar baixa', "kcbmPf.faturaBaixa('" + c.id + "','" + f.fatura + "')", 'bp');
         let h = '<tr style="cursor:pointer' + (quit ? ';background:rgba(59,130,246,.16)' : '') + '" onclick="kcbmPf.movAbrir(\'' + key + '\')">' + td(br(f.venc)) + td(badge) + td('<span style="display:inline-flex;align-items:center;gap:6px"><span style="font-size:11px">' + (aberta ? '▼' : '▶') + '</span>' + bandeiraSvg(c.bandeira, 16) + '<b>' + E(c.nome) + '</b> <span style="color:var(--slate);font-size:11.5px">fatura de ' + rotMes(f.fatura) + ' · ' + f.linhas.length + ' lançamento(s)</span></span>') + td('Cartão de crédito') + td('<span style="color:#dc2626">' + R$(-f.total) + '</span>', 1) + td(sit) + '<td style="' + TD + ';text-align:right;white-space:nowrap" onclick="event.stopPropagation()">' + acao + '</td></tr>';
-        if (aberta) h += '<tr><td colspan="7" style="padding:0;background:rgba(127,127,127,.07)"><div style="padding:6px 12px 10px 38px"><table style="width:100%;border-collapse:collapse">' + f.linhas.map(x => '<tr>' + td(br(x.item.data)) + td(E(x.item.fornecedor)) + td(x.item.rec ? '↻ mensal' : (x.item.parcelado ? x.p.n + '/' + x.item.n : 'à vista')) + td(E(x.item.tipo || '')) + td(R$(-x.p.valor), 1) + '</tr>').join('') + '</table></div></td></tr>';
+        if (aberta) h += '<tr><td colspan="7" style="padding:0;background:rgba(127,127,127,.07)"><div style="padding:6px 12px 10px 38px"><table style="width:100%;border-collapse:collapse">' + f.linhas.map(x => '<tr>' + td(br(x.item.data)) + td(E(x.item.fornecedor) + seloPorQuem(x.item)) + td(x.item.rec ? '↻ mensal' : (x.item.parcelado ? x.p.n + '/' + x.item.n : 'à vista')) + td(E(x.item.tipo || '')) + td(R$(-x.p.valor), 1) + '</tr>').join('') + '</table></div></td></tr>';
         return h;
       }
       const { it, p } = r, v = pag ? -p.valor : p.valor; if (p.pago) { if (pag) pagoT += p.valor; else recebT += p.valor; } else if (pag) aPagar += p.valor; else aReceber += p.valor;
       const sit = p.pago ? '<span style="color:var(--teal)">' + (pag ? 'paga' : 'recebida') + ' em ' + br(p.dataPago) + (p.extratoId ? ' · extrato' : '') + '</span>' : (r.atras ? '<span style="color:#dc2626">atrasada</span>' : 'em aberto');
       const acao = p.pago ? (p.extratoId ? '' : B('↩ Desfazer', "kcbmPf.parcelaDesfaz('" + r.tipo + "','" + it.id + "'," + p.n + ")")) : B(pag ? '✔ Pagar' : '✔ Receber', "kcbmPf.parcelaBaixa('" + r.tipo + "','" + it.id + "'," + p.n + ")", 'bp');
-      return '<tr' + (p.pago ? ' style="background:' + (pag ? 'rgba(59,130,246,.16)' : 'rgba(34,197,94,.17)') + '"' : '') + '>' + td(br(r.venc)) + td(badge) + td(E(it[pag ? 'fornecedor' : 'cliente']) + (it.rec ? ' ↻' : '') + (it.parcelado ? ' <span style="color:var(--slate);font-size:11.5px">' + p.n + '/' + it.n + '</span>' : '')) + td(E(it.tipo || '')) + td('<span style="color:' + cor(v) + '">' + R$(v) + '</span>', 1) + td(sit) + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + acao + ' ' + B('Parcelas', "kcbmPf.tituloVer('" + r.tipo + "','" + it.id + "')") + ' ' + B('🗑', "kcbmPf.tituloExcluir('" + r.tipo + "','" + it.id + "')") + '</td></tr>';
+      return '<tr' + (p.pago ? ' style="background:' + (pag ? 'rgba(59,130,246,.16)' : 'rgba(34,197,94,.17)') + '"' : '') + '>' + td(br(r.venc)) + td(badge) + td(E(it[pag ? 'fornecedor' : 'cliente']) + seloPorQuem(it) + (it.rec ? ' ↻' : '') + (it.parcelado ? ' <span style="color:var(--slate);font-size:11.5px">' + p.n + '/' + it.n + '</span>' : '')) + td(E(it.tipo || '')) + td('<span style="color:' + cor(v) + '">' + R$(v) + '</span>', 1) + td(sit) + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + acao + ' ' + B('Parcelas', "kcbmPf.tituloVer('" + r.tipo + "','" + it.id + "')") + (pag ? ' ' + B('🧒', "kcbmPf.porQuemDefinir('" + r.tipo + "','" + it.id + "')") : '') + ' ' + B('🗑', "kcbmPf.tituloExcluir('" + r.tipo + "','" + it.id + "')") + '</td></tr>';
     });
     const chip = (k, t) => '<button class="btn ' + (fl === k ? 'bp' : 'bo') + ' bsm" onclick="kcbmPf.movFiltro(\'' + k + '\')">' + t + '</button>';
     return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">' + navMes(mes) + chip('todos', 'Tudo') + chip('pagar', 'A pagar') + chip('receber', 'A receber') + '<div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">' + B('+ Conta a pagar', "kcbmPf.tituloForm('pagar')", 'bp') + B('+ Conta a receber', "kcbmPf.tituloForm('receber')", 'bp') + '</div></div>'
@@ -443,7 +454,7 @@
         + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + B('Parcelas', "kcbmPf.tituloVer('" + tipo + "','" + it.id + "')") + ' ' + B('🗑', "kcbmPf.tituloExcluir('" + tipo + "','" + it.id + "')") + '</td></tr>';
     });
     return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px"><div style="font-weight:700">' + (pag ? 'Compras a prazo e contas a pagar' : 'Receitas a prazo e contas a receber') + '</div><div style="margin-left:auto">' + B(pag ? '+ Registrar compra / conta' : '+ Registrar receita', "kcbmPf.tituloForm('" + tipo + "')", 'bp') + '</div></div>'
-      + tabela([{ t: 'Data' }, { t: pag ? 'Fornecedor' : 'Cliente' }, { t: pag ? 'Tipo de gasto' : 'Tipo de receita' }, { t: 'Valor', r: 1 }, { t: 'Parcelas / recorrência' }, { t: 'Forma' }, { t: 'Situação' }, { t: '' }], linhas, pag ? 'Nenhuma conta registrada.' : 'Nenhuma receita a receber registrada.');
+      + tabela([{ t: 'Data' }, { t: pag ? 'A quem pago' : 'De quem recebo' }, { t: pag ? 'Tipo de gasto' : 'Tipo de receita' }, { t: 'Valor', r: 1 }, { t: 'Parcelas / recorrência' }, { t: 'Forma' }, { t: 'Situação' }, { t: '' }], linhas, pag ? 'Nenhuma conta registrada.' : 'Nenhuma receita a receber registrada.');
   }
   // ── Cartões ──
   function abaCartoes(d) {
@@ -457,7 +468,7 @@
       const fats = faturasDoCartao(d, c.id), prox = fats.filter(f => f.aberto > 0.004)[0];
       const linhas = fats.map(f => '<tr style="' + (ST.mesFatura === f.fatura ? 'background:rgba(20,184,166,.12)' : '') + ';cursor:pointer" onclick="kcbmPf.faturaSel(\'' + f.fatura + '\')">' + td('<b>' + rotMes(f.fatura) + '</b>') + td(br(f.venc)) + td(R$(f.total), 1) + td(R$(f.pago), 1) + td('<b style="color:' + (f.aberto > 0.004 ? '#dc2626' : 'var(--teal)') + '">' + R$(f.aberto) + '</b>', 1) + '</tr>');
       const fs = fats.find(f => f.fatura === ST.mesFatura);
-      const compras = fs ? tabela([{ t: 'Compra' }, { t: 'Fornecedor' }, { t: 'Parcela' }, { t: 'Valor', r: 1 }, { t: 'Situação' }, { t: '' }], fs.linhas.map(x => '<tr>' + td(br(x.item.data)) + td(E(x.item.fornecedor)) + td(x.item.rec ? '↻ mensal' : (x.item.parcelado ? x.p.n + '/' + x.item.n : 'à vista')) + td('<span style="color:' + cor(x.p.valor) + '">' + R$(x.p.valor) + '</span>', 1) + td(x.p.pago ? '<span style="color:var(--teal)">paga em ' + br(x.p.dataPago) + '</span>' : 'em aberto') + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + (x.p.pago ? '' : B('✏️', x.item.manual ? "kcbmPf.saldoCartaoEditar('" + x.item.id + "')" : "kcbmPf.parcelaValor('pagar','" + x.item.id + "'," + x.p.n + ")", 'bo', 'Editar')) + ' ' + B('🗑', "kcbmPf.tituloExcluir('pagar','" + x.item.id + "')", 'bo', 'Excluir') + '</td></tr>'), '') : '';
+      const compras = fs ? tabela([{ t: 'Compra' }, { t: 'A quem pago' }, { t: 'Parcela' }, { t: 'Valor', r: 1 }, { t: 'Situação' }, { t: '' }], fs.linhas.map(x => '<tr>' + td(br(x.item.data)) + td(E(x.item.fornecedor) + seloPorQuem(x.item)) + td(x.item.rec ? '↻ mensal' : (x.item.parcelado ? x.p.n + '/' + x.item.n : 'à vista')) + td('<span style="color:' + cor(x.p.valor) + '">' + R$(x.p.valor) + '</span>', 1) + td(x.p.pago ? '<span style="color:var(--teal)">paga em ' + br(x.p.dataPago) + '</span>' : 'em aberto') + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + (x.p.pago ? '' : B('✏️', x.item.manual ? "kcbmPf.saldoCartaoEditar('" + x.item.id + "')" : "kcbmPf.parcelaValor('pagar','" + x.item.id + "'," + x.p.n + ")", 'bo', 'Editar')) + ' ' + B('🗑', "kcbmPf.tituloExcluir('pagar','" + x.item.id + "')", 'bo', 'Excluir') + '</td></tr>'), '') : '';
       det = '<div style="margin-top:16px"><div style="font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px">' + bandeiraSvg(c.bandeira, 20) + 'Faturas — ' + E(c.nome) + ' ' + B('+ Saldo inicial', "kcbmPf.faturaManual('" + c.id + "')", 'bo', 'Informe quanto você já deve numa fatura que existe (ex.: a de novembro), sem detalhar as compras') + (prox ? ' <span style="font-weight:400;color:var(--slate)">· próxima a pagar: ' + rotMes(prox.fatura) + ', vence ' + br(prox.venc) + ', <b style="color:#dc2626">' + R$(prox.aberto) + '</b></span>' : '') + '</div>'
         + tabela([{ t: 'Fatura (fechamento)' }, { t: 'Vencimento' }, { t: 'Total', r: 1 }, { t: 'Pago', r: 1 }, { t: 'Em aberto', r: 1 }], linhas, 'Nenhuma compra neste cartão ainda.')
         + (fs ? '<div style="margin-top:12px;display:flex;align-items:center;gap:10px"><b>Compras da fatura de ' + rotMes(fs.fatura) + '</b>' + B('⚖ Ajustar fatura', "kcbmPf.faturaAjuste('" + c.id + "','" + fs.fatura + "')", 'bo', 'Informe o valor correto da fatura e o site lança a diferença como ajuste') + (fs.aberto > 0.004 ? B('✔ Dar baixa', "kcbmPf.faturaBaixa('" + c.id + "','" + fs.fatura + "')", 'bp', 'Marca a fatura inteira como paga na data que você informar') : '') + (fs.pago > 0.004 ? B('↩ Desfazer baixa', "kcbmPf.faturaDesfazBaixa('" + c.id + "','" + fs.fatura + "')", 'bo', 'Volta a fatura para em aberto (só as baixas feitas por aqui)') : '') + '</div>' + compras : '<div style="font-size:12px;color:var(--slate);margin-top:6px">Clique numa fatura para ver as compras dela e ajustar o valor.</div>') + '</div>';
@@ -477,7 +488,7 @@
       const abertas = s.abertas.sort((a, b) => a.p.venc.localeCompare(b.p.venc)).map(x => '<tr>' + td(br(x.p.venc)) + td(E(x.item[pag ? 'fornecedor' : 'cliente']) + (x.item.rec ? ' <span title="recorrente">↻</span>' : '')) + td(x.item.rec ? 'mensal' : (x.item.parcelado ? x.p.n + '/' + x.item.n : 'à vista')) + td(x.p.venc < m + '-01' ? '<span style="color:#dc2626">acumulada de meses anteriores</span>' : 'do mês') + td(R$(x.p.valor), 1) + '</tr>');
       return '<div style="flex:1 1 440px;min-width:300px"><div style="font-weight:700;margin-bottom:6px">' + tit + '</div>'
         + '<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:13px;line-height:1.7"><div style="display:flex;justify-content:space-between"><span>Saldo anterior</span><b>' + R$(s.anterior) + '</b></div><div style="display:flex;justify-content:space-between"><span>(+) Vencimentos do mês</span><b>' + R$(s.novos) + '</b></div><div style="display:flex;justify-content:space-between"><span>(−) ' + (pag ? 'Pagos' : 'Recebidos') + ' no mês</span><b>' + R$(s.pagos) + '</b></div><div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);margin-top:4px;padding-top:4px"><span><b>Saldo no fim do mês</b></span><b style="font-size:15px;color:' + (pag ? '#dc2626' : 'var(--teal)') + '">' + R$(s.final) + '</b></div><div style="display:flex;justify-content:space-between;color:var(--slate);font-size:12px"><span>A vencer depois deste mês</span><span>' + R$(s.aVencer) + '</span></div></div>'
-        + tabela([{ t: 'Vencimento' }, { t: pag ? 'Fornecedor' : 'Cliente' }, { t: 'Parcela' }, { t: 'Situação' }, { t: 'Valor', r: 1 }], abertas, 'Nada em aberto até o fim deste mês.') + '</div>';
+        + tabela([{ t: 'Vencimento' }, { t: pag ? 'A quem pago' : 'De quem recebo' }, { t: 'Parcela' }, { t: 'Situação' }, { t: 'Valor', r: 1 }], abertas, 'Nada em aberto até o fim deste mês.') + '</div>';
     };
     const fatTab = tabela([{ t: 'Cartão' }, { t: 'Fatura' }, { t: 'Vencimento' }, { t: 'Total', r: 1 }, { t: 'Em aberto', r: 1 }], fats.map(f => '<tr>' + td('<span style="display:inline-flex;align-items:center;gap:6px">' + bandeiraSvg(f.cartao.bandeira, 16) + E(f.cartao.nome) + '</span>') + td(rotMes(f.fatura)) + td(br(f.venc)) + td(R$(f.total), 1) + td('<b style="color:' + (f.aberto > 0.004 ? '#dc2626' : 'var(--teal)') + '">' + R$(f.aberto) + '</b>', 1) + '</tr>'), 'Nenhuma fatura vence neste mês.');
     return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px"><div style="display:flex;align-items:center;gap:6px">' + '<b style="min-width:150px" title="O mês vem da data lá em cima, no topo do site">' + rotMes(m) + '</b>' + (fechMes() < mesIni ? '<span style="font-size:11.5px;color:var(--slate)">(o mês do topo é anterior ao mês inicial dos saldos)</span>' : '') + '</div><div style="margin-left:auto">' + B('⚙ Saldos iniciais', 'kcbmPf.saldoIniForm()') + '</div></div>'
@@ -491,7 +502,7 @@
   const K = {
     tela(t) { ST.tela = t; ST.pf = null; render(); },
     exportar() { // backup de tudo do módulo (lista, cadastros universais e os dados de cada pessoa)
-      const dados = {}; ['kcbm_pf_lista', 'kcbm_pf_tipos', 'kcbm_pf_terceiros', 'kcbm_pf_bandeiras'].forEach(k => { const v = lerChave(k, null); if (v != null) dados[k] = v; });
+      const dados = {}; ['kcbm_pf_lista', 'kcbm_pf_tipos', 'kcbm_pf_terceiros', 'kcbm_pf_porquem', 'kcbm_pf_bandeiras'].forEach(k => { const v = lerChave(k, null); if (v != null) dados[k] = v; });
       lerLista().forEach(p => { const v = lerChave('kcbm_pf_' + p.id, null); if (v != null) dados['kcbm_pf_' + p.id] = v; });
       const blob = new Blob([JSON.stringify({ app: 'kcbm-pf', em: new Date().toISOString(), dados }, null, 1)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pessoa-fisica-backup-' + hoje() + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
@@ -518,9 +529,26 @@
       });
     },
     tipoExcluir(id) { const t = lerTipos().find(x => x.id === id); if (!t) return; if (!confirm('Excluir o tipo "' + t.nome + '"? Os lançamentos que já usam esse nome continuam com o texto.')) return; gravarChave('kcbm_pf_tipos', lerTipos().filter(x => x.id !== id)); render(); },
+    porQuemForm(id) {
+      const t = id ? lerPorQuem().find(x => x.id === id) : null;
+      modal(t ? 'Editar nome' : 'Novo — por quem pago', campo('Nome', inp('kpfNomePQ', t ? t.nome : '', 'text', 'maxlength="80"'), 'Ex.: o nome de uma filha.'), m => {
+        const nome = (val(m, 'kpfNomePQ') || '').trim(); if (!nome) { root.toast('Informe o nome.', 'err'); return false; }
+        const l = lerPorQuem(); if (l.some(x => x.id !== (t && t.id) && norm(x.nome) === norm(nome))) { root.toast('Já existe esse nome.', 'err'); return false; }
+        gravarChave('kcbm_pf_porquem', t ? l.map(x => x.id === t.id ? { id: t.id, nome } : x) : l.concat([{ id: uid(), nome }])); render();
+      });
+    },
+    porQuemExcluir(id) { const t = lerPorQuem().find(x => x.id === id); if (!t) return; if (!confirm('Excluir "' + t.nome + '" da lista? Os lançamentos que já têm esse selinho continuam com ele.')) return; gravarChave('kcbm_pf_porquem', lerPorQuem().filter(x => x.id !== id)); render(); },
+    porQuemDefinir(tipo, id) {
+      const dd = dadosAtual(), it = (dd[tipo] || []).find(x => x.id === id); if (!it) return;
+      modal('Por quem eu pago — ' + E(it[tipo === 'pagar' ? 'fornecedor' : 'cliente']), campo('Nome (deixe vazio para tirar o selinho)', inp('kpfPQ', it.porQuem || '', 'text', 'maxlength="80" list="kpfDLPQ" autocomplete="off"') + datalistPorQuem('kpfDLPQ'), 'Comece a digitar para puxar da lista; se for novo, entra na lista sozinho.'), m => {
+        const nome = (val(m, 'kpfPQ') || '').trim(); const d2 = dadosAtual(), x = (d2[tipo] || []).find(y => y.id === id); if (!x) return false;
+        if (nome) { x.porQuem = nome; registrarPorQuem(nome); } else delete x.porQuem;
+        gravarDados(ST.pf, d2); render();
+      });
+    },
     tercForm(id) {
       const t = id ? lerTerceiros().find(x => x.id === id) : null;
-      modal(t ? 'Editar cadastro' : 'Novo fornecedor / cliente', campo('Nome', inp('kpfNomeF', t ? t.nome : '', 'text', 'maxlength="120"')) + campo('Tipo', sel('kpfTipoF', [['fornecedor', 'Fornecedor'], ['cliente', 'Cliente'], ['ambos', 'Fornecedor e cliente']], t ? t.tipo : 'fornecedor')) + campo('CPF/CNPJ (opcional)', inp('kpfDocF', t ? t.doc : '', 'text', 'maxlength="20"')), m => {
+      modal(t ? 'Editar cadastro' : 'Novo cadastro (a quem pago / de quem recebo)', campo('Nome', inp('kpfNomeF', t ? t.nome : '', 'text', 'maxlength="120"')) + campo('Tipo', sel('kpfTipoF', [['fornecedor', 'A quem pago'], ['cliente', 'De quem recebo'], ['ambos', 'Os dois']], t ? t.tipo : 'fornecedor')) + campo('CPF/CNPJ (opcional)', inp('kpfDocF', t ? t.doc : '', 'text', 'maxlength="20"')), m => {
         const nome = (val(m, 'kpfNomeF') || '').trim(); if (!nome) { root.toast('Informe o nome.', 'err'); return false; }
         const l = lerTerceiros(); if (l.some(x => x.id !== (t && t.id) && norm(x.nome) === norm(nome))) { root.toast('Já existe alguém com esse nome.', 'err'); return false; }
         const novo = { id: t ? t.id : uid(), nome, tipo: val(m, 'kpfTipoF'), doc: (val(m, 'kpfDocF') || '').trim() }; gravarChave('kcbm_pf_terceiros', t ? l.map(x => x.id === t.id ? novo : x) : l.concat([novo])); render();
@@ -612,7 +640,7 @@
     // ── contas a pagar / receber ──
     tituloForm(tipo) {
       const d = dadosAtual(), pag = tipo === 'pagar';
-      const corpo = campo('Data', inp('kpfData', hoje(), 'date')) + campo(pag ? 'Fornecedor' : 'Cliente', inp('kpfQuem', '', 'text', 'maxlength="100" list="kpfDL" autocomplete="off"') + datalistTerc('kpfDL', pag ? 'fornecedor' : 'cliente'), 'Comece a digitar para puxar do cadastro; se for novo, ele entra no cadastro sozinho.') + campo(pag ? 'Tipo de gasto' : 'Tipo de receita', selTipo('kpfTipoG', pag ? 'gasto' : 'receita', '')) + campo('Valor (R$)', inp('kpfValor', '', 'text', 'inputmode="decimal"'))
+      const corpo = campo('Data', inp('kpfData', hoje(), 'date')) + campo(pag ? 'A quem pago' : 'De quem recebo', inp('kpfQuem', '', 'text', 'maxlength="100" list="kpfDL" autocomplete="off"') + datalistTerc('kpfDL', pag ? 'fornecedor' : 'cliente'), 'Comece a digitar para puxar do cadastro; se for novo, ele entra no cadastro sozinho.') + (pag ? campo('Por quem eu pago (opcional)', inp('kpfPQ', '', 'text', 'maxlength="80" list="kpfDLPQ" autocomplete="off"') + datalistPorQuem('kpfDLPQ'), 'Se o gasto é de outra pessoa (ex.: filha). Aparece como selinho amarelo ao lado de a quem pago.') : '') + campo(pag ? 'Tipo de gasto' : 'Tipo de receita', selTipo('kpfTipoG', pag ? 'gasto' : 'receita', '')) + campo('Valor (R$)', inp('kpfValor', '', 'text', 'inputmode="decimal"'))
         + campo('Forma de ' + (pag ? 'pagamento' : 'recebimento'), sel('kpfForma', (pag ? [['avista', 'À vista / boleto'], ['cartao', 'Cartão de crédito'], ['carne', 'Carnê'], ['outro', 'Outro']] : [['avista', 'À vista / boleto'], ['carne', 'Carnê'], ['outro', 'Outro']]), 'avista'))
         + (pag ? '<div id="kpfCartaoBox" style="display:none">' + campo('Cartão', d.cartoes.length ? sel('kpfCartao', d.cartoes.map(c => [c.id, c.nome + (c.bandeira ? ' — ' + c.bandeira : '')]), d.cartoes[0].id) : '<div style="font-size:12px;color:#b45309">Nenhum cartão cadastrado — cadastre na aba Cartões de crédito.</div>') + '</div>' : '')
         + campo('Recorrente (todo mês)?', '<label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="kpfRec"> Sim — repete todo mês, projetado 5 anos à frente</label>')
@@ -620,13 +648,14 @@
         + '<div id="kpfNaoRecBox">' + campo('Foi parcelado?', '<label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="kpfParc"> Sim</label>') + '<div id="kpfParcBox" style="display:none">' + campo('Em quantas vezes?', inp('kpfN', '2', 'number', 'min="2" max="60"')) + '</div><div id="kpfVencBox">' + campo('1º vencimento', inp('kpfVenc1', '', 'date'), 'Se deixar vazio, usa 30 dias depois da data. As demais parcelas vencem de mês em mês.') + '</div></div>';
       const m = modal(pag ? 'Registrar compra / conta a pagar' : 'Registrar receita a receber', corpo, mm => {
         const v = num(val(mm, 'kpfValor')), quem = (val(mm, 'kpfQuem') || '').trim(), data = val(mm, 'kpfData'), rec = chk(mm, 'kpfRec'), parc = !rec && chk(mm, 'kpfParc'), n = parc ? Math.floor(num(val(mm, 'kpfN'))) : 1, forma = val(mm, 'kpfForma');
-        if (!data || !quem || !(v > 0)) { root.toast('Informe a data, ' + (pag ? 'o fornecedor' : 'o cliente') + ' e o valor.', 'err'); return false; }
+        if (!data || !quem || !(v > 0)) { root.toast('Informe a data, ' + (pag ? 'a quem você paga' : 'de quem você recebe') + ' e o valor.', 'err'); return false; }
         if (parc && !(n >= 2)) { root.toast('Informe em quantas vezes (2 ou mais).', 'err'); return false; }
         const dia = Math.floor(num(val(mm, 'kpfDia'))); if (rec && !(dia >= 1 && dia <= 31)) { root.toast('Informe o dia do mês (1 a 31).', 'err'); return false; }
         const dd = dadosAtual(), cartaoId = (pag && forma === 'cartao') ? val(mm, 'kpfCartao') : null, cartao = cartaoId ? dd.cartoes.find(c => c.id === cartaoId) : null;
         if (pag && forma === 'cartao' && !cartao) { root.toast('Escolha o cartão de crédito.', 'err'); return false; }
         const it = { id: uid(), data, [pag ? 'fornecedor' : 'cliente']: quem, tipo: (val(mm, 'kpfTipoG') || '').trim(), valor: v, parcelado: parc, n, forma, cartaoId, venc1: rec ? '' : (val(mm, 'kpfVenc1') || '') };
         if (rec) { it.rec = true; it.diaVenc = dia; const m0 = data.slice(0, 7); it.inicio = (cartao ? true : +data.slice(8, 10) <= dia) ? m0 : somaMes(m0, 1); it.parcelas = []; estenderRecorrencia(it, cartao, somaMes(fechMes(), LIMITE_MESES)); } else it.parcelas = gerarParcelas(it, cartao);
+        const pq = pag ? (val(mm, 'kpfPQ') || '').trim() : ''; if (pq) { it.porQuem = pq; registrarPorQuem(pq); }
         dd[tipo].push(it); registrarTerceiro(quem, pag ? 'fornecedor' : 'cliente'); gravarDados(ST.pf, dd); render(); root.toast(rec ? 'Recorrência criada: ' + it.parcelas.length + ' mês(es) projetado(s).' : 'Registrado: ' + it.parcelas.length + ' parcela(s) gerada(s).', 'ok');
       }, 'Salvar', 620);
       const atualizar = () => { const rec = chk(m, 'kpfRec'); m.querySelector('#kpfRecBox').style.display = rec ? '' : 'none'; m.querySelector('#kpfNaoRecBox').style.display = rec ? 'none' : ''; m.querySelector('#kpfParcBox').style.display = chk(m, 'kpfParc') ? '' : 'none'; const cart = pag && val(m, 'kpfForma') === 'cartao'; const cb = m.querySelector('#kpfCartaoBox'); if (cb) cb.style.display = cart ? '' : 'none'; m.querySelector('#kpfVencBox').style.display = cart ? 'none' : ''; };
@@ -635,7 +664,7 @@
     tituloVer(tipo, id) {
       const d = dadosAtual(), it = d[tipo].find(x => x.id === id); if (!it) return; const pag = tipo === 'pagar';
       const linhas = (it.parcelas || []).map(p => '<tr>' + td(it.rec ? rotMes(p.mes) : p.n + '/' + (it.parcelado ? it.n : 1)) + td(br(p.venc) + (p.fatura ? ' <span style="color:var(--slate);font-size:11px">(fatura ' + p.fatura + ')</span>' : '')) + td(R$(p.valor), 1) + td(p.pago ? '<span style="color:var(--teal)">' + (pag ? 'paga' : 'recebida') + ' em ' + br(p.dataPago) + '</span>' : 'em aberto') + '<td style="' + TD + ';text-align:right">' + (p.pago ? '' : B('✏️ valor', "kcbmPf.parcelaValor('" + tipo + "','" + it.id + "'," + p.n + ")")) + '</td></tr>').join('');
-      modal((pag ? 'Conta — ' : 'Receita — ') + E(it[pag ? 'fornecedor' : 'cliente']), '<div style="font-size:12.5px;margin-bottom:8px">' + br(it.data) + ' · ' + R$(it.valor) + (it.rec ? ' por mês' : '') + ' · ' + E(it.tipo || '') + (it.rec ? ' · <b>recorrente</b> (' + (it.parcelas || []).length + ' mês(es) projetado(s))' : '') + '</div>' + (it.rec ? '<div style="margin-bottom:8px">' + B('⏹ Encerrar recorrência…', "kcbmPf.recEncerrar('" + tipo + "','" + it.id + "')") + '</div>' : '') + '<div style="max-height:360px;overflow:auto">' + tabela([{ t: it.rec ? 'Mês' : 'Parcela' }, { t: 'Vencimento' }, { t: 'Valor', r: 1 }, { t: 'Situação' }, { t: '' }], [linhas], '') + '</div><div style="font-size:11.5px;color:var(--slate);margin-top:8px">A baixa é feita na aba Extrato bancário (Baixar / classificar).</div>', null, null, 700);
+      modal((pag ? 'Conta — ' : 'Receita — ') + E(it[pag ? 'fornecedor' : 'cliente']) + seloPorQuem(it), '<div style="font-size:12.5px;margin-bottom:8px">' + br(it.data) + ' · ' + R$(it.valor) + (it.rec ? ' por mês' : '') + ' · ' + E(it.tipo || '') + (it.rec ? ' · <b>recorrente</b> (' + (it.parcelas || []).length + ' mês(es) projetado(s))' : '') + '</div>' + (it.rec ? '<div style="margin-bottom:8px">' + B('⏹ Encerrar recorrência…', "kcbmPf.recEncerrar('" + tipo + "','" + it.id + "')") + '</div>' : '') + '<div style="max-height:360px;overflow:auto">' + tabela([{ t: it.rec ? 'Mês' : 'Parcela' }, { t: 'Vencimento' }, { t: 'Valor', r: 1 }, { t: 'Situação' }, { t: '' }], [linhas], '') + '</div><div style="font-size:11.5px;color:var(--slate);margin-top:8px">A baixa é feita na aba Extrato bancário (Baixar / classificar).</div>', null, null, 700);
     },
     parcelaValor(tipo, itemId, n) {
       const d = dadosAtual(), it = d[tipo].find(x => x.id === itemId); if (!it) return; const p = it.parcelas.find(q => q.n === n); if (!p) return;
@@ -735,7 +764,7 @@
     }
   };
   root.kcbmPf = K;
-  function render() { if (!el()) return; if (ST.pf) telaPessoa(); else if (ST.tela === 'tipos') telaTipos(); else if (ST.tela === 'terceiros') telaTerceiros(); else telaLista(); aplicarFiltros(); }
+  function render() { if (!el()) return; if (ST.pf) telaPessoa(); else if (ST.tela === 'tipos') telaTipos(); else if (ST.tela === 'terceiros') telaTerceiros(); else if (ST.tela === 'porquem') telaPorQuem(); else telaLista(); aplicarFiltros(); }
 
   // ───────────── integração com o site (menu, cartão da tela inicial, página) ─────────────
   root.kcbmPfAbrir = function () { root.goPage('kcbm-pf'); };
