@@ -34,3 +34,11 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', aplicar); else aplicar();
   setInterval(aplicar, 1500); // o menu é redesenhado em alguns momentos; reaplica
 })();
+
+// ── 4) módulos que só existem no KCBM (arquivos próprios; a sincronização com o JJR nunca os apaga) ──
+(function () {
+  try {
+    var me = document.querySelector('script[src*="tema.js"]'), v = me && /v=([^&]+)/.exec(me.src) ? /v=([^&]+)/.exec(me.src)[1] : Date.now();
+    ['kcbm-pf.js'].forEach(function (f) { var s = document.createElement('script'); s.src = f + '?v=' + v; document.body.appendChild(s); });
+  } catch (e) { console.warn('KCBM módulos próprios:', e); }
+})();
