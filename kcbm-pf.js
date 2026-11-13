@@ -120,7 +120,8 @@
     (dados.pagar || []).forEach(it => { if (it.forma !== 'cartao' || it.cartaoId !== cartaoId) return; (it.parcelas || []).forEach(p => { const k = p.fatura; if (!k) return; (mapa[k] = mapa[k] || { fatura: k, venc: p.venc, total: 0, pago: 0, linhas: [] }); mapa[k].total += cents(p.valor); if (p.pago) mapa[k].pago += cents(p.valor); mapa[k].linhas.push({ item: it, p }); }); });
     return Object.keys(mapa).sort().map(k => { const f = mapa[k]; return { fatura: f.fatura, venc: f.venc, total: f.total / 100, pago: f.pago / 100, aberto: (f.total - f.pago) / 100, linhas: f.linhas }; });
   }
-  const limiteUsado = (dados, cartaoId) => faturasDoCartao(dados, cartaoId).reduce((a, f) => a + f.aberto, 0);
+  // Limite em uso NO MÊS de referência: soma o que ainda está em aberto nas faturas que vencem nesse mês ou depois (as anteriores contam como pagas). Sem mês = tudo em aberto.
+  const limiteUsado = (dados, cartaoId, mes) => faturasDoCartao(dados, cartaoId).reduce((a, f) => (!mes || f.venc.slice(0, 7) >= mes) ? a + f.aberto : a, 0);
   // Faturas que VENCEM no mês, de todos os cartões (para a aba Saldo).
   function faturasQueVencemNoMes(dados, mes) {
     const out = []; (dados.cartoes || []).forEach(c => faturasDoCartao(dados, c.id).forEach(f => { if (f.venc.slice(0, 7) === mes) out.push({ cartao: c, ...f }); })); return out;
@@ -299,9 +300,9 @@
   // ── Cartões ──
   function abaCartoes(d) {
     const cards = d.cartoes.map(c => {
-      const usado = limiteUsado(d, c.id), disp = (Number(c.limite) || 0) - usado, sel2 = ST.cartaoSel === c.id, tm = temaCartao(c.cor);
+      const usado = limiteUsado(d, c.id, fechMes()), disp = (Number(c.limite) || 0) - usado, sel2 = ST.cartaoSel === c.id, tm = temaCartao(c.cor);
       return '<div onclick="kcbmPf.cartaoSel(\'' + c.id + '\')" style="cursor:pointer;min-width:230px;flex:0 1 270px;border:' + (sel2 ? '3px' : '2px') + ' solid ' + (sel2 ? tm.sel : tm.borda) + ';border-radius:12px;padding:12px 14px;background:' + tm.bg + ';color:' + tm.fg + '"><div style="display:flex;justify-content:space-between;align-items:center"><b style="display:flex;align-items:center;gap:8px">' + bandeiraSvg(c.bandeira, 24) + E(c.nome) + '</b><span onclick="event.stopPropagation()">' + B('✏️', "kcbmPf.cartaoForm('" + c.id + "')") + '</span></div>'
-        + '<div style="font-size:12px;color:' + tm.mut + ';margin:4px 0">' + E(c.bandeira || 'Bandeira não informada') + ' · fecha dia ' + c.fechamento + ' · vence dia ' + c.vencimento + '</div><div style="font-size:12.5px;line-height:1.6">Limite <b>' + R$(c.limite) + '</b><br>Em uso <b style="color:' + tm.neg + '">' + R$(usado) + '</b><br>Disponível <b style="color:' + (disp < 0 ? tm.neg : tm.pos) + '">' + R$(disp) + '</b></div></div>';
+        + '<div style="font-size:12px;color:' + tm.mut + ';margin:4px 0">' + E(c.bandeira || 'Bandeira não informada') + ' · fecha dia ' + c.fechamento + ' · vence dia ' + c.vencimento + '</div><div style="font-size:12.5px;line-height:1.6">Limite <b>' + R$(c.limite) + '</b><br>Em uso em ' + fechMes().slice(5, 7) + '/' + fechMes().slice(0, 4) + ' <b style="color:' + tm.neg + '">' + R$(usado) + '</b><br>Disponível <b style="color:' + (disp < 0 ? tm.neg : tm.pos) + '">' + R$(disp) + '</b></div></div>';
     }).join('');
     let det = ''; const c = d.cartoes.find(x => x.id === ST.cartaoSel);
     if (c) {
@@ -309,9 +310,9 @@
       const linhas = fats.map(f => '<tr style="' + (ST.mesFatura === f.fatura ? 'background:rgba(20,184,166,.12)' : '') + ';cursor:pointer" onclick="kcbmPf.faturaSel(\'' + f.fatura + '\')">' + td('<b>' + rotMes(f.fatura) + '</b>') + td(br(f.venc)) + td(R$(f.total), 1) + td(R$(f.pago), 1) + td('<b style="color:' + (f.aberto > 0.004 ? '#dc2626' : 'var(--teal)') + '">' + R$(f.aberto) + '</b>', 1) + '</tr>');
       const fs = fats.find(f => f.fatura === ST.mesFatura);
       const compras = fs ? tabela([{ t: 'Compra' }, { t: 'Fornecedor' }, { t: 'Parcela' }, { t: 'Valor', r: 1 }, { t: 'Situação' }], fs.linhas.map(x => '<tr>' + td(br(x.item.data)) + td(E(x.item.fornecedor)) + td(x.item.rec ? '↻ mensal' : (x.item.parcelado ? x.p.n + '/' + x.item.n : 'à vista')) + td('<span style="color:' + cor(x.p.valor) + '">' + R$(x.p.valor) + '</span>', 1) + td(x.p.pago ? '<span style="color:var(--teal)">paga em ' + br(x.p.dataPago) + '</span>' : 'em aberto') + '</tr>'), '') : '';
-      det = '<div style="margin-top:16px"><div style="font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px">' + bandeiraSvg(c.bandeira, 20) + 'Faturas — ' + E(c.nome) + (prox ? ' <span style="font-weight:400;color:var(--slate)">· próxima a pagar: ' + rotMes(prox.fatura) + ', vence ' + br(prox.venc) + ', <b style="color:#dc2626">' + R$(prox.aberto) + '</b></span>' : '') + '</div>'
+      det = '<div style="margin-top:16px"><div style="font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px">' + bandeiraSvg(c.bandeira, 20) + 'Faturas — ' + E(c.nome) + ' ' + B('+ Informar fatura', "kcbmPf.faturaManual('" + c.id + "')", 'bo', 'Digite o valor de uma fatura que já existe (ex.: a de novembro), sem detalhar as compras') + (prox ? ' <span style="font-weight:400;color:var(--slate)">· próxima a pagar: ' + rotMes(prox.fatura) + ', vence ' + br(prox.venc) + ', <b style="color:#dc2626">' + R$(prox.aberto) + '</b></span>' : '') + '</div>'
         + tabela([{ t: 'Fatura (fechamento)' }, { t: 'Vencimento' }, { t: 'Total', r: 1 }, { t: 'Pago', r: 1 }, { t: 'Em aberto', r: 1 }], linhas, 'Nenhuma compra neste cartão ainda.')
-        + (fs ? '<div style="margin-top:12px;display:flex;align-items:center;gap:10px"><b>Compras da fatura de ' + rotMes(fs.fatura) + '</b>' + B('⚖ Ajustar fatura', "kcbmPf.faturaAjuste('" + c.id + "','" + fs.fatura + "')", 'bo', 'Informe o valor correto da fatura e o site lança a diferença como ajuste') + '</div>' + compras : '<div style="font-size:12px;color:var(--slate);margin-top:6px">Clique numa fatura para ver as compras dela e ajustar o valor.</div>') + '</div>';
+        + (fs ? '<div style="margin-top:12px;display:flex;align-items:center;gap:10px"><b>Compras da fatura de ' + rotMes(fs.fatura) + '</b>' + B('⚖ Ajustar fatura', "kcbmPf.faturaAjuste('" + c.id + "','" + fs.fatura + "')", 'bo', 'Informe o valor correto da fatura e o site lança a diferença como ajuste') + (fs.aberto > 0.004 ? B('✔ Dar baixa', "kcbmPf.faturaBaixa('" + c.id + "','" + fs.fatura + "')", 'bp', 'Marca a fatura inteira como paga na data que você informar') : '') + (fs.pago > 0.004 ? B('↩ Desfazer baixa', "kcbmPf.faturaDesfazBaixa('" + c.id + "','" + fs.fatura + "')", 'bo', 'Volta a fatura para em aberto (só as baixas feitas por aqui)') : '') + '</div>' + compras : '<div style="font-size:12px;color:var(--slate);margin-top:6px">Clique numa fatura para ver as compras dela e ajustar o valor.</div>') + '</div>';
     }
     return '<div style="display:flex;align-items:center;margin-bottom:10px"><div style="font-weight:700">Cartões de crédito</div><div style="margin-left:auto">' + B('+ Novo cartão', 'kcbmPf.cartaoForm()', 'bp') + '</div></div>'
       + '<div style="display:flex;gap:12px;flex-wrap:wrap">' + (cards || '<div style="color:var(--slate);padding:16px">Nenhum cartão cadastrado. Cadastre para escolher na compra parcelada ou recorrente.</div>') + '</div>' + det;
@@ -509,6 +510,32 @@
       const at = () => { m.querySelector('#kpfBandBox').style.display = val(m, 'kpfBand') === '__outra' ? '' : 'none'; }; m.querySelector('#kpfBand').onchange = at; at();
       const marcarCor = () => { const v = val(m, 'kpfCor') || ''; m.querySelectorAll('#kpfCores button').forEach(b => { const on = (b.dataset.cor || '') === v; b.style.borderColor = on ? '#111827' : (b.dataset.cor ? 'transparent' : 'var(--border)'); b.style.boxShadow = on ? '0 0 0 2px #fff inset' : ''; b.textContent = on && b.dataset.cor ? '✓' : ''; }); const nm = CORES_CARTAO.find(x => x[1] === v); m.querySelector('#kpfCorNome').textContent = nm ? 'Cor escolhida: ' + nm[0] : 'Sem cor (branco)'; };
       m.querySelectorAll('#kpfCores button').forEach(b => { b.onclick = () => { m.querySelector('#kpfCor').value = b.dataset.cor || ''; marcarCor(); }; }); marcarCor();
+    },
+    faturaBaixa(cartaoId, fatura) {
+      let v = prompt('Data do pagamento da fatura (AAAA-MM-DD ou DD/MM/AAAA):', hoje()); if (v == null) return; v = v.trim();
+      const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v); if (m) v = m[3] + '-' + m[2] + '-' + m[1];
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { root.toast('Data inválida.', 'err'); return; }
+      const dd = dadosAtual(); let n = 0;
+      (dd.pagar || []).forEach(it => { if (it.forma !== 'cartao' || it.cartaoId !== cartaoId) return; (it.parcelas || []).forEach(p => { if (p.fatura === fatura && !p.pago) { p.pago = true; p.dataPago = v; p.baixaFatura = true; n++; } }); });
+      if (!n) { root.toast('Essa fatura não tem nada em aberto.', 'err'); return; }
+      gravarDados(ST.pf, dd); render(); root.toast('Fatura paga em ' + v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) + '.', 'ok');
+    },
+    faturaDesfazBaixa(cartaoId, fatura) {
+      if (!confirm('Desfazer a baixa desta fatura? As parcelas pagas por aqui voltam para "em aberto".')) return;
+      const dd = dadosAtual(); let n = 0;
+      (dd.pagar || []).forEach(it => { if (it.forma !== 'cartao' || it.cartaoId !== cartaoId) return; (it.parcelas || []).forEach(p => { if (p.fatura === fatura && p.pago && p.baixaFatura) { p.pago = false; p.dataPago = null; delete p.baixaFatura; n++; } }); });
+      if (!n) { root.toast('Não há baixa feita por aqui para desfazer (pagamentos vindos do extrato se desfazem no extrato).', 'err'); return; }
+      gravarDados(ST.pf, dd); render();
+    },
+    faturaManual(cartaoId) {
+      const c0 = dadosAtual().cartoes.find(x => x.id === cartaoId); if (!c0) return;
+      modal('Informar fatura — ' + E(c0.nome), campo('Mês do vencimento', inp('kpfFmMes', fechMes(), 'month'), 'Vence dia ' + c0.vencimento + ' desse mês.') + campo('Valor a pagar (R$)', inp('kpfFmVal', '', 'text', 'inputmode="decimal" placeholder="0,00"'), 'Entra como um total só, sem detalhar as compras. Se a fatura desse mês já existir, o valor é somado a ela.'), m => {
+        const mes = val(m, 'kpfFmMes'), v = num(val(m, 'kpfFmVal'));
+        if (!/^\d{4}-\d{2}$/.test(mes || '') || !(v > 0)) { root.toast('Informe o mês e um valor maior que zero.', 'err'); return false; }
+        const dd = dadosAtual(), venc = diaNoMes(mes, +c0.vencimento);
+        dd.pagar.push({ id: uid(), data: hoje(), fornecedor: 'Fatura ' + c0.nome + ' (valor informado)', tipo: 'Fatura do cartão', valor: v, parcelado: false, n: 1, forma: 'cartao', cartaoId, manual: true, parcelas: [{ n: 1, fatura: mes, venc, valor: v, pago: false, dataPago: null }] });
+        gravarDados(ST.pf, dd); ST.mesFatura = mes; render(); root.toast('Fatura de ' + rotMes(mes) + ' registrada.', 'ok');
+      }, 'Salvar');
     },
     faturaAjuste(cartaoId, fatura) {
       const d = dadosAtual(), f = faturasDoCartao(d, cartaoId).find(x => x.fatura === fatura); if (!f) return;
