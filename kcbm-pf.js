@@ -224,7 +224,7 @@
         + '<td style="' + TD + ';text-align:right;white-space:nowrap" onclick="event.stopPropagation()">' + B('Abrir', "kcbmPf.abrir('" + p.id + "')", 'bp') + ' ' + B('✏️', "kcbmPf.editarPessoa('" + p.id + "')", 'bo', 'Editar nome/CPF') + ' ' + B('🗑', "kcbmPf.excluirPessoa('" + p.id + "')", 'bo', 'Excluir esta pessoa e todos os dados dela (pede confirmação)') + '</td></tr>';
     });
     el().innerHTML = '<div style="padding:18px 22px 40px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><img src="assets/pessoa-fisica.svg" alt="" style="height:28px;width:28px"><div style="font-size:1.3rem;font-weight:700">Pessoa Física</div>'
-      + '<div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">' + B('🏷 Tipos de gasto / receita', "kcbmPf.tela('tipos')") + B('👥 Fornecedores e clientes', "kcbmPf.tela('terceiros')") + B('+ Nova pessoa física', 'kcbmPf.novaPessoa()', 'bp') + '</div></div>'
+      + '<div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">' + B('🏷 Tipos de gasto / receita', "kcbmPf.tela('tipos')") + B('👥 Fornecedores e clientes', "kcbmPf.tela('terceiros')") + B('⬇ Exportar dados', 'kcbmPf.exportar()', 'bo', 'Baixa um arquivo com tudo deste módulo (para levar ao Fluxo PF ou guardar como backup)') + B('+ Nova pessoa física', 'kcbmPf.novaPessoa()', 'bp') + '</div></div>'
       + '<div style="font-size:12.5px;color:var(--slate);margin-bottom:10px">Cadastre a pessoa e abra para lançar contas a pagar/receber, extrato, cartões e ver o saldo. Os valores da lista são do Fechamento Atual (' + rotMes(fechMes()) + '): contas a pagar + faturas que vencem no mês, e contas a receber.</div>'
       + tabela([{ t: 'Pessoa' }, { t: 'CPF' }, { t: 'A pagar (mês)', r: 1 }, { t: 'A receber (saldo)', r: 1 }, { t: '' }], linhas, 'Nenhuma pessoa física cadastrada. Clique em "+ Nova pessoa física".') + '</div>';
   }
@@ -338,6 +338,13 @@
   // ───────────── ações ─────────────
   const K = {
     tela(t) { ST.tela = t; ST.pf = null; render(); },
+    exportar() { // backup de tudo do módulo (lista, cadastros universais e os dados de cada pessoa)
+      const dados = {}; ['kcbm_pf_lista', 'kcbm_pf_tipos', 'kcbm_pf_terceiros', 'kcbm_pf_bandeiras'].forEach(k => { const v = lerChave(k, null); if (v != null) dados[k] = v; });
+      lerLista().forEach(p => { const v = lerChave('kcbm_pf_' + p.id, null); if (v != null) dados['kcbm_pf_' + p.id] = v; });
+      const blob = new Blob([JSON.stringify({ app: 'kcbm-pf', em: new Date().toISOString(), dados }, null, 1)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pessoa-fisica-backup-' + hoje() + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+      root.toast('Arquivo baixado (' + Object.keys(dados).length + ' itens).', 'ok');
+    },
     novaPessoa() { modal('Nova pessoa física', formPessoa(null), m => { const f = lerFormPessoa(m); if (!f) return false; const l = lerLista(); const p = { id: uid(), criado: Date.now(), ...f }; l.push(p); gravarLista(l); gravarDados(p.id, novoDados()); K.abrir(p.id); root.toast('Pessoa cadastrada.', 'ok'); }); },
     editarPessoa(id) { const p = lerLista().find(x => x.id === id); if (!p) return; modal('Editar pessoa física', formPessoa(p), m => { const f = lerFormPessoa(m); if (!f) return false; gravarLista(lerLista().map(x => x.id === id ? Object.assign({}, x, f) : x)); render(); }); },
     excluirPessoa(id) { const p = lerLista().find(x => x.id === id); if (!p) return; if (!confirm('Excluir "' + p.nome + '" e TODOS os dados dela (contas, extrato, cartões)?\n\nNão dá para desfazer.')) return; if (prompt('Para confirmar, digite o nome da pessoa:') !== p.nome) { root.toast('Nome não confere — nada foi excluído.', 'err'); return; } gravarLista(lerLista().filter(x => x.id !== id)); render(); },
