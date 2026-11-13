@@ -135,7 +135,7 @@
       return '<tr style="cursor:pointer" onclick="kcbmPf.abrir(\'' + p.id + '\')"><td style="' + TD + ';font-weight:600">' + E(p.nome) + '</td>' + td(E(fmtCpf(p.cpf)) || '—') + td(R$(sp.final), 1) + td(R$(sr.final), 1)
         + '<td style="' + TD + ';text-align:right;white-space:nowrap" onclick="event.stopPropagation()">' + B('Abrir', "kcbmPf.abrir('" + p.id + "')", 'bp') + ' ' + B('✏️', "kcbmPf.editarPessoa('" + p.id + "')", 'bo', 'Editar nome/CPF') + ' ' + B('🗑', "kcbmPf.excluirPessoa('" + p.id + "')", 'bo', 'Excluir esta pessoa e todos os dados dela (pede confirmação)') + '</td></tr>';
     });
-    el().innerHTML = '<div style="padding:18px 22px 40px"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px"><span style="font-size:1.5rem">👤</span><div style="font-size:1.3rem;font-weight:700">Pessoa Física</div><div style="margin-left:auto">' + B('+ Nova pessoa física', 'kcbmPf.novaPessoa()', 'bp') + '</div></div>'
+    el().innerHTML = '<div style="padding:18px 22px 40px"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px"><img src="assets/pessoa-fisica.svg" alt="" style="height:28px;width:28px;vertical-align:middle"><div style="font-size:1.3rem;font-weight:700">Pessoa Física</div><div style="margin-left:auto">' + B('+ Nova pessoa física', 'kcbmPf.novaPessoa()', 'bp') + '</div></div>'
       + '<div style="font-size:12.5px;color:var(--slate);margin-bottom:10px">Cadastre a pessoa e abra para lançar entradas, gastos, extrato, contas a pagar/receber e cartões. Os saldos mostrados são os do mês atual.</div>'
       + tabela([{ t: 'Pessoa' }, { t: 'CPF' }, { t: 'A pagar (saldo)', r: 1 }, { t: 'A receber (saldo)', r: 1 }, { t: '' }], linhas, 'Nenhuma pessoa física cadastrada. Clique em "+ Nova pessoa física".') + '</div>';
   }
@@ -345,7 +345,7 @@
   function montar() {
     if (document.getElementById('n-kcbm-pf') || !document.getElementById('page-home')) return false;
     const ref = document.getElementById('n-lembretes') || document.querySelector('aside .ni');
-    if (ref) { const ni = document.createElement('div'); ni.className = 'ni'; ni.id = 'n-kcbm-pf'; ni.setAttribute('onclick', 'kcbmPfAbrir()'); ni.innerHTML = '<span class="ic">👤</span>Pessoa Física'; ref.parentNode.insertBefore(ni, ref.nextSibling); }
+    if (ref) { const ni = document.createElement('div'); ni.className = 'ni'; ni.id = 'n-kcbm-pf'; ni.setAttribute('onclick', 'kcbmPfAbrir()'); ni.innerHTML = '<span class="ic"><img src="assets/pessoa-fisica.svg" alt="" style="height:16px;width:16px;vertical-align:middle"></span>Pessoa Física'; ref.parentNode.insertBefore(ni, ref.nextSibling); }
     const pag = document.createElement('div'); pag.className = 'page'; pag.id = 'page-kcbm-pf'; pag.style.display = 'none';
     document.getElementById('page-home').parentNode.appendChild(pag);
     const og = root.goPage;
