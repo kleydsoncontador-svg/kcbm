@@ -176,20 +176,35 @@
     return escuro ? { bg: cor, fg: '#fff', mut: 'rgba(255,255,255,.78)', neg: '#FECACA', pos: '#fff', borda: 'rgba(0,0,0,.25)', sel: '#fff' } : { bg: cor, fg: '#111827', mut: 'rgba(17,24,39,.72)', neg: '#991B1B', pos: '#14532D', borda: 'rgba(0,0,0,.18)', sel: '#111827' };
   }
   // ───────────── estado e telas ─────────────
-  const ST = { bancoSel: '', pf: null, aba: 'movimentacao', movFiltro: 'todos', movAberto: {}, mesSaldo: null, mesLista: hoje().slice(0, 7), cartaoSel: null, mesFatura: null, tela: 'lista' };
+  const ST = { bancoSel: '', pf: null, aba: 'movimentacao', movFiltro: 'todos', movAberto: {}, acumAberto: {}, mesSaldo: null, mesLista: hoje().slice(0, 7), cartaoSel: null, mesFatura: null, tela: 'lista' };
   const el = () => document.getElementById('page-kcbm-pf');
   const CARTAO = '<svg width="18" height="14" viewBox="0 0 18 14" style="vertical-align:-2px"><defs><linearGradient id="pfPrata" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#c9ced6"/><stop offset=".55" stop-color="#f4f6f8"/><stop offset=".8" stop-color="#9aa1ab"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient></defs><rect x="0.5" y="0.5" width="17" height="13" rx="2" fill="url(#pfPrata)" stroke="#8b929c"/><rect x="0.5" y="3" width="17" height="2.6" fill="#6b727c"/><rect x="2.5" y="9" width="5" height="1.6" rx=".8" fill="#8b929c"/></svg>';
-  const ABAS = [['movimentacao', '🔁 Movimentação'], ['extrato', '🏦 Extrato bancário'], ['cartoes', CARTAO + ' Cartões de crédito'], ['saldo', '⚖ Saldo a pagar / a receber']];
+  const ABAS = [['movimentacao', '🔁 Movimentação'], ['extrato', '🏦 Extrato bancário'], ['cartoes', CARTAO + ' Cartões de crédito'], ['saldo', '⚖ Saldo a pagar / a receber'], ['acumulado', '📈 Acumulado']];
   const B = (txt, on, cls, ttl) => '<button class="btn ' + (cls || 'bo') + ' bsm" ' + (ttl ? 'title="' + E(ttl) + '" ' : '') + 'onclick="' + on + '">' + txt + '</button>';
   const IN = 'width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--ink);font:inherit;font-size:13px';
   const TH = 'padding:7px 9px;text-align:left;font-size:11.5px;white-space:nowrap;background:var(--ink2);color:#fff';
   const TD = 'padding:6px 9px;border-bottom:1px solid var(--border);font-size:12.5px;vertical-align:top';
   const dadosAtual = () => { const d = lerDados(ST.pf); let mu = garantirRecorrencias(d, somaMes(fechMes(), LIMITE_MESES)); if (garantirBancos(d)) mu = true; if (mu) gravarDados(ST.pf, d); return d; };
   const pfAtual = () => lerLista().find(x => x.id === ST.pf);
-  function tabela(cols, linhas, vazio) {
-    return '<div style="overflow:auto;border:1px solid var(--border);border-radius:8px"><table style="width:100%;border-collapse:collapse"><thead><tr>' + cols.map(c => '<th style="' + TH + (c.r ? ';text-align:right' : '') + '">' + c.t + '</th>').join('') + '</tr></thead><tbody>'
+  // Tabela com cabeçalho congelado (fica visível ao rolar) e linha de filtros logo abaixo (um campo por coluna; filtra na hora, sem recarregar).
+  function tabela(cols, linhas, vazio, semFiltro) {
+    const sig = cols.map(c => String(c.t).replace(/<[^>]*>/g, '')).join('|') + '#' + (ST.pf || '') + (ST.aba || '') + (ST.tela || '');
+    const fil = semFiltro ? '' : '<tr class="kpfFiltroLinha">' + cols.map((c, i) => '<th style="' + TH + ';padding:3px 5px;font-weight:400">' + ((String(c.t).replace(/<[^>]*>/g, '').trim()) ? '<input class="kpfFiltroIn" data-i="' + i + '" placeholder="filtrar" oninput="kcbmPf.filtrar(this)" style="width:100%;min-width:60px;box-sizing:border-box;padding:3px 6px;font-size:11.5px;border-radius:5px;border:1px solid #666;background:#fff;color:#111">' : '') + '</th>').join('') + '</tr>';
+    return '<div style="overflow:auto;max-height:calc(100vh - 150px);border:1px solid var(--border);border-radius:8px"><table data-sig="' + E(sig) + '" data-nf="' + (semFiltro ? 0 : 1) + '" style="width:100%;border-collapse:collapse"><thead style="position:sticky;top:0;z-index:3"><tr>' + cols.map(c => '<th style="' + TH + (c.r ? ';text-align:right' : '') + '">' + c.t + '</th>').join('') + '</tr>' + fil + '</thead><tbody>'
       + (linhas.length ? linhas.join('') : '<tr><td colspan="' + cols.length + '" style="padding:22px;text-align:center;color:var(--slate)">' + (vazio || 'Nada por aqui ainda.') + '</td></tr>') + '</tbody></table></div>';
   }
+  const FILTROS = {};
+  function aplicarFiltroTabela(t) {
+    const f = FILTROS[t.getAttribute('data-sig')] || {}, ks = Object.keys(f).filter(k => f[k]);
+    t.querySelectorAll('.kpfFiltroIn').forEach(inp => { const v = f[inp.getAttribute('data-i')] || ''; if (inp.value !== v) inp.value = v; });
+    let visivel = true; const rows = Array.from(t.tBodies[0] ? t.tBodies[0].rows : []);
+    rows.forEach(r => {
+      const sub = r.cells.length === 1 && r.cells[0].colSpan > 1;
+      if (sub) { if (rows.length > 1) r.style.display = visivel ? '' : 'none'; return; }
+      visivel = ks.every(k => norm(r.cells[+k] ? r.cells[+k].textContent : '').indexOf(norm(f[k])) >= 0); r.style.display = visivel ? '' : 'none';
+    });
+  }
+  const aplicarFiltros = () => { try { const e = el(); if (e) e.querySelectorAll('table[data-nf="1"]').forEach(aplicarFiltroTabela); } catch (x) { console.warn('filtros', x); } };
   const td = (v, r) => '<td style="' + TD + (r ? ';text-align:right;white-space:nowrap' : '') + '">' + v + '</td>';
   const cor = v => v < 0 ? '#dc2626' : 'var(--teal)';
   function modal(titulo, corpoHtml, aoSalvar, rotSalvar, larg) {
@@ -265,7 +280,7 @@
   }
   function telaAba() {
     const d = dadosAtual();
-    return ({ entradas: () => abaMov(d, 'entradas'), gastos: () => abaMov(d, 'gastos'), extrato: () => abaExtrato(d), movimentacao: () => abaMovimentacao(d), pagar: () => abaTitulos(d, 'pagar'), receber: () => abaTitulos(d, 'receber'), saldo: () => abaSaldo(d), cartoes: () => abaCartoes(d) }[ST.aba] || (() => ''))();
+    return ({ entradas: () => abaMov(d, 'entradas'), gastos: () => abaMov(d, 'gastos'), extrato: () => abaExtrato(d), movimentacao: () => abaMovimentacao(d), pagar: () => abaTitulos(d, 'pagar'), receber: () => abaTitulos(d, 'receber'), saldo: () => abaSaldo(d), cartoes: () => abaCartoes(d), acumulado: () => abaAcumulado(d) }[ST.aba] || (() => ''))();
   }
   // ── Entradas / Gastos ──
   function abaMov(d, tipo) {
@@ -356,6 +371,40 @@
     return n;
   }
   // ── Movimentação: tudo que vence no mês do topo (a pagar e a receber), com baixa; fatura de cartão em uma linha que abre e fecha ──
+  // ── Acumulado: resultado por ano (5 anos, abre um novo a cada virada do calendário real) e movimento mês a mês ──
+  // Conta cada parcela de conta a pagar/receber pela data de vencimento (compra no cartão entra na data da fatura) + entradas/gastos avulsos (inclui os classificados do extrato).
+  function movimentosAno(d) {
+    const out = [];
+    [['pagar', 'fornecedor'], ['receber', 'cliente']].forEach(([tipo, campo]) => (d[tipo] || []).forEach(it => (it.parcelas || []).forEach(p => {
+      if (!p.venc) return; out.push({ data: p.venc, rec: tipo === 'receber', nome: String(it[campo] || '') + (it.parcelado ? ' (' + p.n + '/' + it.n + ')' : '') + (it.forma === 'cartao' ? ' · cartão' : ''), valor: Number(p.valor) || 0, pago: !!p.pago });
+    })));
+    (d.entradas || []).forEach(x => { if (x.data) out.push({ data: x.data, rec: true, nome: String(x.descricao || x.categoria || ''), valor: Math.abs(Number(x.valor) || 0), pago: true }); });
+    (d.gastos || []).forEach(x => { if (x.data) out.push({ data: x.data, rec: false, nome: String(x.descricao || x.categoria || ''), valor: Math.abs(Number(x.valor) || 0), pago: true }); });
+    return out;
+  }
+  function abaAcumulado(d) {
+    const mov = movimentosAno(d), anoHoje = +hoje().slice(0, 4), ini = Math.min(2026, anoHoje, ...mov.map(m => +m.data.slice(0, 4)).filter(n => n > 1990)), fim = Math.max(anoHoje + 4, ...mov.map(m => +m.data.slice(0, 4)));
+    let acum = 0, html = '';
+    for (let ano = ini; ano <= fim; ano++) {
+      const ms = mov.filter(m => +m.data.slice(0, 4) === ano), rec = ms.filter(m => m.rec).reduce((a, m) => a + cents(m.valor), 0) / 100, gas = ms.filter(m => !m.rec).reduce((a, m) => a + cents(m.valor), 0) / 100, res = (cents(rec) - cents(gas)) / 100;
+      acum = (cents(acum) + cents(res)) / 100;
+      const aberto = !!ST.acumAberto[ano];
+      html += '<tr style="cursor:pointer;font-weight:600" onclick="kcbmPf.acumAbrir(\'' + ano + '\')">' + td('<span style="font-size:11px">' + (aberto ? '▼' : '▶') + '</span> <b>' + ano + '</b>')
+        + td('<span style="color:var(--teal)">' + R$(rec) + '</span>', 1) + td('<span style="color:#dc2626">' + R$(-gas) + '</span>', 1) + td('<span style="color:' + cor(res) + '">' + R$(res) + '</span>', 1) + td('<b style="color:' + cor(acum) + '">' + R$(acum) + '</b>', 1) + '</tr>';
+      if (aberto) {
+        let det = '';
+        for (let m = 1; m <= 12; m++) {
+          const mes = ano + '-' + p2(m), li = ms.filter(x => x.data.slice(0, 7) === mes).sort((a, b) => a.data.localeCompare(b.data) || (a.rec === b.rec ? 0 : a.rec ? -1 : 1)); if (!li.length) continue;
+          const r2 = li.filter(x => x.rec).reduce((a, x) => a + cents(x.valor), 0) / 100, g2 = li.filter(x => !x.rec).reduce((a, x) => a + cents(x.valor), 0) / 100;
+          det += '<tr style="background:rgba(127,127,127,.12)"><td colspan="4" style="' + TD + ';font-weight:700">' + rotMes(mes) + '</td><td style="' + TD + ';text-align:right;white-space:nowrap">Receitas <b style="color:var(--teal)">' + R$(r2) + '</b> · Gastos <b style="color:#dc2626">' + R$(-g2) + '</b> · Resultado <b>' + R$((cents(r2) - cents(g2)) / 100) + '</b></td></tr>'
+            + li.map(x => '<tr>' + td(br(x.data)) + td(x.rec ? '<span style="color:var(--teal)">Receita</span>' : '<span style="color:#dc2626">Gasto</span>') + td(E(x.nome)) + td(x.pago ? (x.rec ? 'recebido' : 'pago') : '<span style="color:var(--slate)">em aberto</span>') + td('<span style="color:' + (x.rec ? 'var(--teal)' : '#dc2626') + '">' + R$(x.rec ? x.valor : -x.valor) + '</span>', 1) + '</tr>').join('');
+        }
+        html += '<tr><td colspan="5" style="padding:0;background:rgba(127,127,127,.06)"><div style="padding:6px 12px 12px 30px">' + (det ? '<table style="width:100%;border-collapse:collapse"><tr><th style="' + TD + ';text-align:left">Data</th><th style="' + TD + ';text-align:left">Tipo</th><th style="' + TD + ';text-align:left">Quem pagou / a quem paguei</th><th style="' + TD + ';text-align:left">Situação</th><th style="' + TD + ';text-align:right">Valor</th></tr>' + det + '</table>' : '<div style="color:var(--slate);font-size:12.5px;padding:8px">Sem movimento neste ano.</div>') + '</div></td></tr>';
+      }
+    }
+    return '<div style="font-size:12.5px;color:var(--slate);margin-bottom:10px">Resultado acumulado ano a ano (receitas − gastos). Clique no ano para ver o movimento mês a mês. Conta pela data de vencimento; compra no cartão entra na data da fatura. Um ano novo abre sozinho quando o calendário virar.</div>'
+      + tabela([{ t: 'Ano' }, { t: 'Receitas', r: 1 }, { t: 'Gastos', r: 1 }, { t: 'Resultado do ano', r: 1 }, { t: 'Acumulado', r: 1 }], [html], '', true);
+  }
   function abaMovimentacao(d) {
     const mes = fechMes(), fl = ST.movFiltro || 'todos', rows = [];
     ['pagar', 'receber'].forEach(tipo => (d[tipo] || []).forEach(it => { if (it.forma === 'cartao') return; (it.parcelas || []).forEach(p => { const vm = p.venc.slice(0, 7); if (vm === mes || (!p.pago && vm < mes)) rows.push({ tipo, venc: p.venc, it, p, atras: vm < mes }); }); }));
@@ -630,6 +679,8 @@
       if (!n) { root.toast('Não há baixa feita por aqui para desfazer (pagamentos vindos do extrato se desfazem no extrato).', 'err'); return; }
       gravarDados(ST.pf, dd); render();
     },
+    filtrar(inp) { const t = inp.closest('table'); if (!t) return; const sg = t.getAttribute('data-sig'); (FILTROS[sg] = FILTROS[sg] || {})[inp.getAttribute('data-i')] = inp.value; aplicarFiltroTabela(t); },
+    acumAbrir(k) { ST.acumAberto[k] = !ST.acumAberto[k]; render(); },
     movAbrir(key) { ST.movAberto[key] = !ST.movAberto[key]; render(); },
     movFiltro(f) { ST.movFiltro = f; render(); },
     parcelaBaixa(tipo, itemId, n) {
@@ -684,7 +735,7 @@
     }
   };
   root.kcbmPf = K;
-  function render() { if (!el()) return; if (ST.pf) telaPessoa(); else if (ST.tela === 'tipos') telaTipos(); else if (ST.tela === 'terceiros') telaTerceiros(); else telaLista(); }
+  function render() { if (!el()) return; if (ST.pf) telaPessoa(); else if (ST.tela === 'tipos') telaTipos(); else if (ST.tela === 'terceiros') telaTerceiros(); else telaLista(); aplicarFiltros(); }
 
   // ───────────── integração com o site (menu, cartão da tela inicial, página) ─────────────
   root.kcbmPfAbrir = function () { root.goPage('kcbm-pf'); };
