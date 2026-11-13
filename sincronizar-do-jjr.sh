@@ -3,9 +3,12 @@
 # as rotinas de backup do JJR. Os arquivos próprios do KCBM (supabase-config.js, tema.css, tema.js, manifest, ícones) NUNCA são sobrescritos.
 set -e
 ORIG="${1:-/c/jjr-controle}"; DEST="$(cd "$(dirname "$0")" && pwd)"
-ARQ="index.html analises.js calc-motor.js calc-ui.js contabil-import.js contabil-parsers.js extrato-generico.js fopag-lote.js itau-extrato-parsers.js pride-fluxo-parser.js razao-parser.js busca-empresa.js xls-fallback.js analises-explicacoes.js composicao.html valor-residual.html refresh.html nbc-conteudo-1.js nbc-conteudo-2.js nbc-conteudo-3.js nbc-conteudo-4.js nbc-conteudo-5.js nbc-conteudo-6.js nbc-conteudo-7.js nbc-conteudo-8.js nbc-conteudo-9.js nbc-mapas.js nbc-mapas-2.js nbc-mapas-3.js nbc-mapas-4.js nbc-mapas-5.js nbc-ui.js"
+ARQ="index.html analises.js calc-motor.js calc-ui.js contabil-import.js contabil-parsers.js extrato-generico.js fopag-lote.js itau-extrato-parsers.js pride-fluxo-parser.js razao-parser.js busca-empresa.js xls-fallback.js analises-explicacoes.js composicao.html valor-residual.html refresh.html nbc-conteudo-1.js nbc-conteudo-2.js nbc-conteudo-3.js nbc-conteudo-4.js nbc-conteudo-5.js nbc-conteudo-6.js nbc-conteudo-7.js nbc-conteudo-8.js nbc-conteudo-9.js nbc-mapas.js nbc-mapas-2.js nbc-mapas-3.js nbc-mapas-4.js nbc-mapas-5.js nbc-ui.js lembretes.js apuracao-export.js apuracao-presumido.js calendario-intervalo.js layout-add-empresa.js"
 for f in $ARQ; do [ -f "$ORIG/$f" ] && cp "$ORIG/$f" "$DEST/$f"; done
 cd "$DEST"
+# arquivos novos: tira marca/exemplo de cliente do JJR (a cópia é só do KCBM; o JJR não muda)
+sed -i "s/Ex.: Elaborar perguntas para a Kajuna/Ex.: Enviar a proposta ao cliente/" lembretes.js 2>/dev/null || true
+sed -i "s/wb.creator='JJR Controle Contábil'/wb.creator='KCBM'/" apuracao-export.js 2>/dev/null || true
 # identidade do KCBM no index.html + ganchos do tema
 python - <<'PY'
 import re
@@ -48,6 +51,8 @@ if 'tema.css' not in s:
     s=s.replace('</head>','<link rel="stylesheet" href="tema.css?v=__BUILD_ID__">\n</head>',1)
     i=s.rfind('</body>')  # o ÚLTIMO: dentro de textos de script também aparece '</body>'
     s=s[:i]+'<script src="tema.js?v=__BUILD_ID__"></script>\n'+s[i:]
+# módulos de cliente do JJR (Fast Lube/Rufato) não existem no KCBM: tira o carregamento do script
+s=re.sub(r'<script src="fastlube\.js[^"]*"></script>\s*','',s)
 # a lista inicial de clientes/checklists do JJR NUNCA vai para o KCBM (nem no código): ficam vazias
 s=re.sub(r'^const EMP_SEED\s*=\s*\[.*?\];\s*$','const EMP_SEED = [];',s,flags=re.M)
 s=re.sub(r'^const CH_SEED\s*=\s*\{.*?\};\s*$','const CH_SEED = {};',s,flags=re.M)
