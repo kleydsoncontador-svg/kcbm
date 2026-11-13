@@ -39,6 +39,6 @@
 (function () {
   try {
     var me = document.querySelector('script[src*="tema.js"]'), v = me && /v=([^&]+)/.exec(me.src) ? /v=([^&]+)/.exec(me.src)[1] : Date.now();
-    ['kcbm-pf.js'].forEach(function (f) { var s = document.createElement('script'); s.src = f + '?v=' + v; document.body.appendChild(s); });
+    [].forEach /* módulo Pessoa Física migrou para o app Fluxo PF (13/11/2026); kcbm-pf.js fica no repositório só como cópia */(function (f) { var s = document.createElement('script'); s.src = f + '?v=' + v; document.body.appendChild(s); });
   } catch (e) { console.warn('KCBM módulos próprios:', e); }
 })();
