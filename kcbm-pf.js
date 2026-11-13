@@ -356,7 +356,7 @@
           + '<div style="display:flex;justify-content:space-between;gap:8px"><span>Saídas</span><b style="color:#dc2626">' + R$(sai) + '</b></div>'
           + '<div style="display:flex;justify-content:space-between;gap:8px;color:#b45309"><span>Lançamentos pendentes</span><b>' + pend + '</b></div>'
           + '<div style="display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--border);margin-top:3px;padding-top:3px"><span><b>Saldo corrente</b> <span style="color:var(--slate);font-size:11px">(' + mes.slice(5, 7) + '/' + mes.slice(0, 4) + ')</span></span><b style="color:' + cor(sd) + '">' + R$(sd) + '</b></div>'
-        </div></div>';
+        + '</div></div>';
     }).join('');
     return '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch;margin-bottom:14px">' + cards + '<div onclick="kcbmPf.bancoForm()" style="cursor:pointer;min-width:150px;flex:0 1 190px;border:2px dashed var(--border);border-radius:12px;padding:11px 13px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--slate);font-weight:600">➕ Adicionar banco</div></div>'
       + ((d.bancos || []).length ? '<div style="font-size:12px;color:var(--slate);margin:-4px 0 10px">Clique no banco para ver o extrato dele no mês. ' + (sel ? '' : '<b>Nenhum selecionado: mostrando todos.</b> ') + (sel ? B('Ver todos', "kcbmPf.bancoSel('')") : '') + '</div>' : '<div style="font-size:12.5px;color:var(--slate);margin-bottom:10px">Adicione o seu primeiro banco para importar extratos.</div>');
