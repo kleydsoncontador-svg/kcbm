@@ -483,6 +483,7 @@
   function abaSaldo(d) {
     const mesIni = mesInicio(d), mesMax = somaMes(fechMes(), LIMITE_MESES); let m = fechMes(); if (m < mesIni) m = mesIni; if (m > mesMax) m = mesMax; ST.mesSaldo = m;
     const fats = faturasQueVencemNoMes(d, m), totFat = fats.reduce((a, f) => a + f.aberto, 0), sp = saldoMes(d, 'pagar', m, { semCartao: true }), sr = saldoMes(d, 'receber', m);
+    const fatAcum = (d.cartoes || []).reduce((a, c) => a + faturasDoCartao(d, c.id).filter(f => f.venc.slice(0, 7) <= m).reduce((b, f) => b + f.aberto, 0), 0), saldoProj = (cents(sr.final) - cents(sp.final) - cents(fatAcum)) / 100;
     const blocoContas = (tipo, tit, s) => {
       const pag = tipo === 'pagar';
       const abertas = s.abertas.sort((a, b) => a.p.venc.localeCompare(b.p.venc)).map(x => '<tr>' + td(br(x.p.venc)) + td(E(x.item[pag ? 'fornecedor' : 'cliente']) + (x.item.rec ? ' <span title="recorrente">↻</span>' : '')) + td(x.item.rec ? 'mensal' : (x.item.parcelado ? x.p.n + '/' + x.item.n : 'à vista')) + td(x.p.venc < m + '-01' ? '<span style="color:#dc2626">acumulada de meses anteriores</span>' : 'do mês') + td(R$(x.p.valor), 1) + '</tr>');
@@ -492,11 +493,37 @@
     };
     const fatTab = tabela([{ t: 'Cartão' }, { t: 'Fatura' }, { t: 'Vencimento' }, { t: 'Total', r: 1 }, { t: 'Em aberto', r: 1 }], fats.map(f => '<tr>' + td('<span style="display:inline-flex;align-items:center;gap:6px">' + bandeiraSvg(f.cartao.bandeira, 16) + E(f.cartao.nome) + '</span>') + td(rotMes(f.fatura)) + td(br(f.venc)) + td(R$(f.total), 1) + td('<b style="color:' + (f.aberto > 0.004 ? '#dc2626' : 'var(--teal)') + '">' + R$(f.aberto) + '</b>', 1) + '</tr>'), 'Nenhuma fatura vence neste mês.');
     return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px"><div style="display:flex;align-items:center;gap:6px">' + '<b style="min-width:150px" title="O mês vem da data lá em cima, no topo do site">' + rotMes(m) + '</b>' + (fechMes() < mesIni ? '<span style="font-size:11.5px;color:var(--slate)">(o mês do topo é anterior ao mês inicial dos saldos)</span>' : '') + '</div><div style="margin-left:auto">' + B('⚙ Saldos iniciais', 'kcbmPf.saldoIniForm()') + '</div></div>'
-      + '<div style="font-size:12px;color:var(--slate);margin-bottom:10px">Projeção mês a mês por até 5 anos, a partir do Fechamento Atual. Inclui as recorrências. O que não foi baixado no extrato continua acumulando nos meses seguintes. Começa em ' + rotMes(mesIni) + '.</div>'
-      + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">' + [[CARTAO + ' Faturas que vencem no mês', totFat, '#dc2626'], ['🧾 Contas a pagar (saldo no fim do mês)', sp.final, '#dc2626'], ['💰 Contas a receber (saldo no fim do mês)', sr.final, 'var(--teal)']].map(x => '<div style="flex:1 1 220px;border:1px solid var(--border);border-radius:10px;padding:10px 14px"><div style="font-size:11.5px;color:var(--slate)">' + x[0] + '</div><div style="font-size:1.15rem;font-weight:700;color:' + x[2] + '">' + R$(x[1]) + '</div></div>').join('') + '</div>'
+      + '<div style="font-weight:800;font-size:1.05rem;margin:6px 0">📈 Projeção — o que vence e ainda não foi pago/recebido</div><div style="font-size:12px;color:var(--slate);margin-bottom:10px">Projeção mês a mês por até 5 anos, a partir do Fechamento Atual. Inclui as recorrências. O que não foi baixado no extrato continua acumulando nos meses seguintes. Começa em ' + rotMes(mesIni) + '.</div>'
+      + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">' + [[CARTAO + ' Faturas que vencem no mês', totFat, '#dc2626'], ['🧾 Contas a pagar (saldo no fim do mês)', sp.final, '#dc2626'], ['💰 Contas a receber (saldo no fim do mês)', sr.final, 'var(--teal)'], ['⚖ Saldo projetado do mês', saldoProj, saldoProj < 0 ? '#dc2626' : '#16a34a', 'a receber − faturas em aberto − contas a pagar. O que não for baixado passa para o mês seguinte.']].map(x => '<div style="flex:1 1 220px;border:1px solid var(--border);border-radius:10px;padding:10px 14px"><div style="font-size:11.5px;color:var(--slate)">' + x[0] + '</div><div style="font-size:1.15rem;font-weight:700;color:' + x[2] + '">' + R$(x[1]) + '</div>' + (x[3] ? '<div style="font-size:10.5px;color:var(--slate)">' + x[3] + '</div>' : '') + '</div>').join('') + '</div>'
       + '<div style="font-weight:700;margin-bottom:6px">' + CARTAO + ' Cartões de crédito — faturas que vencem neste mês</div>' + fatTab
-      + '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:16px">' + blocoContas('pagar', '🧾 Contas a pagar (fora do cartão)', sp) + blocoContas('receber', '💰 Contas a receber', sr) + '</div>';
+      + '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:16px">' + blocoContas('pagar', '🧾 Contas a pagar (fora do cartão)', sp) + blocoContas('receber', '💰 Contas a receber', sr) + '</div>'
+      + blocoEfetivado(d, m);
   }
+  // ── Efetivado: só o que de fato foi pago/recebido (pela data da baixa); o saldo passa para o mês seguinte ──
+  function blocoEfetivado(d, m) {
+    const ini = m + '-01', fim = m + '-31', ev = [];
+    (d.pagar || []).forEach(it => (it.parcelas || []).forEach(p => { if (p.pago && p.dataPago) ev.push({ k: it.forma === 'cartao' ? 'fat' : 'pag', data: p.dataPago, valor: Number(p.valor) || 0, it, p }); }));
+    (d.receber || []).forEach(it => (it.parcelas || []).forEach(p => { if (p.pago && p.dataPago) ev.push({ k: 'rec', data: p.dataPago, valor: Number(p.valor) || 0, it, p }); }));
+    const soma = (k, f) => ev.filter(e => e.k === k && f(e.data)).reduce((a, e) => a + cents(e.valor), 0) / 100;
+    const noMes = x => x >= ini && x <= fim, antes = x => x < ini;
+    const fatM = soma('fat', noMes), pagM = soma('pag', noMes), recM = soma('rec', noMes);
+    const ant = (cents(soma('rec', antes)) - cents(soma('pag', antes)) - cents(soma('fat', antes))) / 100, saldo = (cents(ant) + cents(recM) - cents(pagM) - cents(fatM)) / 100;
+    const card = (t, v, c, sub) => '<div style="flex:1 1 220px;border:1px solid var(--border);border-radius:10px;padding:10px 14px"><div style="font-size:11.5px;color:var(--slate)">' + t + '</div><div style="font-size:1.15rem;font-weight:700;color:' + c + '">' + R$(v) + '</div>' + (sub ? '<div style="font-size:10.5px;color:var(--slate)">' + sub + '</div>' : '') + '</div>';
+    // faturas pagas no mês (uma linha por cartão/fatura)
+    const fg = {}; ev.filter(e => e.k === 'fat' && noMes(e.data)).forEach(e => { const key = e.it.cartaoId + '|' + (e.p.fatura || ''); const g = fg[key] = fg[key] || { cartao: (d.cartoes || []).find(c => c.id === e.it.cartaoId), fatura: e.p.fatura || '', venc: e.p.venc || '', data: e.data, valor: 0 }; g.valor += e.valor; if (e.data > g.data) g.data = e.data; });
+    const fatLin = Object.values(fg).sort((a, b) => a.data.localeCompare(b.data)).map(g => '<tr>' + td('<span style="display:inline-flex;align-items:center;gap:6px">' + (g.cartao ? bandeiraSvg(g.cartao.bandeira, 16) + E(g.cartao.nome) : 'Cartão') + '</span>') + td(g.fatura ? rotMes(g.fatura) : '') + td(br(g.venc)) + td(br(g.data)) + td(R$(g.valor), 1) + '</tr>');
+    const bloco = (k, tit, total, quem, sinalPago) => {
+      const lin = ev.filter(e => e.k === k && noMes(e.data)).sort((a, b) => a.data.localeCompare(b.data)).map(e => '<tr>' + td(br(e.data)) + td(E(e.it[quem]) + (k === 'pag' ? seloPorQuem(e.it) : '') + (e.it.rec ? ' <span title="recorrente">↻</span>' : '')) + td(e.it.rec ? 'mensal' : (e.it.parcelado ? e.p.n + '/' + e.it.n : 'à vista')) + td(R$(e.valor), 1) + '</tr>');
+      return '<div style="flex:1 1 440px;min-width:300px"><div style="font-weight:700;margin-bottom:6px">' + tit + '</div>'
+        + '<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:13px;display:flex;justify-content:space-between"><span><b>Total ' + (sinalPago ? 'pago' : 'recebido') + ' no mês</b></span><b style="font-size:15px;color:' + (sinalPago ? '#dc2626' : 'var(--teal)') + '">' + R$(total) + '</b></div>'
+        + tabela([{ t: sinalPago ? 'Pago em' : 'Recebido em' }, { t: sinalPago ? 'A quem pago' : 'De quem recebo' }, { t: 'Parcela' }, { t: 'Valor', r: 1 }], lin, sinalPago ? 'Nenhuma conta paga neste mês.' : 'Nada recebido neste mês.') + '</div>';
+    };
+    return '<div style="border-top:2px solid var(--border);margin:26px 0 10px;padding-top:14px"><div style="font-weight:800;font-size:1.05rem">✅ Efetivado — o que realmente foi pago e recebido</div><div style="font-size:12px;color:var(--slate);margin:2px 0 10px">Conta pela data em que a baixa foi dada. O saldo efetivado do fim do mês passa para o mês seguinte.</div></div>'
+      + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">' + card(CARTAO + ' Faturas pagas no mês', fatM, '#dc2626') + card('🧾 Contas pagas no mês', pagM, '#dc2626') + card('💰 Contas recebidas no mês', recM, 'var(--teal)') + card('⚖ Saldo efetivado (acumulado)', saldo, saldo < 0 ? '#dc2626' : '#16a34a', 'saldo anterior ' + R$(ant) + ' + recebido − pago − faturas') + '</div>'
+      + '<div style="font-weight:700;margin-bottom:6px">' + CARTAO + ' Cartões de crédito — faturas pagas neste mês</div>' + tabela([{ t: 'Cartão' }, { t: 'Fatura' }, { t: 'Vencimento' }, { t: 'Pago em' }, { t: 'Valor pago', r: 1 }], fatLin, 'Nenhuma fatura paga neste mês.')
+      + '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:16px">' + bloco('pag', '🧾 Contas pagas (fora do cartão)', pagM, 'fornecedor', true) + bloco('rec', '💰 Contas recebidas', recM, 'cliente', false) + '</div>';
+  }
+
 
   // ───────────── ações ─────────────
   const K = {
