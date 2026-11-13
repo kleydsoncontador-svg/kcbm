@@ -17,7 +17,7 @@
   const somaMes = (m, n) => { const y = +m.slice(0, 4), mm = +m.slice(5, 7) - 1 + n; const d = new Date(y, mm, 1); return d.getFullYear() + '-' + p2(d.getMonth() + 1); };
   const fimMes = m => { const y = +m.slice(0, 4), mm = +m.slice(5, 7); return m + '-' + p2(new Date(y, mm, 0).getDate()); };
   const diaNoMes = (m, dia) => { const ult = new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate(); return m + '-' + p2(Math.min(dia, ult)); };
-  const somaDias = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); };
+  const dataMaisDias = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); };
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const dig = s => String(s || '').replace(/\D/g, '');
   const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -142,7 +142,7 @@
     if (l.classe) return l.valor < 0 ? 'D Despesa — ' + (l.classe.categoria || 'Gastos') + ' · C ' + banco : 'D ' + banco + ' · C Receita — ' + (l.classe.categoria || 'Entradas');
     return '';
   }
-  root.__kcbmPfTeste = { mestreDe, gruposCartoes, grupoUso, temaCartao, get CORES_CARTAO() { return CORES_CARTAO; }, bandeiraSvg, lerLista, gravarLista, lerDados, gravarDados, dividir, faturaDaCompra, gerarParcelas, estenderRecorrencia, garantirRecorrencias, alterarValorParcela, encerrarRecorrencia, saldoMes, faturasDoCartao, faturasQueVencemNoMes, ajusteDeFatura, limiteUsado, lancamentoTexto, cpfValido, somaMes, num, mesInicio };
+  root.__kcbmPfTeste = { baixaAutomatica, mestreDe, gruposCartoes, grupoUso, temaCartao, get CORES_CARTAO() { return CORES_CARTAO; }, bandeiraSvg, lerLista, gravarLista, lerDados, gravarDados, dividir, faturaDaCompra, gerarParcelas, estenderRecorrencia, garantirRecorrencias, alterarValorParcela, encerrarRecorrencia, saldoMes, faturasDoCartao, faturasQueVencemNoMes, ajusteDeFatura, limiteUsado, lancamentoTexto, cpfValido, somaMes, num, mesInicio };
 
   // Símbolo de cada bandeira (desenho simples em SVG, sem imagem externa). Bandeira própria/desconhecida: cartão genérico com as iniciais.
   function bandeiraSvg(nome, h) {
@@ -176,9 +176,9 @@
     return escuro ? { bg: cor, fg: '#fff', mut: 'rgba(255,255,255,.78)', neg: '#FECACA', pos: '#fff', borda: 'rgba(0,0,0,.25)', sel: '#fff' } : { bg: cor, fg: '#111827', mut: 'rgba(17,24,39,.72)', neg: '#991B1B', pos: '#14532D', borda: 'rgba(0,0,0,.18)', sel: '#111827' };
   }
   // ───────────── estado e telas ─────────────
-  const ST = { pf: null, aba: 'pagar', mesSaldo: null, mesLista: hoje().slice(0, 7), cartaoSel: null, mesFatura: null, tela: 'lista' };
+  const ST = { pf: null, aba: 'movimentacao', movFiltro: 'todos', movAberto: {}, mesSaldo: null, mesLista: hoje().slice(0, 7), cartaoSel: null, mesFatura: null, tela: 'lista' };
   const el = () => document.getElementById('page-kcbm-pf');
-  const ABAS = [['pagar', '🧾 Contas a pagar'], ['receber', '💰 Contas a receber'], ['extrato', '🏦 Extrato bancário'], ['cartoes', '💳 Cartões de crédito'], ['saldo', '⚖ Saldo a pagar / a receber']];
+  const ABAS = [['movimentacao', '🔁 Movimentação'], ['extrato', '🏦 Extrato bancário'], ['cartoes', '💳 Cartões de crédito'], ['saldo', '⚖ Saldo a pagar / a receber']];
   const B = (txt, on, cls, ttl) => '<button class="btn ' + (cls || 'bo') + ' bsm" ' + (ttl ? 'title="' + E(ttl) + '" ' : '') + 'onclick="' + on + '">' + txt + '</button>';
   const IN = 'width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--ink);font:inherit;font-size:13px';
   const TH = 'padding:7px 9px;text-align:left;font-size:11.5px;white-space:nowrap;background:var(--ink2);color:#fff';
@@ -264,7 +264,7 @@
   }
   function telaAba() {
     const d = dadosAtual();
-    return ({ entradas: () => abaMov(d, 'entradas'), gastos: () => abaMov(d, 'gastos'), extrato: () => abaExtrato(d), pagar: () => abaTitulos(d, 'pagar'), receber: () => abaTitulos(d, 'receber'), saldo: () => abaSaldo(d), cartoes: () => abaCartoes(d) }[ST.aba] || (() => ''))();
+    return ({ entradas: () => abaMov(d, 'entradas'), gastos: () => abaMov(d, 'gastos'), extrato: () => abaExtrato(d), movimentacao: () => abaMovimentacao(d), pagar: () => abaTitulos(d, 'pagar'), receber: () => abaTitulos(d, 'receber'), saldo: () => abaSaldo(d), cartoes: () => abaCartoes(d) }[ST.aba] || (() => ''))();
   }
   // ── Entradas / Gastos ──
   function abaMov(d, tipo) {
@@ -284,10 +284,52 @@
       return '<tr>' + '<td style="' + TD + '">' + (pend ? '<input type="checkbox" class="kpfSelL" data-id="' + x.id + '">' : '') + '</td>' + td(br(x.data)) + td(E(x.banco || '')) + td(E(x.hist)) + '<td style="' + TD + ';text-align:right;white-space:nowrap;color:' + cor(x.valor) + '">' + R$(x.valor) + '</td>'
         + td(pend ? '<span style="color:#b45309">— pendente —</span>' : '<span style="font-size:11.5px">' + E(lanc) + '</span>') + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + (pend ? B('Baixar / classificar', "kcbmPf.extratoBaixar('" + x.id + "')", 'bp') : B('↩ Desfazer', "kcbmPf.extratoDesfazer('" + x.id + "')")) + ' ' + B('🗑', "kcbmPf.extratoExcluir('" + x.id + "')") + '</td></tr>';
     });
-    return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">' + navMes(mes, 'kcbmPf.mesLista') + '<div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">' + B('📄 Importar extrato (PDF)', 'kcbmPf.importarPdf()', 'bp', 'Sobe o PDF do extrato; o site lê e você classifica') + B('+ Lançar à mão', 'kcbmPf.extratoForm()') + B('✔ Classificar selecionadas', 'kcbmPf.extratoLote()', 'bo', 'Classifica várias linhas pendentes de uma vez') + '</div></div>'
+    return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">' + navMes(mes, 'kcbmPf.mesLista') + '<div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">' + B('📄 Importar extrato (PDF)', 'kcbmPf.importarPdf()', 'bp', 'Sobe o PDF do extrato; o site lê e você classifica') + B('+ Lançar à mão', 'kcbmPf.extratoForm()') + B('⚡ Baixa automática', 'kcbmPf.baixaAuto()', 'bo', 'Dá baixa nas contas cujo valor e vencimento batem com a linha do extrato') + B('✔ Classificar selecionadas', 'kcbmPf.extratoLote()', 'bo', 'Classifica várias linhas pendentes de uma vez') + '</div></div>'
       + '<div style="font-size:12px;color:var(--slate);margin-bottom:8px">Cada linha do extrato forma um <b>lançamento contábil</b>: dar baixa numa conta a pagar/receber, ou classificar como gasto/entrada (com o tipo cadastrado). Valor positivo = entrada; negativo = saída.</div>'
       + tabela([{ t: '<input type="checkbox" onchange="document.querySelectorAll(\'.kpfSelL\').forEach(c=>c.checked=this.checked)" title="Marcar todas as pendentes">' }, { t: 'Data' }, { t: 'Banco' }, { t: 'Histórico' }, { t: 'Valor', r: 1 }, { t: 'Lançamento contábil' }, { t: '' }], linhas, 'Nenhuma linha de extrato neste mês.')
       + '<div style="text-align:right;margin-top:8px;font-size:13px">Entradas <b style="color:var(--teal)">' + R$(ent) + '</b> · Saídas <b style="color:#dc2626">' + R$(sai) + '</b> · Resultado <b>' + R$(ent + sai) + '</b></div>';
+  }
+  // ── Baixa automática: linha do extrato que paga exatamente o valor de algo que vencia no dia (ou até 3 dias antes). Inclui faturas de cartão. ──
+  function baixaAutomatica(dd) {
+    let n = 0;
+    (dd.extrato || []).slice().sort((a, b) => a.data.localeCompare(b.data)).forEach(l => {
+      if (l.baixa || l.classe || !l.valor) return; const sai = l.valor < 0, tipo = sai ? 'pagar' : 'receber', alvo = cents(Math.abs(l.valor)), cand = [];
+      (dd[tipo] || []).forEach(it => { if (it.forma === 'cartao') return; (it.parcelas || []).forEach(p => { if (!p.pago && cents(p.valor) === alvo) cand.push({ venc: p.venc, itens: [{ it, p }] }); }); });
+      if (sai) (dd.cartoes || []).forEach(c => faturasDoCartao(dd, c.id).forEach(f => { if (f.aberto > 0.004 && cents(f.aberto) === alvo) cand.push({ venc: f.venc, itens: f.linhas.filter(x => !x.p.pago).map(x => ({ it: x.item, p: x.p })) }); }));
+      let ok = cand.filter(c => c.venc === l.data); if (!ok.length) ok = cand.filter(c => c.venc < l.data && c.venc >= dataMaisDias(l.data, -3));
+      if (ok.length !== 1) return;
+      l.baixa = []; ok[0].itens.forEach(x => { x.p.pago = true; x.p.dataPago = l.data; x.p.extratoId = l.id; l.baixa.push({ tipo, itemId: x.it.id, n: x.p.n }); }); n++;
+    });
+    return n;
+  }
+  // ── Movimentação: tudo que vence no mês do topo (a pagar e a receber), com baixa; fatura de cartão em uma linha que abre e fecha ──
+  function abaMovimentacao(d) {
+    const mes = fechMes(), fl = ST.movFiltro || 'todos', rows = [];
+    ['pagar', 'receber'].forEach(tipo => (d[tipo] || []).forEach(it => { if (it.forma === 'cartao') return; (it.parcelas || []).forEach(p => { const vm = p.venc.slice(0, 7); if (vm === mes || (!p.pago && vm < mes)) rows.push({ tipo, venc: p.venc, it, p, atras: vm < mes }); }); }));
+    (d.cartoes || []).forEach(c => faturasDoCartao(d, c.id).forEach(f => { const vm = f.venc.slice(0, 7); if (vm === mes || (f.aberto > 0.004 && vm < mes)) rows.push({ tipo: 'pagar', venc: f.venc, fat: { c, f }, atras: vm < mes }); }));
+    rows.sort((a, b) => a.venc.localeCompare(b.venc));
+    let aPagar = 0, aReceber = 0, pagoT = 0, recebT = 0;
+    const html = rows.filter(r => fl === 'todos' || r.tipo === fl).map(r => {
+      const pag = r.tipo === 'pagar', badge = '<span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;border:1px solid ' + (pag ? '#dc2626' : 'var(--teal)') + ';color:' + (pag ? '#dc2626' : 'var(--teal)') + '">' + (pag ? 'A pagar' : 'A receber') + '</span>';
+      if (r.fat) {
+        const { c, f } = r.fat, key = c.id + '|' + f.fatura, aberta = !!ST.movAberto[key], quit = f.aberto <= 0.004;
+        if (quit) pagoT += f.total; else aPagar += f.aberto;
+        const sit = quit ? '<span style="color:var(--teal)">paga</span>' : (r.atras ? '<span style="color:#dc2626">atrasada</span>' : 'em aberto');
+        const acao = quit ? (f.linhas.some(x => x.p.baixaFatura) ? B('↩ Desfazer', "kcbmPf.faturaDesfazBaixa('" + c.id + "','" + f.fatura + "')") : '') : B('✔ Dar baixa', "kcbmPf.faturaBaixa('" + c.id + "','" + f.fatura + "')", 'bp');
+        let h = '<tr style="cursor:pointer' + (quit ? ';background:rgba(59,130,246,.16)' : '') + '" onclick="kcbmPf.movAbrir(\'' + key + '\')">' + td(br(f.venc)) + td(badge) + td('<span style="display:inline-flex;align-items:center;gap:6px"><span style="font-size:11px">' + (aberta ? '▼' : '▶') + '</span>' + bandeiraSvg(c.bandeira, 16) + '<b>' + E(c.nome) + '</b> <span style="color:var(--slate);font-size:11.5px">fatura de ' + rotMes(f.fatura) + ' · ' + f.linhas.length + ' lançamento(s)</span></span>') + td('Cartão de crédito') + td('<span style="color:#dc2626">' + R$(-f.total) + '</span>', 1) + td(sit) + '<td style="' + TD + ';text-align:right;white-space:nowrap" onclick="event.stopPropagation()">' + acao + '</td></tr>';
+        if (aberta) h += '<tr><td colspan="7" style="padding:0;background:rgba(127,127,127,.07)"><div style="padding:6px 12px 10px 38px"><table style="width:100%;border-collapse:collapse">' + f.linhas.map(x => '<tr>' + td(br(x.item.data)) + td(E(x.item.fornecedor)) + td(x.item.rec ? '↻ mensal' : (x.item.parcelado ? x.p.n + '/' + x.item.n : 'à vista')) + td(E(x.item.tipo || '')) + td(R$(-x.p.valor), 1) + '</tr>').join('') + '</table></div></td></tr>';
+        return h;
+      }
+      const { it, p } = r, v = pag ? -p.valor : p.valor; if (p.pago) { if (pag) pagoT += p.valor; else recebT += p.valor; } else if (pag) aPagar += p.valor; else aReceber += p.valor;
+      const sit = p.pago ? '<span style="color:var(--teal)">' + (pag ? 'paga' : 'recebida') + ' em ' + br(p.dataPago) + (p.extratoId ? ' · extrato' : '') + '</span>' : (r.atras ? '<span style="color:#dc2626">atrasada</span>' : 'em aberto');
+      const acao = p.pago ? (p.extratoId ? '' : B('↩ Desfazer', "kcbmPf.parcelaDesfaz('" + r.tipo + "','" + it.id + "'," + p.n + ")")) : B(pag ? '✔ Pagar' : '✔ Receber', "kcbmPf.parcelaBaixa('" + r.tipo + "','" + it.id + "'," + p.n + ")", 'bp');
+      return '<tr' + (p.pago ? ' style="background:' + (pag ? 'rgba(59,130,246,.16)' : 'rgba(34,197,94,.17)') + '"' : '') + '>' + td(br(r.venc)) + td(badge) + td(E(it[pag ? 'fornecedor' : 'cliente']) + (it.rec ? ' ↻' : '') + (it.parcelado ? ' <span style="color:var(--slate);font-size:11.5px">' + p.n + '/' + it.n + '</span>' : '')) + td(E(it.tipo || '')) + td('<span style="color:' + cor(v) + '">' + R$(v) + '</span>', 1) + td(sit) + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + acao + ' ' + B('Parcelas', "kcbmPf.tituloVer('" + r.tipo + "','" + it.id + "')") + ' ' + B('🗑', "kcbmPf.tituloExcluir('" + r.tipo + "','" + it.id + "')") + '</td></tr>';
+    });
+    const chip = (k, t) => '<button class="btn ' + (fl === k ? 'bp' : 'bo') + ' bsm" onclick="kcbmPf.movFiltro(\'' + k + '\')">' + t + '</button>';
+    return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">' + navMes(mes) + chip('todos', 'Tudo') + chip('pagar', 'A pagar') + chip('receber', 'A receber') + '<div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">' + B('+ Conta a pagar', "kcbmPf.tituloForm('pagar')", 'bp') + B('+ Conta a receber', "kcbmPf.tituloForm('receber')", 'bp') + '</div></div>'
+      + '<div style="font-size:12px;color:var(--slate);margin-bottom:8px">Tudo que vence no mês do topo (e o que ficou atrasado de meses anteriores). Compras no cartão aparecem somadas na fatura: clique na linha do cartão para abrir ou fechar o que compõe o valor. A baixa também é feita sozinha quando o extrato paga exatamente o valor no dia do vencimento.</div>'
+      + tabela([{ t: 'Vencimento' }, { t: '' }, { t: 'Descrição' }, { t: 'Tipo' }, { t: 'Valor', r: 1 }, { t: 'Situação' }, { t: '' }], html, 'Nada vence neste mês.')
+      + '<div style="text-align:right;margin-top:8px;font-size:13px">A pagar <b style="color:#dc2626">' + R$(aPagar) + '</b> · Pago <b>' + R$(pagoT) + '</b> · A receber <b style="color:var(--teal)">' + R$(aReceber) + '</b> · Recebido <b>' + R$(recebT) + '</b></div>';
   }
   // ── Contas a pagar / receber ──
   function abaTitulos(d, tipo) {
@@ -356,7 +398,7 @@
     novaPessoa() { modal('Nova pessoa física', formPessoa(null), m => { const f = lerFormPessoa(m); if (!f) return false; const l = lerLista(); const p = { id: uid(), criado: Date.now(), ...f }; l.push(p); gravarLista(l); gravarDados(p.id, novoDados()); K.abrir(p.id); root.toast('Pessoa cadastrada.', 'ok'); }); },
     editarPessoa(id) { const p = lerLista().find(x => x.id === id); if (!p) return; modal('Editar pessoa física', formPessoa(p), m => { const f = lerFormPessoa(m); if (!f) return false; gravarLista(lerLista().map(x => x.id === id ? Object.assign({}, x, f) : x)); render(); }); },
     excluirPessoa(id) { const p = lerLista().find(x => x.id === id); if (!p) return; if (!confirm('Excluir "' + p.nome + '" e TODOS os dados dela (contas, extrato, cartões)?\n\nNão dá para desfazer.')) return; if (prompt('Para confirmar, digite o nome da pessoa:') !== p.nome) { root.toast('Nome não confere — nada foi excluído.', 'err'); return; } gravarLista(lerLista().filter(x => x.id !== id)); render(); },
-    abrir(id) { ST.pf = id; ST.tela = 'lista'; ST.aba = 'pagar'; ST.mesSaldo = null; ST.cartaoSel = null; ST.mesFatura = null; render(); },
+    abrir(id) { ST.pf = id; ST.tela = 'lista'; ST.aba = 'movimentacao'; ST.mesSaldo = null; ST.cartaoSel = null; ST.mesFatura = null; render(); },
     voltar() { ST.pf = null; ST.tela = 'lista'; render(); },
     aba(a) { ST.aba = a; ST.mesFatura = null; render(); },
     mesLista(n) { ST.mesLista = somaMes(ST.mesLista, n); render(); },
@@ -420,7 +462,7 @@
           let banco = val(m, 'kpfBancoI'); if (banco === 'Outro') banco = (val(m, 'kpfBancoO') || '').trim() || 'Outro';
           const d2 = dadosAtual(), ja2 = new Set(d2.extrato.map(l => l.data + '|' + cents(l.valor) + '|' + norm(l.hist))); let n = 0;
           novas.forEach(x => { const k = x.data + '|' + cents(x.valor) + '|' + norm(x.hist); if (ja2.has(k)) return; ja2.add(k); d2.extrato.push({ id: uid(), criado: Date.now() + n, data: x.data, banco, hist: x.hist, valor: x.valor, baixa: null, classe: null }); n++; });
-          gravarDados(ST.pf, d2); render(); root.toast(n + ' lançamento(s) importado(s). Agora é só classificar.', 'ok');
+          const nb = baixaAutomatica(d2); gravarDados(ST.pf, d2); render(); root.toast(n + ' lançamento(s) importado(s)' + (nb ? ' · ' + nb + ' baixa(s) automática(s)' : '') + '. Agora é só classificar o que sobrou.', 'ok');
         }, 'Importar', 720);
       };
       inpf.click();
@@ -534,6 +576,17 @@
       if (!n) { root.toast('Não há baixa feita por aqui para desfazer (pagamentos vindos do extrato se desfazem no extrato).', 'err'); return; }
       gravarDados(ST.pf, dd); render();
     },
+    movAbrir(key) { ST.movAberto[key] = !ST.movAberto[key]; render(); },
+    movFiltro(f) { ST.movFiltro = f; render(); },
+    parcelaBaixa(tipo, itemId, n) {
+      let v = prompt('Data em que foi ' + (tipo === 'pagar' ? 'paga' : 'recebida') + ' (AAAA-MM-DD ou DD/MM/AAAA):', hoje()); if (v == null) return; v = v.trim();
+      const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v); if (m) v = m[3] + '-' + m[2] + '-' + m[1]; if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { root.toast('Data inválida.', 'err'); return; }
+      const dd = dadosAtual(), it = dd[tipo].find(x => x.id === itemId), p = it && it.parcelas.find(q => q.n === n); if (!p || p.pago) return; p.pago = true; p.dataPago = v; p.baixaManual = true; gravarDados(ST.pf, dd); render();
+    },
+    parcelaDesfaz(tipo, itemId, n) {
+      const dd = dadosAtual(), it = dd[tipo].find(x => x.id === itemId), p = it && it.parcelas.find(q => q.n === n); if (!p || !p.pago || p.extratoId) return; p.pago = false; p.dataPago = null; delete p.baixaManual; gravarDados(ST.pf, dd); render();
+    },
+    baixaAuto() { const dd = dadosAtual(), n = baixaAutomatica(dd); if (n) { gravarDados(ST.pf, dd); render(); } root.toast(n ? n + ' linha(s) do extrato baixaram contas sozinhas.' : 'Nenhuma linha pendente bate exatamente com um vencimento.', n ? 'ok' : 'info'); },
     saldoCartaoEditar(itemId) {
       const d0 = dadosAtual(), it = d0.pagar.find(x => x.id === itemId); if (!it || !it.parcelas || !it.parcelas[0]) return; const p0 = it.parcelas[0], c0 = d0.cartoes.find(x => x.id === it.cartaoId); if (!c0) return;
       modal('Editar saldo inicial — ' + E(c0.nome), campo('Mês do vencimento', inp('kpfFmMes', p0.fatura, 'month'), 'Vence dia ' + c0.vencimento + ' desse mês.') + campo('Saldo inicial (R$)', inp('kpfFmVal', String(p0.valor).replace('.', ','), 'text', 'inputmode="decimal"')), m => {
