@@ -140,13 +140,31 @@
     const dif = (cents(valorCorreto) - cents(f.total)) / 100; if (!dif) return null;
     return { id: uid(), data: hojeIso || hoje(), fornecedor: 'Ajuste de fatura', tipo: 'Ajuste', valor: dif, parcelado: false, n: 1, forma: 'cartao', cartaoId, ajuste: true, parcelas: [{ n: 1, fatura, venc: f.venc, valor: dif, pago: false, dataPago: null }] };
   }
+  // Transferência entre contas: a linha de um banco aponta o outro banco (classe.contraBancoId). Quando existe no outro banco uma linha de mesma data e valor oposto, as duas se amarram sozinhas.
+  function parearTransferencias(d) {
+    let mu = false; const ex = d.extrato || [];
+    const livre = (x, bancoId) => x.bancoId === bancoId && !x.baixa && (!x.classe || (x.classe.tipo === 'transferencia' && !x.classe.parId));
+    ex.filter(l => l.classe && l.classe.tipo === 'transferencia' && !l.classe.parId).forEach(l => {
+      if (l.classe.parId) return;
+      const alvo = cents(-l.valor), nome = ((d.bancos || []).find(b => b.id === l.bancoId) || {}).nome || l.banco || '';
+      let c = ex.filter(x => x.id !== l.id && livre(x, l.classe.contraBancoId) && cents(x.valor) === alvo && x.data === l.data && (!x.classe || x.classe.contraBancoId === l.bancoId));
+      if (!c.length) c = ex.filter(x => x.id !== l.id && livre(x, l.classe.contraBancoId) && cents(x.valor) === alvo && (!x.classe || x.classe.contraBancoId === l.bancoId) && Math.abs(new Date(x.data + 'T12:00:00') - new Date(l.data + 'T12:00:00')) <= 3 * 86400000);
+      if (c.length !== 1) return;
+      const m = c[0]; l.classe.parId = m.id;
+      m.classe = Object.assign({}, m.classe || { auto: true }, { tipo: 'transferencia', contraBancoId: l.bancoId, contraBanco: nome, categoria: 'Transferência entre contas', parId: l.id }); mu = true;
+    });
+    return mu;
+  }
+  // avisos: transferências que saíram/entraram em outro banco e ainda não foram conciliadas neste
+  function transfPendentes(d, bancoId) { return (d.extrato || []).filter(l => l.classe && l.classe.tipo === 'transferencia' && !l.classe.parId && l.classe.contraBancoId === bancoId); }
   function lancamentoTexto(l, banco) {
     banco = banco || 'Banco';
     if (l.baixa && l.baixa.length) return l.valor < 0 ? 'D Fornecedores (contas a pagar) · C ' + banco : 'D ' + banco + ' · C Clientes (contas a receber)';
+    if (l.classe && l.classe.tipo === 'transferencia') { const o = l.classe.contraBanco || 'outro banco', pr = l.classe.parId ? '' : ' — aguardando o outro lado'; return (l.valor < 0 ? 'D ' + o + ' (transferência) · C ' + banco : 'D ' + banco + ' · C ' + o + ' (transferência)') + pr; }
     if (l.classe) return l.valor < 0 ? 'D Despesa — ' + (l.classe.categoria || 'Gastos') + ' · C ' + banco : 'D ' + banco + ' · C Receita — ' + (l.classe.categoria || 'Entradas');
     return '';
   }
-  root.__kcbmPfTeste = { garantirBancos, get bancoTipoDe() { return bancoTipoDe; }, baixaAutomatica, mestreDe, gruposCartoes, grupoUso, temaCartao, get CORES_CARTAO() { return CORES_CARTAO; }, bandeiraSvg, lerLista, gravarLista, lerDados, gravarDados, dividir, faturaDaCompra, gerarParcelas, estenderRecorrencia, garantirRecorrencias, alterarValorParcela, encerrarRecorrencia, saldoMes, faturasDoCartao, faturasQueVencemNoMes, ajusteDeFatura, limiteUsado, lancamentoTexto, cpfValido, somaMes, num, mesInicio };
+  root.__kcbmPfTeste = { garantirBancos, parearTransferencias, transfPendentes, get bancoTipoDe() { return bancoTipoDe; }, baixaAutomatica, mestreDe, gruposCartoes, grupoUso, temaCartao, get CORES_CARTAO() { return CORES_CARTAO; }, bandeiraSvg, lerLista, gravarLista, lerDados, gravarDados, dividir, faturaDaCompra, gerarParcelas, estenderRecorrencia, garantirRecorrencias, alterarValorParcela, encerrarRecorrencia, saldoMes, faturasDoCartao, faturasQueVencemNoMes, ajusteDeFatura, limiteUsado, lancamentoTexto, cpfValido, somaMes, num, mesInicio };
 
   // Símbolo de cada bandeira (desenho simples em SVG, sem imagem externa). Bandeira própria/desconhecida: cartão genérico com as iniciais.
   function bandeiraSvg(nome, h) {
@@ -189,7 +207,7 @@
   const IN = 'width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--ink);font:inherit;font-size:13px';
   const TH = 'padding:7px 9px;text-align:left;font-size:11.5px;white-space:nowrap;background:var(--ink2);color:#fff';
   const TD = 'padding:6px 9px;border-bottom:1px solid var(--border);font-size:12.5px;vertical-align:top';
-  const dadosAtual = () => { const d = lerDados(ST.pf); let mu = garantirRecorrencias(d, somaMes(fechMes(), LIMITE_MESES)); if (garantirBancos(d)) mu = true; if (mu) gravarDados(ST.pf, d); return d; };
+  const dadosAtual = () => { const d = lerDados(ST.pf); let mu = garantirRecorrencias(d, somaMes(fechMes(), LIMITE_MESES)); if (garantirBancos(d)) mu = true; if (parearTransferencias(d)) mu = true; if (mu) gravarDados(ST.pf, d); return d; };
   const pfAtual = () => lerLista().find(x => x.id === ST.pf);
   // Tabela com cabeçalho congelado (fica visível ao rolar) e linha de filtros logo abaixo (um campo por coluna; filtra na hora, sem recarregar).
   function tabela(cols, linhas, vazio, semFiltro) {
@@ -348,17 +366,18 @@
   function abaBancos(d) {
     const mes = fechMes(), sel = ST.bancoSel || '';
     const cards = (d.bancos || []).map(b => {
-      const ls = (d.extrato || []).filter(l => l.bancoId === b.id && l.data.slice(0, 7) === mes), ent = ls.filter(l => l.valor > 0).reduce((a, l) => a + cents(l.valor), 0) / 100, sai = ls.filter(l => l.valor < 0).reduce((a, l) => a + cents(l.valor), 0) / 100, pend = ls.filter(l => !l.baixa && !l.classe).length, on = sel === b.id, sd = saldoBanco(d, b, mes), sa = saldoBanco(d, b, somaMes(mes, -1));
+      const ls = (d.extrato || []).filter(l => l.bancoId === b.id && l.data.slice(0, 7) === mes), ent = ls.filter(l => l.valor > 0).reduce((a, l) => a + cents(l.valor), 0) / 100, sai = ls.filter(l => l.valor < 0).reduce((a, l) => a + cents(l.valor), 0) / 100, pend = ls.filter(l => !l.baixa && !l.classe).length, tp = transfPendentes(d, b.id), on = sel === b.id, sd = saldoBanco(d, b, mes), sa = saldoBanco(d, b, somaMes(mes, -1));
       return '<div onclick="kcbmPf.bancoSel(\'' + b.id + '\')" style="cursor:pointer;min-width:230px;flex:0 1 270px;border:' + (on ? '3px solid var(--teal)' : '2px solid var(--border)') + ';border-radius:12px;padding:11px 13px;background:var(--white)"><div style="display:flex;align-items:center;gap:10px">' + bancoLogo(b.tipo, 34) + '<div style="flex:1;min-width:0"><b>' + E(b.nome) + '</b>' + ((b.agencia || b.conta) ? '<div style="font-size:11.5px;color:var(--slate)">' + (b.agencia ? 'Ag. ' + E(b.agencia) : '') + (b.agencia && b.conta ? ' · ' : '') + (b.conta ? 'Conta ' + E(b.conta) : '') + '</div>' : '') + '</div><span onclick="event.stopPropagation()">' + B('✏️', "kcbmPf.bancoForm('" + b.id + "')", 'bo', 'Editar banco') + '</span></div>'
         + '<div style="font-size:12.5px;line-height:1.55;margin-top:6px">'
           + '<div style="display:flex;justify-content:space-between;gap:8px"><span>Saldo inicial <span style="color:var(--slate);font-size:11px">(' + ((b.saldoIniData && b.saldoIniData.slice(0, 7) === somaMes(mes, -1)) ? br(b.saldoIniData) : 'início de ' + mes.slice(5, 7) + '/' + mes.slice(0, 4)) + ')</span></span><b style="color:' + cor(sa) + '">' + R$(sa) + '</b></div>'
           + '<div style="display:flex;justify-content:space-between;gap:8px"><span>Entradas</span><b style="color:var(--teal)">' + R$(ent) + '</b></div>'
           + '<div style="display:flex;justify-content:space-between;gap:8px"><span>Saídas</span><b style="color:#dc2626">' + R$(sai) + '</b></div>'
           + '<div style="display:flex;justify-content:space-between;gap:8px;color:#b45309"><span>Lançamentos pendentes</span><b>' + pend + '</b></div>'
+          + (tp.length ? '<div style="margin-top:3px;padding:3px 7px;border-radius:7px;background:#fde047;color:#422006;font-weight:700;font-size:11.5px" title="Uma transferência saiu ou entrou em outro banco e ainda não foi conciliada aqui">↔ Transferência entre contas pendente: ' + tp.length + ' (' + R$(tp.reduce((a, l) => a + Math.abs(l.valor), 0)) + ')</div>' : '')
           + '<div style="display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--border);margin-top:3px;padding-top:3px"><span><b>Saldo corrente</b> <span style="color:var(--slate);font-size:11px">(' + mes.slice(5, 7) + '/' + mes.slice(0, 4) + ')</span></span><b style="color:' + cor(sd) + '">' + R$(sd) + '</b></div>'
         + '</div></div>';
     }).join('');
-    return '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch;margin-bottom:14px">' + cards + '<div onclick="kcbmPf.bancoForm()" style="cursor:pointer;min-width:150px;flex:0 1 190px;border:2px dashed var(--border);border-radius:12px;padding:11px 13px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--slate);font-weight:600">➕ Adicionar banco</div></div>'
+    return '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch;margin-bottom:14px">' + cards + '<div style="align-self:flex-start">' + B('Adicionar banco', 'kcbmPf.bancoForm()', 'bp') + '</div></div>'
       + ((d.bancos || []).length ? '<div style="font-size:12px;color:var(--slate);margin:-4px 0 10px">Clique no banco para ver o extrato dele no mês. ' + (sel ? '' : '<b>Nenhum selecionado: mostrando todos.</b> ') + (sel ? B('Ver todos', "kcbmPf.bancoSel('')") : '') + '</div>' : '<div style="font-size:12.5px;color:var(--slate);margin-bottom:10px">Adicione o seu primeiro banco para importar extratos.</div>');
   }
   function abaExtrato(d) { return abaBancos(d) + abaExtratoLista(d); }
@@ -388,6 +407,7 @@
         + td(pend ? '<span style="color:#b45309">— pendente —</span>' : '<span style="font-size:11.5px">' + E(lanc) + '</span>') + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + (pend ? B('Baixar / classificar', "kcbmPf.extratoBaixar('" + x.id + "')", 'bp') : B('↩ Desfazer', "kcbmPf.extratoDesfazer('" + x.id + "')")) + ' ' + B('🗑', "kcbmPf.extratoExcluir('" + x.id + "')") + '</td></tr>';
     }));
     return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">' + navMes(mes, 'kcbmPf.mesLista') + '<div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">' + B('📄 Importar extrato (PDF)', 'kcbmPf.importarPdf()', 'bp', 'Sobe o PDF do extrato; o site lê e você classifica') + B('+ Lançar à mão', 'kcbmPf.extratoForm()') + B('⚡ Baixa automática', 'kcbmPf.baixaAuto()', 'bo', 'Dá baixa nas contas cujo valor e vencimento batem com a linha do extrato') + B('✔ Classificar selecionadas', 'kcbmPf.extratoLote()', 'bo', 'Classifica várias linhas pendentes de uma vez') + '</div></div>'
+      + (d.bancos || []).filter(b => (!ST.bancoSel || b.id === ST.bancoSel) && transfPendentes(d, b.id).length).map(b => '<div style="border:1px solid #eab308;background:rgba(253,224,71,.18);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:12.5px"><b>↔ Transferência entre contas pendente no ' + E(b.nome) + ':</b> ' + transfPendentes(d, b.id).map(l => R$(Math.abs(l.valor)) + ' em ' + br(l.data) + ' (' + (l.valor < 0 ? 'saiu d' : 'entrou n') + 'o ' + E(l.banco || '') + ')').join(' · ') + '. Localize a linha correspondente aqui e classifique como transferência entre contas (ou lance à mão).</div>').join('')
       + '<div style="font-size:12px;color:var(--slate);margin-bottom:8px">Cada linha do extrato forma um <b>lançamento contábil</b>: dar baixa numa conta a pagar/receber, ou classificar como gasto/entrada (com o tipo cadastrado). Valor positivo = entrada; negativo = saída.</div>'
       + tabela([{ t: '<input type="checkbox" onchange="document.querySelectorAll(\'.kpfSelL\').forEach(c=>c.checked=this.checked)" title="Marcar todas as pendentes">' }, { t: 'Data' }, { t: 'Banco' }, { t: 'Histórico' }, { t: 'Valor', r: 1 }, { t: 'Saldo', r: 1 }, { t: 'Lançamento contábil' }, { t: '' }], linhas, 'Nenhuma linha de extrato neste mês.')
       + '<div style="text-align:right;margin-top:8px;font-size:13px">Entradas <b style="color:var(--teal)">' + R$(ent) + '</b> · Saídas <b style="color:#dc2626">' + R$(sai) + '</b> · Resultado <b>' + R$(ent + sai) + '</b></div>';
@@ -663,7 +683,8 @@
     extratoDesfazer(id, silencioso) {
       const dd = dadosAtual(), l = dd.extrato.find(x => x.id === id); if (!l) return;
       (l.baixa || []).forEach(b => { const it = (dd[b.tipo] || []).find(x => x.id === b.itemId); if (it) (it.parcelas || []).forEach(p => { if (p.n === b.n && p.extratoId === id) { p.pago = false; p.dataPago = null; delete p.extratoId; } }); });
-      if (l.classe) { const lista = l.valor < 0 ? 'gastos' : 'entradas'; dd[lista] = dd[lista].filter(x => x.extratoId !== id); }
+      if (l.classe && l.classe.tipo === 'transferencia') { const par = l.classe.parId && dd.extrato.find(x => x.id === l.classe.parId); if (par && par.classe) { if (par.classe.auto) par.classe = null; else par.classe.parId = null; } }
+      else if (l.classe) { const lista = l.valor < 0 ? 'gastos' : 'entradas'; dd[lista] = dd[lista].filter(x => x.extratoId !== id); }
       l.baixa = null; l.classe = null; gravarDados(ST.pf, dd); if (!silencioso) render();
     },
     extratoBaixar(id) {
@@ -673,14 +694,19 @@
       const linhas = pend.slice(0, 300).map((x, i) => '<label style="display:flex;gap:8px;align-items:center;padding:5px 6px;border-bottom:1px solid var(--border);font-size:12.5px;cursor:pointer"><input type="checkbox" class="kpfSelP" data-i="' + i + '" data-v="' + cents(x.p.valor) + '"> <span style="flex:1">' + br(x.p.venc) + ' · ' + E(x.it[sai ? 'fornecedor' : 'cliente']) + ' · ' + (x.it.rec ? 'mensal' : (x.it.parcelado ? x.p.n + '/' + x.it.n : 'à vista')) + (x.it.forma === 'cartao' ? ' · ' + CARTAO + ' fatura ' + x.p.fatura : '') + '</span><b>' + R$(x.p.valor) + '</b></label>').join('');
       const corpo = '<div style="font-size:12.5px;margin-bottom:8px"><b>' + br(l.data) + '</b> · ' + E(l.hist) + ' · <b style="color:' + cor(l.valor) + '">' + R$(l.valor) + '</b></div>'
         + '<div style="font-weight:600;font-size:12.5px;margin-bottom:4px">' + (sai ? 'Dar baixa em contas a pagar' : 'Dar baixa em contas a receber') + ' <span id="kpfSoma" style="font-weight:400;color:var(--slate)"></span></div><div style="max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:8px">' + (linhas || '<div style="padding:14px;color:var(--slate);font-size:12.5px">Nada em aberto.</div>') + '</div>'
-        + '<div style="margin:12px 0 4px;font-weight:600;font-size:12.5px">…ou classificar direto como ' + (sai ? 'gasto' : 'entrada') + '</div>' + campo(sai ? 'Tipo de gasto' : 'Tipo de receita', selTipo('kpfCatC', sai ? 'gasto' : 'receita', ''), 'Escolha só se NÃO for dar baixa em uma conta acima.');
+        + '<div style="margin:12px 0 4px;font-weight:600;font-size:12.5px">…ou classificar direto como ' + (sai ? 'gasto' : 'entrada') + '</div>' + campo(sai ? 'Tipo de gasto' : 'Tipo de receita', selTipo('kpfCatC', sai ? 'gasto' : 'receita', ''), 'Escolha só se NÃO for dar baixa em uma conta acima.')
+        + ((dd.bancos || []).length > 1 ? '<div style="margin:12px 0 4px;font-weight:600;font-size:12.5px">…ou é uma <b>transferência entre contas</b> suas</div>' + campo(sai ? 'Para qual banco foi?' : 'De qual banco veio?', sel('kpfTrBanco', [['', '— não é transferência —']].concat((dd.bancos || []).filter(b => b.id !== l.bancoId).map(b => [b.id, b.nome])), ''), 'Se a linha do outro banco já existir (mesma data e valor), as duas se amarram sozinhas. Se não, fica um aviso no outro banco até você conciliar lá.') : '');
       const m = modal('Baixar / classificar — extrato', corpo, mm => {
-        const sel2 = [...mm.querySelectorAll('.kpfSelP:checked')].map(c => pend[+c.dataset.i]), cat = (val(mm, 'kpfCatC') || '').trim();
+        const sel2 = [...mm.querySelectorAll('.kpfSelP:checked')].map(c => pend[+c.dataset.i]), cat = (val(mm, 'kpfCatC') || '').trim(), trB = (val(mm, 'kpfTrBanco') || '');
         const d2 = dadosAtual(), l2 = d2.extrato.find(x => x.id === id);
         if (sel2.length) {
           const soma = sel2.reduce((a, x) => a + cents(x.p.valor), 0);
           if (soma !== cents(abs) && !confirm('A soma marcada (' + R$(soma / 100) + ') é diferente do valor do extrato (' + R$(abs) + '). Dar baixa mesmo assim?')) return false;
           l2.baixa = []; sel2.forEach(x => { const it = d2[tipo].find(y => y.id === x.it.id); const p = it.parcelas.find(q => q.n === x.p.n); p.pago = true; p.dataPago = l2.data; p.extratoId = id; l2.baixa.push({ tipo, itemId: it.id, n: p.n }); });
+        } else if (trB && !cat) {
+          const ob = (d2.bancos || []).find(b => b.id === trB); if (!ob) { root.toast('Banco não encontrado.', 'err'); return false; }
+          l2.classe = { tipo: 'transferencia', contraBancoId: ob.id, contraBanco: ob.nome, categoria: 'Transferência entre contas', parId: null }; parearTransferencias(d2);
+          gravarDados(ST.pf, d2); render(); root.toast(l2.classe.parId ? 'Transferência amarrada com a linha do ' + ob.nome + '.' : 'Transferência registrada. Fica como aviso no ' + ob.nome + ' até você conciliar lá.', 'ok'); return;
         } else if (cat) { l2.classe = { categoria: cat }; d2[sai ? 'gastos' : 'entradas'].push({ id: uid(), data: l2.data, descricao: l2.hist, categoria: cat, banco: l2.banco, valor: abs, extratoId: id }); }
         else { root.toast('Marque o que está sendo pago/recebido ou escolha o tipo.', 'err'); return false; }
         gravarDados(ST.pf, d2); render(); root.toast('Lançamento contábil gerado.', 'ok');
