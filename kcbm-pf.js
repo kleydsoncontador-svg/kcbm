@@ -35,7 +35,7 @@
   const lerTipos = () => { const v = lerChave('kcbm_pf_tipos', []); return Array.isArray(v) ? v : []; };
   const lerPorQuem = () => { const v = lerChave('kcbm_pf_porquem', []); return Array.isArray(v) ? v : []; };
   const seloPorQuem = it => (it && it.porQuem) ? ' <span title="Por quem eu pago" style="display:inline-block;background:#fde047;color:#422006;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:99px;margin-left:4px;white-space:nowrap">' + E(it.porQuem) + '</span>' : '';
-  const datalistPorQuem = id => '<datalist id="' + id + '">' + lerPorQuem().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map(t => '<option value="' + E(t.nome) + '">').join('') + '</datalist>';
+  const datalistPorQuem = id => { const vistos = new Set(), lista = []; lerPorQuem().concat(lerTerceiros()).forEach(t => { const n = String(t.nome || '').trim(), k = norm(n); if (n && !vistos.has(k)) { vistos.add(k); lista.push(n); } }); return '<datalist id="' + id + '">' + lista.sort((a, b) => a.localeCompare(b, 'pt-BR')).map(n => '<option value="' + E(n) + '">').join('') + '</datalist>'; }; // sugere os nomes de "Por quem pago" + os de "A quem pago / de quem recebo"
   function registrarPorQuem(nome) { nome = (nome || '').trim(); if (!nome) return; const l = lerPorQuem(); if (l.some(t => norm(t.nome) === norm(nome))) return; gravarChave('kcbm_pf_porquem', l.concat([{ id: uid(), nome }])); }
   const lerTerceiros = () => { const v = lerChave('kcbm_pf_terceiros', []); return Array.isArray(v) ? v : []; };
   const BANDEIRAS = ['Mastercard', 'Visa', 'Elo', 'American Express', 'Hipercard', 'Diners Club', 'Discover', 'Cabal', 'Sorocred', 'JCB', 'Aura'];
