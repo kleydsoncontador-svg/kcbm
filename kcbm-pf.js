@@ -574,7 +574,10 @@
   function abaSaldo(d) {
     // Saldo mês a mês, "como se tudo já tivesse acontecido": receitas, contas e faturas já cadastradas entram no mês em que vencem, pagas ou não.
     // Saldo do fim do mês = saldo anterior + a receber − contas a pagar − faturas. O saldo de um mês é o saldo anterior do seguinte.
-    const mesIni = mesInicio(d), mesMax = somaMes(fechMes(), LIMITE_MESES); let m = fechMes(); if (m < mesIni) m = mesIni; if (m > mesMax) m = mesMax; ST.mesSaldo = m;
+    // o saldo começa no mês dos "Saldos iniciais" (se definido) ou no mês do primeiro lançamento: assim NÃO muda quando você troca o mês lá em cima
+    const venc0 = []; (d.receber || []).forEach(it => (it.parcelas || []).forEach(p => p.venc && venc0.push(p.venc.slice(0, 7)))); (d.pagar || []).forEach(it => { if (it.forma !== 'cartao') (it.parcelas || []).forEach(p => p.venc && venc0.push(p.venc.slice(0, 7))); }); (d.cartoes || []).forEach(c => faturasDoCartao(d, c.id).forEach(f => f.venc && venc0.push(f.venc.slice(0, 7))));
+    const defIni = d.saldoIni && d.saldoIni.definido && /^\d{4}-\d{2}$/.test(d.saldoIni.mes || '');
+    const mesIni = defIni ? d.saldoIni.mes : (venc0.length ? venc0.reduce((x, y) => x < y ? x : y) : fechMes()), mesMax = somaMes(fechMes() > mesIni ? fechMes() : mesIni, LIMITE_MESES); let m = fechMes(); if (m < mesIni) m = mesIni; if (m > mesMax) m = mesMax; ST.mesSaldo = m;
     const rec = {}, pag = {}, fat = {}, mk = v => { const x = String(v || '').slice(0, 7); return x < mesIni ? mesIni : x; };
     (d.receber || []).forEach(it => (it.parcelas || []).forEach(p => { const k = mk(p.venc); rec[k] = (rec[k] || 0) + cents(p.valor); }));
     (d.pagar || []).forEach(it => { if (it.forma === 'cartao') return; (it.parcelas || []).forEach(p => { const k = mk(p.venc); pag[k] = (pag[k] || 0) + cents(p.valor); }); });
