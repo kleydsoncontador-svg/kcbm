@@ -410,7 +410,8 @@
     z = z || 24; const e = EMISSORES.find(x => x[0] === id);
     if (!e || e[2] === '') return bancoLogo('outro', z);
     if (e[2] === 'b') return bancoLogo(id, z);
-    return '<img src="assets/emissores/' + id + '.png" width="' + z + '" height="' + z + '" alt="' + E(e[1]) + '" style="flex:none;border-radius:7px;background:#fff;object-fit:contain">';
+    if (id === 'fernando') return '<img src="assets/emissores/fernando.png?v=2" height="' + z + '" alt="' + E(e[1]) + '" style="flex:none;height:' + z + 'px;width:auto;border-radius:5px;background:#fff;padding:2px 4px">'; // logo largo (não é quadrado)
+    return '<img src="assets/emissores/' + id + '.png?v=2" width="' + z + '" height="' + z + '" alt="' + E(e[1]) + '" style="flex:none;border-radius:7px;background:#fff;object-fit:contain">';
   }
   function bancoLogo(tipo, z) {
     z = z || 34;
