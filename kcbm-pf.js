@@ -530,7 +530,7 @@
   function movimentosAno(d) {
     const out = [];
     [['pagar', 'fornecedor'], ['receber', 'cliente']].forEach(([tipo, campo]) => (d[tipo] || []).forEach(it => (it.parcelas || []).forEach(p => {
-      if (!p.venc) return; out.push({ data: p.venc, rec: tipo === 'receber', tipo: String(it.tipo || '').trim() || 'Sem tipo', porQuem: it.porQuem || '', nome: String(it[campo] || '') + (it.parcelado ? ' (' + p.n + '/' + it.n + ')' : '') + (it.forma === 'cartao' ? ' · cartão' : ''), valor: Number(p.valor) || 0, pago: !!p.pago });
+      if (!p.venc || it.quitaDivida) return; out.push({ data: p.venc, rec: tipo === 'receber', tipo: String(it.tipo || '').trim() || 'Sem tipo', porQuem: it.porQuem || '', nome: String(it[campo] || '') + (it.parcelado ? ' (' + p.n + '/' + it.n + ')' : '') + (it.forma === 'cartao' ? ' · cartão' : ''), valor: Number(p.valor) || 0, pago: !!p.pago });
     })));
     (d.entradas || []).forEach(x => { if (x.data) out.push({ data: x.data, rec: true, tipo: String(x.categoria || '').trim() || 'Sem tipo', nome: String(x.descricao || x.categoria || ''), valor: Math.abs(Number(x.valor) || 0), pago: true }); });
     (d.gastos || []).forEach(x => { if (x.data) out.push({ data: x.data, rec: false, tipo: String(x.categoria || '').trim() || 'Sem tipo', nome: String(x.descricao || x.categoria || ''), valor: Math.abs(Number(x.valor) || 0), pago: true }); });
@@ -574,14 +574,15 @@
   const FORMAS_PAG = [['Boleto', 'Boleto'], ['Débito automático', 'Débito automático'], ['Pix', 'Pix'], ['Carnê', 'Carnê'], ['Outro', 'Outro']];
   function resumoContrato(d, c) {
     const it = (d.pagar || []).find(x => x.id === c.pagarId); if (!it) return null;
-    const ps = it.parcelas || [], pagas = ps.filter(p => p.pago), abertas = ps.filter(p => !p.pago).sort((a, b) => a.venc.localeCompare(b.venc));
-    return { it, n: ps.length, pagas: pagas.length, aberto: abertas.reduce((a, p) => a + cents(p.valor), 0) / 100, prox: abertas[0] ? abertas[0].venc : '', total: ps.reduce((a, p) => a + cents(p.valor), 0) / 100, quitado: !abertas.length };
+    const todos = [it].concat([c.jurosId, c.iofId].map(id => id && (d.pagar || []).find(x => x.id === id)).filter(Boolean)), ps = todos.reduce((a, x) => a.concat(x.parcelas || []), []);
+    const pagas = (it.parcelas || []).filter(p => p.pago), abertas = ps.filter(p => !p.pago).sort((a, b) => a.venc.localeCompare(b.venc));
+    return { it, n: (it.parcelas || []).length, pagas: pagas.length, aberto: abertas.reduce((a, p) => a + cents(p.valor), 0) / 100, prox: abertas[0] ? abertas[0].venc : '', total: ps.reduce((a, p) => a + cents(p.valor), 0) / 100, quitado: !abertas.length };
   }
   function abaContratos(d, tipo) {
     const cfg = CONTRATO[tipo], lista = (d.contratos || []).filter(c => c.tipo === tipo).map(c => ({ c, r: resumoContrato(d, c) })).filter(x => x.r);
-    const emp = tipo === 'emprestimo', cols = [{ t: 'Credor' }].concat(emp ? [{ t: 'Recebido', r: 1 }, { t: 'Entrou em' }] : [{ t: 'Tipo' }]).concat([{ t: 'Total a pagar', r: 1 }, { t: 'Parcelas' }, { t: 'Em aberto', r: 1 }, { t: 'Próx. vencimento' }, { t: '' }]);
+    const emp = tipo === 'emprestimo', par = tipo === 'parcelamento', cols = [{ t: 'Credor' }].concat(emp ? [{ t: 'Recebido', r: 1 }, { t: 'Entrou em' }] : par ? [{ t: 'Dívida quitada', r: 1 }, { t: 'Juros + IOF', r: 1 }] : [{ t: 'Tipo' }]).concat([{ t: 'Total a pagar', r: 1 }, { t: 'Parcelas' }, { t: 'Em aberto', r: 1 }, { t: 'Próx. vencimento' }, { t: '' }]);
     const linhas = lista.sort((a, b) => (b.c.criado || 0) - (a.c.criado || 0)).map(({ c, r }) => '<tr>' + td('<b>' + E(c.credor) + '</b>' + (c.desc ? '<div style="font-size:11px;color:var(--slate)">' + E(c.desc) + '</div>' : ''))
-      + (emp ? td('<span style="color:var(--teal)">' + R$(c.principal) + '</span>', 1) + td(br(c.dataEntrada) + (c.bancoId ? '<div style="font-size:11px;color:var(--slate)">' + E(((d.bancos || []).find(b => b.id === c.bancoId) || {}).nome || '') + '</div>' : '')) : td(E(c.tipoGasto || '')))
+      + (emp ? td('<span style="color:var(--teal)">' + R$(c.principal) + '</span>', 1) + td(br(c.dataEntrada) + (c.bancoId ? '<div style="font-size:11px;color:var(--slate)">' + E(((d.bancos || []).find(b => b.id === c.bancoId) || {}).nome || '') + '</div>' : '')) : par ? td(R$(c.divida || 0), 1) + td('<span style="color:#dc2626">' + R$((Number(c.juros) || 0) + (Number(c.iof) || 0)) + '</span>', 1) : td(E(c.tipoGasto || '')))
       + td(R$(r.total), 1) + td(r.pagas + '/' + r.n + (r.quitado ? ' <span style="color:var(--teal)">✔ quitado</span>' : '')) + td('<b style="color:' + (r.aberto > 0.004 ? '#dc2626' : 'var(--teal)') + '">' + R$(r.aberto) + '</b>', 1) + td(r.prox ? br(r.prox) : '—')
       + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + B('Parcelas', "kcbmPf.tituloVer('pagar','" + c.pagarId + "')") + ' ' + B('🗑', "kcbmPf.contratoExcluir('" + c.id + "')", 'bo', 'Excluir este ' + cfg.un) + '</td></tr>');
     const totAberto = lista.reduce((a, x) => a + cents(x.r.aberto), 0) / 100;
@@ -622,16 +623,17 @@
       const pag = r.tipo === 'pagar', badge = '<span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;border:1px solid ' + (pag ? '#dc2626' : 'var(--teal)') + ';color:' + (pag ? '#dc2626' : 'var(--teal)') + '">' + (pag ? 'A pagar' : 'A receber') + '</span>';
       if (r.fat) {
         const { c, f } = r.fat, key = c.id + '|' + f.fatura, aberta = !!ST.movAberto[key], quit = f.aberto <= 0.004;
-        if (quit) pagoT += f.total; else aPagar += f.aberto;
-        const sit = quit ? '<span style="color:var(--teal)">paga</span>' : (r.atras ? '<span style="color:#dc2626">atrasada</span>' : 'em aberto');
-        const acao = quit ? (f.linhas.some(x => x.p.baixaFatura) ? B('↩ Desfazer', "kcbmPf.faturaDesfazBaixa('" + c.id + "','" + f.fatura + "')") : '') : B('✔ Dar baixa', "kcbmPf.faturaBaixa('" + c.id + "','" + f.fatura + "')", 'bp');
+        const viaP = !!f.linhas.length && f.linhas.every(x => x.p.via);
+        if (quit) { if (!viaP) pagoT += f.total; } else aPagar += f.aberto;
+        const sit = viaP ? '<span style="color:#a78bfa">quitada por parcelamento</span>' : quit ? '<span style="color:var(--teal)">paga</span>' : (r.atras ? '<span style="color:#dc2626">atrasada</span>' : 'em aberto');
+        const acao = viaP ? '' : quit ? (f.linhas.some(x => x.p.baixaFatura) ? B('↩ Desfazer', "kcbmPf.faturaDesfazBaixa('" + c.id + "','" + f.fatura + "')") : '') : B('✔ Dar baixa', "kcbmPf.faturaBaixa('" + c.id + "','" + f.fatura + "')", 'bp');
         let h = '<tr style="cursor:pointer' + (quit ? ';background:rgba(59,130,246,.16)' : '') + '" onclick="kcbmPf.movAbrir(\'' + key + '\')">' + td(br(f.venc)) + td(badge) + td('<span style="display:inline-flex;align-items:center;gap:6px"><span style="font-size:11px">' + (aberta ? '▼' : '▶') + '</span>' + emissorLogo(emissorDe(c), 20) + '<b>' + E(c.nome) + '</b> <span style="color:var(--slate);font-size:11.5px">fatura de ' + rotMes(f.fatura) + ' · ' + f.linhas.length + ' lançamento(s)</span></span>') + td('Cartão de crédito') + td('<span style="color:#dc2626">' + R$(-f.total) + '</span>', 1) + td(sit) + '<td style="' + TD + ';text-align:right;white-space:nowrap" onclick="event.stopPropagation()">' + acao + '</td></tr>';
         if (aberta) h += '<tr><td colspan="7" style="padding:0;background:rgba(127,127,127,.07)"><div style="padding:6px 12px 10px 38px"><table style="width:100%;border-collapse:collapse">' + f.linhas.map(x => '<tr>' + td(br(x.item.data)) + td(E(x.item.fornecedor) + seloPorQuem(x.item)) + td(x.item.rec ? '↻ ' + recRot(x.item) : (x.item.parcelado ? x.p.n + '/' + x.item.n : 'à vista')) + td(E(x.item.tipo || '')) + td(R$(-x.p.valor), 1) + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + B('✏️', "kcbmPf.tituloEditar('pagar','" + x.item.id + "')", 'bo', 'Editar esta compra') + ' ' + B('🗑', "kcbmPf.tituloExcluir('pagar','" + x.item.id + "'" + ',' + x.p.n + ")", 'bo', 'Excluir esta compra') + '</td></tr>').join('') + '</table></div></td></tr>';
         return h;
       }
-      const { it, p } = r, v = pag ? -p.valor : p.valor; if (p.pago) { if (pag) pagoT += p.valor; else recebT += p.valor; } else if (pag) aPagar += p.valor; else aReceber += p.valor;
-      const sit = p.pago ? '<span style="color:var(--teal)">' + (pag ? 'paga' : 'recebida') + ' em ' + br(p.dataPago) + (p.extratoId ? ' · extrato' : '') + '</span>' : (r.atras ? '<span style="color:#dc2626">atrasada</span>' : 'em aberto');
-      const acao = p.pago ? (p.extratoId ? '' : B('↩ Desfazer', "kcbmPf.parcelaDesfaz('" + r.tipo + "','" + it.id + "'," + p.n + ")")) : B(pag ? '✔ Pagar' : '✔ Receber', "kcbmPf.parcelaBaixa('" + r.tipo + "','" + it.id + "'," + p.n + ")", 'bp');
+      const { it, p } = r, v = pag ? -p.valor : p.valor; if (p.pago) { if (!p.via) { if (pag) pagoT += p.valor; else recebT += p.valor; } } else if (pag) aPagar += p.valor; else aReceber += p.valor;
+      const sit = p.via ? '<span style="color:#a78bfa">quitada por parcelamento</span>' : p.pago ? '<span style="color:var(--teal)">' + (pag ? 'paga' : 'recebida') + ' em ' + br(p.dataPago) + (p.extratoId ? ' · extrato' : '') + '</span>' : (r.atras ? '<span style="color:#dc2626">atrasada</span>' : 'em aberto');
+      const acao = p.via ? '' : p.pago ? (p.extratoId ? '' : B('↩ Desfazer', "kcbmPf.parcelaDesfaz('" + r.tipo + "','" + it.id + "'," + p.n + ")")) : B(pag ? '✔ Pagar' : '✔ Receber', "kcbmPf.parcelaBaixa('" + r.tipo + "','" + it.id + "'," + p.n + ")", 'bp');
       return '<tr' + (p.pago ? ' style="background:' + (pag ? 'rgba(59,130,246,.16)' : 'rgba(34,197,94,.17)') + '"' : '') + '>' + td(br(r.venc)) + td(badge) + td(E(it[pag ? 'fornecedor' : 'cliente']) + seloPorQuem(it) + (it.rec ? ' ↻' : '') + (it.parcelado ? ' <span style="color:var(--slate);font-size:11.5px">' + p.n + '/' + it.n + '</span>' : '')) + td(E(it.tipo || '')) + td('<span style="color:' + cor(v) + '">' + R$(v) + '</span>', 1) + td(sit) + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + acao + ' ' + B('✏️', "kcbmPf.tituloEditar('" + r.tipo + "','" + it.id + "')", 'bo', 'Editar') + ' ' + B('Parcelas', "kcbmPf.tituloVer('" + r.tipo + "','" + it.id + "')") + (pag ? ' ' + B(ICO_UM, "kcbmPf.porQuemDefinir('" + r.tipo + "','" + it.id + "')") : '') + ' ' + B('🗑', "kcbmPf.tituloExcluir('" + r.tipo + "','" + it.id + "'" + ',' + p.n + ")") + '</td></tr>';
     });
     const chip = (k, t) => '<button class="btn ' + (fl === k ? 'bp' : 'bo') + ' bsm" onclick="kcbmPf.movFiltro(\'' + k + '\')">' + t + '</button>';
@@ -692,8 +694,8 @@
     const mesIni = defIni ? d.saldoIni.mes : (venc0.length ? venc0.reduce((x, y) => x < y ? x : y) : fechMes()), mesMax = somaMes(fechMes() > mesIni ? fechMes() : mesIni, LIMITE_MESES); let m = fechMes(); if (m < mesIni) m = mesIni; if (m > mesMax) m = mesMax; ST.mesSaldo = m;
     const rec = {}, pag = {}, fat = {}, mk = v => { const x = String(v || '').slice(0, 7); return x < mesIni ? mesIni : x; };
     (d.receber || []).forEach(it => (it.parcelas || []).forEach(p => { const k = mk(p.venc); rec[k] = (rec[k] || 0) + cents(p.valor); }));
-    (d.pagar || []).forEach(it => { if (it.forma === 'cartao') return; (it.parcelas || []).forEach(p => { const k = mk(p.venc); pag[k] = (pag[k] || 0) + cents(p.valor); }); });
-    (d.cartoes || []).forEach(c => faturasDoCartao(d, c.id).forEach(f => { const k = mk(f.venc); fat[k] = (fat[k] || 0) + cents(f.total); }));
+    (d.pagar || []).forEach(it => { if (it.forma === 'cartao') return; (it.parcelas || []).forEach(p => { const k = mk(p.venc); if (p.via) return; pag[k] = (pag[k] || 0) + cents(p.valor); }); });
+    (d.cartoes || []).forEach(c => faturasDoCartao(d, c.id).forEach(f => { const k = mk(f.venc); fat[k] = (fat[k] || 0) + cents(f.total) - f.linhas.filter(x => x.p.via).reduce((a, x) => a + cents(x.p.valor), 0); }));
     const bancosIni = (d.bancos || []).reduce((a, b) => a + cents(b.saldoIni || 0), 0); // saldo das contas correntes (inicial): positivo abate o negativo, negativo aumenta
     const ini0 = cents((d.saldoIni || {}).receber || 0) - cents((d.saldoIni || {}).pagar || 0) + bancosIni;
     const linhas = []; let acum = ini0;
@@ -723,7 +725,7 @@
     const bancos = d.bancos || [], ev = { rec: {}, pag: {}, fat: {} }, abre = {};
     const add = (tipo, data, v) => { const k = String(data || '').slice(0, 7); if (/^\d{4}-\d{2}$/.test(k)) ev[tipo][k] = (ev[tipo][k] || 0) + cents(v); };
     (d.receber || []).forEach(it => (it.parcelas || []).forEach(p => { if (p.pago && p.dataPago) add('rec', p.dataPago, p.valor); }));
-    (d.pagar || []).forEach(it => (it.parcelas || []).forEach(p => { if (p.pago && p.dataPago) add(it.forma === 'cartao' ? 'fat' : 'pag', p.dataPago, p.valor); }));
+    (d.pagar || []).forEach(it => (it.parcelas || []).forEach(p => { if (p.pago && p.dataPago && !p.via) add(it.forma === 'cartao' ? 'fat' : 'pag', p.dataPago, p.valor); }));
     // o saldo inicial de cada banco entra no mês seguinte à data do saldo (ou no 1º mês com movimento, se não tiver data)
     const meses = [].concat(Object.keys(ev.rec), Object.keys(ev.pag), Object.keys(ev.fat));
     bancos.forEach(b => { if (!Number(b.saldoIni)) return; const k = b.saldoIniData ? somaMes(b.saldoIniData.slice(0, 7), 1) : null; if (k) { abre[k] = (abre[k] || 0) + cents(b.saldoIni); meses.push(k); } });
@@ -1066,6 +1068,7 @@
     dreAbrir(k) { ST.dreAberto[k] = !ST.dreAberto[k]; render(); },
     dreModo(m) { ST.dreModo = m; render(); },
     contratoForm(tipo) {
+      if (tipo === 'parcelamento') { K.contratoFormParc(); return; }
       const d = dadosAtual(), cfg = CONTRATO[tipo], emp = tipo === 'emprestimo';
       const bancosOpts = [['', '— não informar —']].concat((d.bancos || []).map(b => [b.id, b.nome]));
       const corpo = campo(emp ? 'De quem peguei emprestado' : (tipo === 'financiamento' ? 'Credor / instituição' : 'Credor / descrição'), inp('kpfCtCred', '', 'text', 'maxlength="100" list="kpfDLC" autocomplete="off"') + datalistTerc('kpfDLC', 'fornecedor'), 'Comece a digitar para puxar do cadastro; se for novo, ele entra no cadastro sozinho.')
@@ -1091,12 +1094,54 @@
         dd.contratos.push(c); registrarTerceiro(credor, 'ambos'); gravarDados(ST.pf, dd); render(); root.toast(cfg.un.charAt(0).toUpperCase() + cfg.un.slice(1) + ' criado: ' + n + ' parcela(s) em contas a pagar' + (emp ? ' e o valor recebido em contas a receber' : '') + '.', 'ok');
       }, 'Salvar', 620);
     },
+    // Parcelamento: quita (anula) dívidas já lançadas — faturas de cartão, impostos, contas — e gera as parcelas + juros + IOF como despesas novas.
+    contratoFormParc() {
+      const d = dadosAtual(), dividas = [];
+      (d.cartoes || []).forEach(c => faturasDoCartao(d, c.id).filter(f => f.aberto > 0.004).forEach(f => dividas.push({ k: 'F|' + c.id + '|' + f.fatura, v: f.aberto, t: c.nome + ' — fatura de ' + rotMes(f.fatura) + ' (vence ' + br(f.venc) + ')', o: f.venc })));
+      (d.pagar || []).forEach(it => { if (it.forma === 'cartao' || it.contratoTipo === 'parcelamento' && it.quitaDivida === undefined && false) return; (it.parcelas || []).forEach(p => { if (!p.pago) dividas.push({ k: 'P|' + it.id + '|' + p.n, v: p.valor, t: it.fornecedor + ' — ' + (it.tipo || 'conta') + ' (vence ' + br(p.venc) + ')', o: p.venc }); }); });
+      dividas.sort((a, b) => a.o.localeCompare(b.o));
+      const tipos = tiposDe('gasto'), acha = re => (tipos.find(t => re.test(norm(t.nome))) || {}).nome || '';
+      const lista = dividas.length ? '<div style="max-height:230px;overflow:auto;border:1px solid var(--border);border-radius:8px">' + dividas.map(x => '<label style="display:flex;gap:8px;align-items:center;padding:5px 8px;border-bottom:1px solid var(--border);font-size:12.5px;cursor:pointer"><input type="checkbox" class="kpfPcSel" data-k="' + E(x.k) + '" data-v="' + cents(x.v) + '"> <span style="flex:1">' + E(x.t) + '</span><b>' + R$(x.v) + '</b></label>').join('') + '</div>' : '<div style="padding:10px;color:var(--slate);font-size:12.5px">Nenhuma dívida em aberto para quitar.</div>';
+      const corpo = campo('A quem pago (credor do parcelamento)', inp('kpfPcCred', '', 'text', 'maxlength="100" list="kpfDLC" autocomplete="off"') + datalistTerc('kpfDLC', 'fornecedor'), 'Comece a digitar para puxar do cadastro; se for novo, ele entra no cadastro sozinho.')
+        + campo('Parcelamento do quê?', inp('kpfPcDesc', '', 'text', 'maxlength="100" placeholder="Ex.: faturas do cartão, DARF, IPTU…"'))
+        + campo('Dívidas que este parcelamento quita <span id="kpfPcSoma" style="font-weight:400"></span>', lista, 'Marque tudo o que entra no parcelamento. Essas linhas deixam de contar na conta (ficam na Movimentação, marcadas como "quitada por parcelamento").')
+        + campo('Valor total do parcelamento (R$)', inp('kpfPcTotal', '', 'text', 'inputmode="decimal"'), 'Soma de todas as parcelas, com juros e IOF.')
+        + campo('IOF (R$)', inp('kpfPcIof', '', 'text', 'inputmode="decimal" placeholder="0,00"')) + '<div id="kpfPcJuros" style="font-size:12.5px;margin:-4px 0 10px;color:var(--slate)"></div>'
+        + campo('Tipo de gasto das parcelas (a dívida paga)', selTipo('kpfPcTipoP', 'gasto', acha(/^(?!.*(juros|iof)).*parcelamento/)), 'Se deixar em branco, usa "Parcelamento".')
+        + campo('Tipo de gasto dos juros', selTipo('kpfPcTipoJ', 'gasto', acha(/juros.*parcel|juros/)), 'Ex.: "Juros sobre parcelamentos". Se deixar em branco, usa "Juros sobre parcelamento".')
+        + campo('Tipo de gasto do IOF', selTipo('kpfPcTipoI', 'gasto', acha(/iof/)), 'Se deixar em branco, usa "IOF".')
+        + campo('Quantas parcelas', inp('kpfPcN', '12', 'number', 'min="1" max="480"')) + campo('Vencimento da 1ª parcela', inp('kpfPcV1', '', 'date'), 'As demais vencem nos meses seguintes, no mesmo dia.')
+        + campo('Data do parcelamento', inp('kpfPcData', hoje(), 'date'), 'As dívidas marcadas ficam quitadas nesta data.') + campo('Forma de pagamento', sel('kpfPcForma', FORMAS_PAG, 'Boleto'));
+      const m = modal('Adicionar parcelamento', corpo, mm => {
+        const credor = (val(mm, 'kpfPcCred') || '').trim(), total = num(val(mm, 'kpfPcTotal')), iof = num(val(mm, 'kpfPcIof')) || 0, n = Math.floor(num(val(mm, 'kpfPcN'))), v1 = val(mm, 'kpfPcV1'), dataP = val(mm, 'kpfPcData') || hoje();
+        const sel2 = [...mm.querySelectorAll('.kpfPcSel:checked')].map(c => c.dataset.k), divida = [...mm.querySelectorAll('.kpfPcSel:checked')].reduce((a, c) => a + (+c.dataset.v), 0) / 100;
+        if (!credor || !(total > 0) || !(n >= 1) || !v1) { root.toast('Informe o credor, o valor total, quantas parcelas e o vencimento da 1ª.', 'err'); return false; }
+        if (!sel2.length) { root.toast('Marque pelo menos uma dívida que este parcelamento quita.', 'err'); return false; }
+        const juros = Math.round((total - divida - iof) * 100) / 100;
+        if (juros < -0.005) { root.toast('O total (' + R$(total) + ') é menor que a dívida quitada (' + R$(divida) + ') mais o IOF.', 'err'); return false; }
+        const tP = (val(mm, 'kpfPcTipoP') || '').trim() || 'Parcelamento', tJ = (val(mm, 'kpfPcTipoJ') || '').trim() || 'Juros sobre parcelamento', tI = (val(mm, 'kpfPcTipoI') || '').trim() || 'IOF', formaTxt = val(mm, 'kpfPcForma') || 'Boleto';
+        const dd = dadosAtual(); dd.contratos = dd.contratos || []; const cid = uid(), forma = formaTxt === 'Carnê' ? 'carne' : 'avista';
+        // 1) quita (anula) as dívidas marcadas
+        sel2.forEach(k => { const [t, a, b] = k.split('|'); const marca = p => { if (p.pago) return; p.pago = true; p.dataPago = dataP; p.via = 'parcelamento'; p.parcelamentoId = cid; };
+          if (t === 'F') { const f = faturasDoCartao(dd, a).find(x => x.fatura === b); if (f) f.linhas.forEach(x => marca(x.p)); } else { const it = dd.pagar.find(x => x.id === a), p = it && (it.parcelas || []).find(q => q.n === +b); if (p) marca(p); } });
+        // 2) as parcelas novas: a parte da dívida (não conta como despesa nova), os juros e o IOF (despesas novas)
+        const mk = (valor, tipo, parte, quita) => { const it = { id: uid(), data: dataP, fornecedor: credor, tipo, valor, parcelado: n > 1, n, cartaoId: null, forma, venc1: v1, contratoId: cid, contratoTipo: 'parcelamento', parte }; if (quita) it.quitaDivida = true; it.parcelas = gerarParcelas(it, null); dd.pagar.push(it); return it.id; };
+        const pagarId = mk(divida, tP, 'principal', true), jurosId = juros > 0.004 ? mk(juros, tJ, 'juros', false) : '', iofId = iof > 0.004 ? mk(iof, tI, 'iof', false) : '';
+        dd.contratos.push({ id: cid, tipo: 'parcelamento', credor, desc: (val(mm, 'kpfPcDesc') || '').trim(), total, n, venc1: v1, divida, iof, juros: Math.max(0, juros), tipoGasto: tP, tipoJuros: tJ, tipoIof: tI, formaTxt, dataParc: dataP, pagarId, jurosId, iofId, criado: Date.now() });
+        registrarTerceiro(credor, 'fornecedor'); gravarDados(ST.pf, dd); render(); root.toast('Parcelamento criado: ' + sel2.length + ' dívida(s) quitada(s), ' + n + ' parcela(s)' + (juros > 0.004 ? ' + juros de ' + R$(juros) : '') + (iof > 0.004 ? ' + IOF de ' + R$(iof) : '') + '.', 'ok');
+      }, 'Salvar', 660);
+      const atual = () => { const divida = [...m.querySelectorAll('.kpfPcSel:checked')].reduce((a, c) => a + (+c.dataset.v), 0) / 100, total = num(val(m, 'kpfPcTotal')) || 0, iof = num(val(m, 'kpfPcIof')) || 0, juros = total - divida - iof;
+        m.querySelector('#kpfPcSoma').textContent = divida ? '— marcado ' + R$(divida) : '';
+        m.querySelector('#kpfPcJuros').innerHTML = total > 0 ? 'Dívida quitada <b>' + R$(divida) + '</b> + IOF <b>' + R$(iof) + '</b> + juros <b style="color:' + (juros < -0.005 ? '#dc2626' : 'var(--ink)') + '">' + R$(Math.max(juros, 0)) + '</b> = total <b>' + R$(total) + '</b>' + (juros < -0.005 ? ' <span style="color:#dc2626">(o total está menor que a dívida + IOF)</span>' : '') : ''; };
+      m.querySelectorAll('.kpfPcSel').forEach(c => c.onchange = atual); ['kpfPcTotal', 'kpfPcIof'].forEach(i => { m.querySelector('#' + i).oninput = atual; });
+    },
     contratoExcluir(id) {
       const dd = dadosAtual(), c = (dd.contratos || []).find(x => x.id === id); if (!c) return;
-      const itens = [dd.pagar.find(x => x.id === c.pagarId), (dd.receber || []).find(x => x.id === c.receberId)].filter(Boolean);
+      const ids = [c.pagarId, c.jurosId, c.iofId].filter(Boolean), itens = dd.pagar.filter(x => ids.indexOf(x.id) >= 0).concat((dd.receber || []).filter(x => x.id === c.receberId));
       if (itens.some(it => (it.parcelas || []).some(p => p.pago))) { root.toast('Já tem parcela paga/recebida. O site não exclui o que já foi pago ou recebido. Desfaça a baixa primeiro.', 'err'); return; }
-      if (!confirm('Excluir este ' + CONTRATO[c.tipo].un + ' (' + c.credor + ') e todas as parcelas? Isso não pode ser desfeito.')) return;
-      dd.pagar = dd.pagar.filter(x => x.id !== c.pagarId); dd.receber = (dd.receber || []).filter(x => x.id !== c.receberId); dd.contratos = dd.contratos.filter(x => x.id !== id);
+      if (!confirm('Excluir este ' + CONTRATO[c.tipo].un + ' (' + c.credor + ') e todas as parcelas?' + (c.tipo === 'parcelamento' ? ' As dívidas que ele quitou voltam a ficar em aberto.' : '') + ' Isso não pode ser desfeito.')) return;
+      dd.pagar.forEach(x => (x.parcelas || []).forEach(p => { if (p.parcelamentoId === id) { p.pago = false; p.dataPago = null; delete p.via; delete p.parcelamentoId; } }));
+      dd.pagar = dd.pagar.filter(x => ids.indexOf(x.id) < 0); dd.receber = (dd.receber || []).filter(x => x.id !== c.receberId); dd.contratos = dd.contratos.filter(x => x.id !== id);
       gravarDados(ST.pf, dd); render(); root.toast('Excluído.', 'ok');
     },
     acumAbrir(k) { ST.acumAberto[k] = !ST.acumAberto[k]; render(); },
