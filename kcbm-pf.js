@@ -383,25 +383,30 @@
   }
   function abaExtrato(d) { return abaBancos(d) + abaExtratoLista(d); }
   // saldo da conta depois de cada linha do extrato (saldo inicial + lançamentos depois da data do saldo inicial, na ordem do extrato)
-  function saldosCorrentes(d) {
-    const out = {};
-    (d.bancos || []).forEach(b => {
-      let s0 = cents(b.saldoIni || 0);
-      (d.extrato || []).filter(l => l.bancoId === b.id).sort((a, c) => a.data.localeCompare(c.data) || (a.criado || 0) - (c.criado || 0)).forEach(l => {
-        if (b.saldoIniData && l.data <= b.saldoIniData) { out[l.id] = null; return; }
-        s0 += cents(l.valor); out[l.id] = s0 / 100;
-      });
+  function saldosCorrentes(d, sel) {
+    const out = {}, bs = d.bancos || [];
+    if (sel) { // um banco: saldo só dele
+      const b = bs.find(x => x.id === sel); if (!b) return out; let s0 = cents(b.saldoIni || 0);
+      (d.extrato || []).filter(l => l.bancoId === b.id).sort((a, c) => a.data.localeCompare(c.data) || (a.criado || 0) - (c.criado || 0)).forEach(l => { if (b.saldoIniData && l.data <= b.saldoIniData) { out[l.id] = null; return; } s0 += cents(l.valor); out[l.id] = s0 / 100; });
+      return out;
+    }
+    // todos os bancos juntos: saldo consolidado (soma dos saldos iniciais + todas as linhas, na ordem em que aparecem)
+    let s0 = bs.reduce((a, b) => a + cents(b.saldoIni || 0), 0);
+    (d.extrato || []).slice().sort((a, c) => a.data.localeCompare(c.data) || (a.criado || 0) - (c.criado || 0)).forEach(l => {
+      const b = bs.find(x => x.id === l.bancoId); if (b && b.saldoIniData && l.data <= b.saldoIniData) { out[l.id] = null; return; }
+      s0 += cents(l.valor); out[l.id] = s0 / 100;
     });
     return out;
   }
   function abaExtratoLista(d) {
     const mes = fechMes(), itens = (d.extrato || []).filter(x => x.data.slice(0, 7) === mes && (!ST.bancoSel || x.bancoId === ST.bancoSel)).sort((a, b) => a.data.localeCompare(b.data) || (a.criado || 0) - (b.criado || 0));
     const ent = itens.filter(x => x.valor > 0).reduce((a, x) => a + cents(x.valor), 0) / 100, sai = itens.filter(x => x.valor < 0).reduce((a, x) => a + cents(x.valor), 0) / 100;
-    const sc = saldosCorrentes(d), mesAnt = somaMes(mes, -1);
+    const sc = saldosCorrentes(d, ST.bancoSel || ''), mesAnt = somaMes(mes, -1);
     const antLin = (d.bancos || []).filter(b => !ST.bancoSel || b.id === ST.bancoSel).filter(b => Number(b.saldoIni) || (d.extrato || []).some(l => l.bancoId === b.id && l.data.slice(0, 7) <= mesAnt)).map(b => {
       const v = saldoBanco(d, b, mesAnt), rot = (b.saldoIniData && b.saldoIniData.slice(0, 7) === mesAnt) ? 'Saldo inicial em ' + br(b.saldoIniData) : 'Saldo anterior (fim de ' + rotMes(mesAnt) + ')';
       return '<tr style="background:rgba(127,127,127,.10);font-style:italic"><td style="' + TD + '"></td>' + td(br(mes + '-01')) + td(E(b.nome)) + td(rot) + td('') + '<td style="' + TD + ';text-align:right;white-space:nowrap;font-weight:700;color:' + cor(v) + '">' + R$(v) + '</td>' + td('') + td('') + '</tr>';
     });
+    if (!ST.bancoSel && antLin.length > 1) { const tot = (d.bancos || []).reduce((a, b) => a + cents(saldoBanco(d, b, mesAnt)), 0) / 100; antLin.push('<tr style="background:rgba(127,127,127,.18);font-style:italic;font-weight:700"><td style="' + TD + '"></td>' + td(br(mes + '-01')) + td('Todos os bancos') + td('Saldo inicial juntos') + td('') + '<td style="' + TD + ';text-align:right;white-space:nowrap;color:' + cor(tot) + '">' + R$(tot) + '</td>' + td('') + td('') + '</tr>'); }
     const linhas = antLin.concat(itens.map(x => {
       const lanc = lancamentoTexto(x, x.banco), pend = !lanc;
       return '<tr>' + '<td style="' + TD + '">' + (pend ? '<input type="checkbox" class="kpfSelL" data-id="' + x.id + '">' : '') + '</td>' + td(br(x.data)) + td(E(x.banco || '')) + td(E(x.hist)) + '<td style="' + TD + ';text-align:right;white-space:nowrap;color:' + cor(x.valor) + '">' + R$(x.valor) + '</td>' + '<td style="' + TD + ';text-align:right;white-space:nowrap;font-weight:600;color:' + (sc[x.id] == null ? 'var(--slate)' : cor(sc[x.id])) + '">' + (sc[x.id] == null ? '' : R$(sc[x.id])) + '</td>'
