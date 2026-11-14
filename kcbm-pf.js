@@ -215,7 +215,7 @@
   const CARTAO = '<svg width="18" height="14" viewBox="0 0 18 14" style="vertical-align:-2px"><defs><linearGradient id="pfPrata" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#c9ced6"/><stop offset=".55" stop-color="#f4f6f8"/><stop offset=".8" stop-color="#9aa1ab"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient></defs><rect x="0.5" y="0.5" width="17" height="13" rx="2" fill="url(#pfPrata)" stroke="#8b929c"/><rect x="0.5" y="3" width="17" height="2.6" fill="#6b727c"/><rect x="2.5" y="9" width="5" height="1.6" rx=".8" fill="#8b929c"/></svg>';
   const ICO_DOIS = '<svg width="18" height="16" viewBox="0 0 24 20" style="vertical-align:-3px;color:var(--ink);filter:drop-shadow(0 0 2.5px currentColor)"><circle cx="8" cy="6" r="4" fill="currentColor"/><path d="M0 19c0-4.4 3.6-7 8-7s8 2.6 8 7z" fill="currentColor"/><circle cx="17" cy="7" r="3.3" fill="currentColor" opacity=".75"/><path d="M13.5 12.4c.9-.3 2-.4 3.5-.4 4 0 7 2.2 7 6.5v.5h-8.6c0-2.6-.8-5-1.9-6.6z" fill="currentColor" opacity=".75"/><ellipse cx="6.7" cy="4.6" rx="1.5" ry="1" fill="#fff" opacity=".45"/></svg>', ICO_UM = '<svg width="16" height="16" viewBox="0 0 20 20" style="vertical-align:-3px;color:var(--ink);filter:drop-shadow(0 0 2.5px currentColor)"><circle cx="10" cy="5.5" r="4.5" fill="currentColor"/><path d="M1 19c0-5 4-8 9-8s9 3 9 8z" fill="currentColor"/><ellipse cx="8.3" cy="3.8" rx="1.7" ry="1.1" fill="#fff" opacity=".45"/></svg>';
   const ICO_MOV = '<svg width="17" height="17" viewBox="0 0 24 24" style="vertical-align:-3px;filter:drop-shadow(0 0 3px #ffc400)" fill="none" stroke="#ffc400" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V9a3 3 0 0 1 3-3h11"/><path d="M15 2.5L18.5 6 15 9.5"/><path d="M20 13v2a3 3 0 0 1-3 3H6"/><path d="M9 21.5L5.5 18 9 14.5"/></svg>';
-  const ABAS = [['movimentacao', ICO_MOV + ' Movimentação'], ['extrato', '🏦 Extrato bancário'], ['cartoes', CARTAO + ' Cartões de crédito'], ['saldo', '⚖ Saldo a pagar / a receber'], ['acumulado', '📈 Acumulado']];
+  const ABAS = [['movimentacao', ICO_MOV, 'Movimentação', 'Movim.'], ['extrato', '🏦', 'Extrato bancário', 'Extrato'], ['cartoes', CARTAO, 'Cartões de crédito', 'Cartões'], ['saldo', '⚖', 'Saldo a pagar / a receber', 'Saldo'], ['acumulado', '📈', 'Acumulado', 'Acumul.']];
   const B = (txt, on, cls, ttl) => '<button class="btn ' + (cls || 'bo') + ' bsm" ' + (ttl ? 'title="' + E(ttl) + '" ' : '') + 'onclick="' + on + '">' + txt + '</button>';
   const IN = 'width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--ink);font:inherit;font-size:13px';
   const TH = 'padding:7px 9px;text-align:left;font-size:11.5px;white-space:nowrap;background:var(--ink2);color:#fff';
@@ -239,6 +239,9 @@
       if (sub) { if (rows.length > 1) r.style.display = visivel ? '' : 'none'; return; }
       visivel = ks.every(k => norm(r.cells[+k] ? r.cells[+k].textContent : '').indexOf(norm(f[k])) >= 0); r.style.display = visivel ? '' : 'none';
     });
+  }
+  function rotularTabelas() {
+    try { const e = el(); if (!e) return; e.querySelectorAll('table[data-nf]').forEach(t => { const hs = Array.from(t.querySelectorAll('thead tr:first-child th')).map(h => h.textContent.trim()); t.classList.add('tabCard'); Array.from(t.tBodies[0] ? t.tBodies[0].rows : []).forEach(r => { if (r.cells.length === hs.length) Array.from(r.cells).forEach((c, i) => c.setAttribute('data-label', hs[i] || '')); }); }); } catch (x) { console.warn('rotular', x); }
   }
   const aplicarFiltros = () => { try { const e = el(); if (e) e.querySelectorAll('table[data-nf="1"]').forEach(aplicarFiltroTabela); } catch (x) { console.warn('filtros', x); } };
   const td = (v, r) => '<td style="' + TD + (r ? ';text-align:right;white-space:nowrap' : '') + '">' + v + '</td>';
@@ -317,9 +320,9 @@
   // ───────────── dentro da pessoa ─────────────
   function telaPessoa() {
     const p = pfAtual(); if (!p) { ST.pf = null; return telaLista(); }
-    const abas = ABAS.map(a => '<button onclick="kcbmPf.aba(\'' + a[0] + '\')" style="padding:8px 14px;border:1px solid var(--border);border-bottom:' + (ST.aba === a[0] ? '3px solid var(--teal)' : '1px solid var(--border)') + ';background:' + (ST.aba === a[0] ? 'var(--white)' : 'transparent') + ';color:var(--ink);font-weight:' + (ST.aba === a[0] ? '700' : '500') + ';border-radius:8px 8px 0 0;cursor:pointer;font-size:12.5px;white-space:nowrap">' + a[1] + '</button>').join('');
+    const abas = ABAS.map(a => '<button class="kpfTab" onclick="kcbmPf.aba(\'' + a[0] + '\')" style="padding:8px 14px;border:1px solid var(--border);border-bottom:' + (ST.aba === a[0] ? '3px solid var(--teal)' : '1px solid var(--border)') + ';background:' + (ST.aba === a[0] ? 'var(--white)' : 'transparent') + ';color:var(--ink);font-weight:' + (ST.aba === a[0] ? '700' : '500') + ';border-radius:8px 8px 0 0;cursor:pointer;font-size:12.5px;white-space:nowrap">' + '<span class="kpfI">' + a[1] + '</span><span class="lg"> ' + a[2] + '</span><span class="sh">' + a[3] + '</span></button>').join('');
     el().innerHTML = '<div style="padding:16px 22px 40px"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">' + B('← Pessoas físicas', 'kcbmPf.voltar()') + '<div style="font-size:1.25rem;font-weight:700">' + E(p.nome) + '</div><div style="font-size:12px;color:var(--slate)">' + E(fmtCpf(p.cpf)) + '</div></div>'
-      + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;border-bottom:1px solid var(--border)">' + abas + '</div><div id="kpfAba">' + telaAba() + '</div></div>';
+      + '<div class="kpfTabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;border-bottom:1px solid var(--border)">' + abas + '</div><div id="kpfAba">' + telaAba() + '</div></div>';
   }
   function telaAba() {
     const d = dadosAtual();
@@ -860,7 +863,7 @@
     }
   };
   root.kcbmPf = K;
-  function render() { if (!el()) return; if (ST.pf) telaPessoa(); else if (ST.tela === 'tipos') telaTipos(); else if (ST.tela === 'terceiros') telaTerceiros(); else if (ST.tela === 'porquem') telaPorQuem(); else telaLista(); aplicarFiltros(); }
+  function render() { if (!el()) return; if (ST.pf) telaPessoa(); else if (ST.tela === 'tipos') telaTipos(); else if (ST.tela === 'terceiros') telaTerceiros(); else if (ST.tela === 'porquem') telaPorQuem(); else telaLista(); rotularTabelas(); aplicarFiltros(); }
 
   // ───────────── integração com o site (menu, cartão da tela inicial, página) ─────────────
   root.kcbmPfAbrir = function () { root.goPage('kcbm-pf'); };
