@@ -414,7 +414,7 @@
   }
   function bancoLogo(tipo, z) {
     z = z || 34;
-    if (LOGOS_OFICIAIS.indexOf(tipo) >= 0) return '<img class="' + (LOGO_PROPRIO.indexOf(tipo) >= 0 ? 'kpfLP' : '') + '" src="assets/bancos/' + tipo + '.svg" onerror="this.onerror=null;this.src=\'assets/bancos/' + tipo + '.png\'" width="' + z + '" height="' + z + '" alt="" style="flex:none;border-radius:9px;background:#fff;object-fit:contain">';
+    if (LOGOS_OFICIAIS.indexOf(tipo) >= 0) return '<img class="' + (LOGO_PROPRIO.indexOf(tipo) >= 0 ? 'kpfLP' : '') + '" src="assets/bancos/' + tipo + '.svg?v=2" onerror="this.onerror=null;this.src=\'assets/bancos/' + tipo + '.png\'" width="' + z + '" height="' + z + '" alt="" style="flex:none;border-radius:9px;background:#fff;object-fit:contain">';
     const sv = (bg, inner) => '<svg width="' + z + '" height="' + z + '" viewBox="0 0 40 40" style="flex:none;border-radius:9px"><rect width="40" height="40" rx="9" fill="' + bg + '"/>' + inner + '</svg>';
     const txt = (t, c, fs) => '<text x="20" y="26" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="' + (fs || 15) + '" fill="' + (c || '#fff') + '">' + t + '</text>';
     if (tipo === 'caixa') return sv('#005CA9', '<path d="M9 9 L18 20 L9 31 L15 31 L21 23.5 L27 31 L33 31 L24 20 L33 9 L27 9 L21 16.5 L15 9 Z" fill="#fff"/><path d="M21 16.5 L27 9 L33 9 L24 20 L21 16.5Z" fill="#F7941D"/>');
