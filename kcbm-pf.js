@@ -272,7 +272,7 @@
   const CARTAO = '<svg width="18" height="14" viewBox="0 0 18 14" style="vertical-align:-2px"><defs><linearGradient id="pfPrata" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#c9ced6"/><stop offset=".55" stop-color="#f4f6f8"/><stop offset=".8" stop-color="#9aa1ab"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient></defs><rect x="0.5" y="0.5" width="17" height="13" rx="2" fill="url(#pfPrata)" stroke="#8b929c"/><rect x="0.5" y="3" width="17" height="2.6" fill="#6b727c"/><rect x="2.5" y="9" width="5" height="1.6" rx=".8" fill="#8b929c"/></svg>';
   const ICO_DOIS = '<svg width="18" height="16" viewBox="0 0 24 20" style="vertical-align:-3px;color:var(--ink);filter:drop-shadow(0 0 2.5px currentColor)"><circle cx="8" cy="6" r="4" fill="currentColor"/><path d="M0 19c0-4.4 3.6-7 8-7s8 2.6 8 7z" fill="currentColor"/><circle cx="17" cy="7" r="3.3" fill="currentColor" opacity=".75"/><path d="M13.5 12.4c.9-.3 2-.4 3.5-.4 4 0 7 2.2 7 6.5v.5h-8.6c0-2.6-.8-5-1.9-6.6z" fill="currentColor" opacity=".75"/><ellipse cx="6.7" cy="4.6" rx="1.5" ry="1" fill="#fff" opacity=".45"/></svg>', ICO_UM = '<svg width="16" height="16" viewBox="0 0 20 20" style="vertical-align:-3px;color:var(--ink);filter:drop-shadow(0 0 2.5px currentColor)"><circle cx="10" cy="5.5" r="4.5" fill="currentColor"/><path d="M1 19c0-5 4-8 9-8s9 3 9 8z" fill="currentColor"/><ellipse cx="8.3" cy="3.8" rx="1.7" ry="1.1" fill="#fff" opacity=".45"/></svg>';
   const ICO_MOV = '<svg width="17" height="17" viewBox="0 0 24 24" style="vertical-align:-3px;filter:drop-shadow(0 0 3px #ffc400)" fill="none" stroke="#ffc400" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V9a3 3 0 0 1 3-3h11"/><path d="M15 2.5L18.5 6 15 9.5"/><path d="M20 13v2a3 3 0 0 1-3 3H6"/><path d="M9 21.5L5.5 18 9 14.5"/></svg>';
-  const ABAS = [['movimentacao', ICO_MOV, 'Movimentação', 'Movim.'], ['extrato', '🏦', 'Extrato bancário', 'Extrato'], ['cartoes', CARTAO, 'Cartões de crédito', 'Cartões'], ['saldo', '⚖', 'Saldo', 'Saldo'], ['caixa', '💵', 'Saldo por caixa', 'Caixa'], ['acumulado', '📈', 'Acumulado', 'Acumul.'], ['dre', '📑', 'DRE', 'DRE']];
+  const ABAS = [['movimentacao', ICO_MOV, 'Movimentação', 'Movim.'], ['extrato', '🏦', 'Extrato bancário', 'Extrato'], ['cartoes', CARTAO, 'Cartões de crédito', 'Cartões'], ['emprestimos', '🤝', 'Empréstimos', 'Empr.'], ['financiamentos', '🏠', 'Financiamentos', 'Financ.'], ['parcelamentos', '🧩', 'Parcelamentos', 'Parcel.'], ['saldo', '⚖', 'Saldo', 'Saldo'], ['caixa', '💵', 'Saldo por caixa', 'Caixa'], ['acumulado', '📈', 'Acumulado', 'Acumul.'], ['dre', '📑', 'DRE', 'DRE']];
   const B = (txt, on, cls, ttl) => '<button class="btn ' + (cls || 'bo') + ' bsm" ' + (ttl ? 'title="' + E(ttl) + '" ' : '') + 'onclick="' + on + '">' + txt + '</button>';
   const IN = 'width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--ink);font:inherit;font-size:13px';
   const TH = 'padding:7px 9px;text-align:left;font-size:11.5px;white-space:nowrap;background:var(--ink2);color:#fff';
@@ -383,7 +383,7 @@
   }
   function telaAba() {
     const d = dadosAtual();
-    return ({ entradas: () => abaMov(d, 'entradas'), gastos: () => abaMov(d, 'gastos'), extrato: () => abaExtrato(d), movimentacao: () => abaMovimentacao(d), pagar: () => abaTitulos(d, 'pagar'), receber: () => abaTitulos(d, 'receber'), saldo: () => abaSaldo(d), cartoes: () => abaCartoes(d), acumulado: () => abaAcumulado(d), caixa: () => abaSaldoCaixa(d), dre: () => abaDRE(d) }[ST.aba] || (() => ''))();
+    return ({ entradas: () => abaMov(d, 'entradas'), gastos: () => abaMov(d, 'gastos'), extrato: () => abaExtrato(d), movimentacao: () => abaMovimentacao(d), pagar: () => abaTitulos(d, 'pagar'), receber: () => abaTitulos(d, 'receber'), saldo: () => abaSaldo(d), cartoes: () => abaCartoes(d), acumulado: () => abaAcumulado(d), caixa: () => abaSaldoCaixa(d), dre: () => abaDRE(d), emprestimos: () => abaContratos(d, 'emprestimo'), financiamentos: () => abaContratos(d, 'financiamento'), parcelamentos: () => abaContratos(d, 'parcelamento') }[ST.aba] || (() => ''))();
   }
   // ── Entradas / Gastos ──
   function abaMov(d, tipo) {
@@ -562,6 +562,32 @@
     return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px"><b style="font-size:1.1rem">DRE — até ' + mesRot + ' de ' + ref.slice(0, 4) + '</b>' + chip('ano', 'Acumulado no ano (jan a ' + ref.slice(5, 7) + ')') + chip('tudo', 'Desde o início') + '</div>'
       + '<div style="font-size:12px;color:var(--slate);margin-bottom:10px">Receitas e gastos por <b>tipo</b>. A coluna "No mês" é só o mês do topo; "Acumulado" soma ' + (tudo ? 'tudo desde o primeiro lançamento' : 'de janeiro até o mês do topo') + '. Conta pela data de vencimento. Clique no tipo para ver os lançamentos. Mude o mês pelas setas lá em cima.</div>'
       + '<div style="overflow:auto;border:1px solid var(--border);border-radius:8px"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="' + TH + '">Tipo</th><th style="' + TH + ';text-align:right">No mês</th><th style="' + TH + ';text-align:right">Acumulado</th><th style="' + TH + ';text-align:right">% da receita</th></tr></thead><tbody>' + corpo + '</tbody></table></div>';
+  }
+  // ── Empréstimos, Financiamentos e Parcelamentos ──
+  // Cada contrato gera lançamentos normais: as parcelas viram contas a pagar (1ª no vencimento escolhido, as outras mês a mês) e, no empréstimo, o dinheiro que entra vira uma conta a receber na data de entrada.
+  // Por isso tudo aparece na Movimentação, no Saldo e na DRE, no mês certo.
+  const CONTRATO = {
+    emprestimo: { tit: 'Empréstimos', un: 'empréstimo', ic: '🤝', ajuda: 'Dinheiro que você pegou emprestado. Ao adicionar, o valor recebido entra como receita na data informada e as parcelas viram contas a pagar nos meses seguintes.' },
+    financiamento: { tit: 'Financiamentos', un: 'financiamento', ic: '🏠', ajuda: 'Compras financiadas (carro, apartamento…). Escolha o tipo de gasto; cada parcela entra na Movimentação no mês certo.' },
+    parcelamento: { tit: 'Parcelamentos', un: 'parcelamento', ic: '🧩', ajuda: 'Dívidas ou compras que você parcelou (por exemplo, a fatura de um cartão). Cada parcela entra na Movimentação no mês certo.' }
+  };
+  const FORMAS_PAG = [['Boleto', 'Boleto'], ['Débito automático', 'Débito automático'], ['Pix', 'Pix'], ['Carnê', 'Carnê'], ['Outro', 'Outro']];
+  function resumoContrato(d, c) {
+    const it = (d.pagar || []).find(x => x.id === c.pagarId); if (!it) return null;
+    const ps = it.parcelas || [], pagas = ps.filter(p => p.pago), abertas = ps.filter(p => !p.pago).sort((a, b) => a.venc.localeCompare(b.venc));
+    return { it, n: ps.length, pagas: pagas.length, aberto: abertas.reduce((a, p) => a + cents(p.valor), 0) / 100, prox: abertas[0] ? abertas[0].venc : '', total: ps.reduce((a, p) => a + cents(p.valor), 0) / 100, quitado: !abertas.length };
+  }
+  function abaContratos(d, tipo) {
+    const cfg = CONTRATO[tipo], lista = (d.contratos || []).filter(c => c.tipo === tipo).map(c => ({ c, r: resumoContrato(d, c) })).filter(x => x.r);
+    const emp = tipo === 'emprestimo', cols = [{ t: 'Credor' }].concat(emp ? [{ t: 'Recebido', r: 1 }, { t: 'Entrou em' }] : [{ t: 'Tipo' }]).concat([{ t: 'Total a pagar', r: 1 }, { t: 'Parcelas' }, { t: 'Em aberto', r: 1 }, { t: 'Próx. vencimento' }, { t: '' }]);
+    const linhas = lista.sort((a, b) => (b.c.criado || 0) - (a.c.criado || 0)).map(({ c, r }) => '<tr>' + td('<b>' + E(c.credor) + '</b>' + (c.desc ? '<div style="font-size:11px;color:var(--slate)">' + E(c.desc) + '</div>' : ''))
+      + (emp ? td('<span style="color:var(--teal)">' + R$(c.principal) + '</span>', 1) + td(br(c.dataEntrada) + (c.bancoId ? '<div style="font-size:11px;color:var(--slate)">' + E(((d.bancos || []).find(b => b.id === c.bancoId) || {}).nome || '') + '</div>' : '')) : td(E(c.tipoGasto || '')))
+      + td(R$(r.total), 1) + td(r.pagas + '/' + r.n + (r.quitado ? ' <span style="color:var(--teal)">✔ quitado</span>' : '')) + td('<b style="color:' + (r.aberto > 0.004 ? '#dc2626' : 'var(--teal)') + '">' + R$(r.aberto) + '</b>', 1) + td(r.prox ? br(r.prox) : '—')
+      + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + B('Parcelas', "kcbmPf.tituloVer('pagar','" + c.pagarId + "')") + ' ' + B('🗑', "kcbmPf.contratoExcluir('" + c.id + "')", 'bo', 'Excluir este ' + cfg.un) + '</td></tr>');
+    const totAberto = lista.reduce((a, x) => a + cents(x.r.aberto), 0) / 100;
+    return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px"><b style="font-size:1.1rem">' + cfg.ic + ' ' + cfg.tit + '</b><span style="font-size:12.5px;color:var(--slate)">Em aberto: <b style="color:#dc2626">' + R$(totAberto) + '</b></span><div style="margin-left:auto">' + B('+ Adicionar ' + cfg.un, "kcbmPf.contratoForm('" + tipo + "')", 'bp') + '</div></div>'
+      + '<div style="font-size:12px;color:var(--slate);margin-bottom:10px">' + cfg.ajuda + '</div>'
+      + tabela(cols, linhas, 'Nenhum ' + cfg.un + ' cadastrado ainda. Clique em "+ Adicionar ' + cfg.un + '".');
   }
   function abaAcumulado(d) {
     const mov = movimentosAno(d), anoHoje = +hoje().slice(0, 4), ini = Math.min(2026, anoHoje, ...mov.map(m => +m.data.slice(0, 4)).filter(n => n > 1990)), fim = Math.max(anoHoje + 4, ...mov.map(m => +m.data.slice(0, 4)));
@@ -1039,6 +1065,40 @@
     rolar(id, dir) { const c = document.getElementById(id); if (c) c.scrollBy({ left: dir * 300, behavior: 'smooth' }); },
     dreAbrir(k) { ST.dreAberto[k] = !ST.dreAberto[k]; render(); },
     dreModo(m) { ST.dreModo = m; render(); },
+    contratoForm(tipo) {
+      const d = dadosAtual(), cfg = CONTRATO[tipo], emp = tipo === 'emprestimo';
+      const bancosOpts = [['', '— não informar —']].concat((d.bancos || []).map(b => [b.id, b.nome]));
+      const corpo = campo(emp ? 'De quem peguei emprestado' : (tipo === 'financiamento' ? 'Credor / instituição' : 'Credor / descrição'), inp('kpfCtCred', '', 'text', 'maxlength="100" list="kpfDLC" autocomplete="off"') + datalistTerc('kpfDLC', 'fornecedor'), 'Comece a digitar para puxar do cadastro; se for novo, ele entra no cadastro sozinho.')
+        + (tipo !== 'emprestimo' ? campo('Descrição (opcional)', inp('kpfCtDesc', '', 'text', 'maxlength="100" placeholder="Ex.: Honda Civic, apartamento…"')) : '')
+        + (emp ? campo('Valor recebido (R$)', inp('kpfCtPrinc', '', 'text', 'inputmode="decimal"'), 'O dinheiro que entrou na sua conta.') + campo('Dia em que entra na conta corrente', inp('kpfCtEntrada', hoje(), 'date')) + campo('Onde entra (conta corrente)', sel('kpfCtBanco', bancosOpts, '')) + campo('Tipo de receita', selTipo('kpfCtTipoRec', 'receita', ''), 'Como o valor recebido aparece nas suas receitas.') : '')
+        + campo(emp ? 'Total a pagar (R$)' : 'Valor total (R$)', inp('kpfCtTotal', '', 'text', 'inputmode="decimal"'), emp ? 'Com juros: é o valor somado de todas as parcelas.' : 'É dividido igualmente nas parcelas.')
+        + campo(tipo === 'financiamento' ? 'Tipo do financiamento (tipo de gasto)' : 'Tipo de gasto das parcelas', selTipo('kpfCtTipoGasto', 'gasto', ''), tipo === 'financiamento' ? 'Escolha um tipo de gasto cadastrado, por exemplo "Financiamento de carro".' : 'Se deixar em branco, usa "' + (emp ? 'Empréstimo' : 'Parcelamento') + '".')
+        + campo('Quantas parcelas', inp('kpfCtN', '12', 'number', 'min="1" max="480"'))
+        + campo('Vencimento da 1ª parcela', inp('kpfCtV1', '', 'date'), 'As demais vencem nos meses seguintes, no mesmo dia.')
+        + campo('Forma de pagamento', sel('kpfCtForma', FORMAS_PAG, 'Boleto'));
+      modal('Adicionar ' + cfg.un, corpo, mm => {
+        const credor = (val(mm, 'kpfCtCred') || '').trim(), total = num(val(mm, 'kpfCtTotal')), n = Math.floor(num(val(mm, 'kpfCtN'))), v1 = val(mm, 'kpfCtV1'), principal = emp ? num(val(mm, 'kpfCtPrinc')) : 0, entrada = emp ? val(mm, 'kpfCtEntrada') : '';
+        if (!credor || !(total > 0) || !(n >= 1) || !v1) { root.toast('Informe ' + (emp ? 'de quem pegou, o total a pagar, ' : 'o credor, o valor total, ') + 'quantas parcelas e o vencimento da 1ª.', 'err'); return false; }
+        if (emp && (!(principal > 0) || !entrada)) { root.toast('Informe o valor recebido e o dia em que ele entra na conta.', 'err'); return false; }
+        const tipoRec = emp ? (val(mm, 'kpfCtTipoRec') || '').trim() : '', tipoGasto = (val(mm, 'kpfCtTipoGasto') || '').trim() || (emp ? 'Empréstimo' : 'Parcelamento'), formaTxt = val(mm, 'kpfCtForma') || 'Boleto';
+        if (tipo === 'financiamento' && !(val(mm, 'kpfCtTipoGasto') || '').trim()) { root.toast('Escolha o tipo do financiamento (tipo de gasto).', 'err'); return false; }
+        const dd = dadosAtual(); dd.contratos = dd.contratos || []; const cid = uid();
+        const base = { parcelado: n > 1, n, cartaoId: null, forma: formaTxt === 'Carnê' ? 'carne' : 'avista', contratoId: cid, contratoTipo: tipo };
+        const pagar = Object.assign({ id: uid(), data: emp ? entrada : v1, fornecedor: credor, tipo: tipoGasto, valor: total, venc1: v1 }, base); pagar.parcelas = gerarParcelas(pagar, null);
+        const c = { id: cid, tipo, credor, desc: (val(mm, 'kpfCtDesc') || '').trim(), total, n, venc1: v1, tipoGasto, formaTxt, principal, dataEntrada: entrada, bancoId: emp ? (val(mm, 'kpfCtBanco') || '') : '', tipoReceita: tipoRec, pagarId: pagar.id, criado: Date.now() };
+        dd.pagar.push(pagar);
+        if (emp) { const rec = { id: uid(), data: entrada, cliente: credor, tipo: tipoRec, valor: principal, parcelado: false, n: 1, cartaoId: null, forma: 'avista', venc1: entrada, contratoId: cid, contratoTipo: tipo }; rec.parcelas = gerarParcelas(rec, null); dd.receber.push(rec); c.receberId = rec.id; }
+        dd.contratos.push(c); registrarTerceiro(credor, 'ambos'); gravarDados(ST.pf, dd); render(); root.toast(cfg.un.charAt(0).toUpperCase() + cfg.un.slice(1) + ' criado: ' + n + ' parcela(s) em contas a pagar' + (emp ? ' e o valor recebido em contas a receber' : '') + '.', 'ok');
+      }, 'Salvar', 620);
+    },
+    contratoExcluir(id) {
+      const dd = dadosAtual(), c = (dd.contratos || []).find(x => x.id === id); if (!c) return;
+      const itens = [dd.pagar.find(x => x.id === c.pagarId), (dd.receber || []).find(x => x.id === c.receberId)].filter(Boolean);
+      if (itens.some(it => (it.parcelas || []).some(p => p.pago))) { root.toast('Já tem parcela paga/recebida. O site não exclui o que já foi pago ou recebido. Desfaça a baixa primeiro.', 'err'); return; }
+      if (!confirm('Excluir este ' + CONTRATO[c.tipo].un + ' (' + c.credor + ') e todas as parcelas? Isso não pode ser desfeito.')) return;
+      dd.pagar = dd.pagar.filter(x => x.id !== c.pagarId); dd.receber = (dd.receber || []).filter(x => x.id !== c.receberId); dd.contratos = dd.contratos.filter(x => x.id !== id);
+      gravarDados(ST.pf, dd); render(); root.toast('Excluído.', 'ok');
+    },
     acumAbrir(k) { ST.acumAberto[k] = !ST.acumAberto[k]; render(); },
     movAbrir(key) { ST.movAberto[key] = !ST.movAberto[key]; render(); },
     movFiltro(f) { ST.movFiltro = f; render(); },
