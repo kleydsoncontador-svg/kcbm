@@ -222,7 +222,7 @@
   const CARTAO = '<svg width="18" height="14" viewBox="0 0 18 14" style="vertical-align:-2px"><defs><linearGradient id="pfPrata" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#c9ced6"/><stop offset=".55" stop-color="#f4f6f8"/><stop offset=".8" stop-color="#9aa1ab"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient></defs><rect x="0.5" y="0.5" width="17" height="13" rx="2" fill="url(#pfPrata)" stroke="#8b929c"/><rect x="0.5" y="3" width="17" height="2.6" fill="#6b727c"/><rect x="2.5" y="9" width="5" height="1.6" rx=".8" fill="#8b929c"/></svg>';
   const ICO_DOIS = '<svg width="18" height="16" viewBox="0 0 24 20" style="vertical-align:-3px;color:var(--ink);filter:drop-shadow(0 0 2.5px currentColor)"><circle cx="8" cy="6" r="4" fill="currentColor"/><path d="M0 19c0-4.4 3.6-7 8-7s8 2.6 8 7z" fill="currentColor"/><circle cx="17" cy="7" r="3.3" fill="currentColor" opacity=".75"/><path d="M13.5 12.4c.9-.3 2-.4 3.5-.4 4 0 7 2.2 7 6.5v.5h-8.6c0-2.6-.8-5-1.9-6.6z" fill="currentColor" opacity=".75"/><ellipse cx="6.7" cy="4.6" rx="1.5" ry="1" fill="#fff" opacity=".45"/></svg>', ICO_UM = '<svg width="16" height="16" viewBox="0 0 20 20" style="vertical-align:-3px;color:var(--ink);filter:drop-shadow(0 0 2.5px currentColor)"><circle cx="10" cy="5.5" r="4.5" fill="currentColor"/><path d="M1 19c0-5 4-8 9-8s9 3 9 8z" fill="currentColor"/><ellipse cx="8.3" cy="3.8" rx="1.7" ry="1.1" fill="#fff" opacity=".45"/></svg>';
   const ICO_MOV = '<svg width="17" height="17" viewBox="0 0 24 24" style="vertical-align:-3px;filter:drop-shadow(0 0 3px #ffc400)" fill="none" stroke="#ffc400" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V9a3 3 0 0 1 3-3h11"/><path d="M15 2.5L18.5 6 15 9.5"/><path d="M20 13v2a3 3 0 0 1-3 3H6"/><path d="M9 21.5L5.5 18 9 14.5"/></svg>';
-  const ABAS = [['movimentacao', ICO_MOV, 'Movimentação', 'Movim.'], ['extrato', '🏦', 'Extrato bancário', 'Extrato'], ['cartoes', CARTAO, 'Cartões de crédito', 'Cartões'], ['saldo', '⚖', 'Saldo', 'Saldo'], ['acumulado', '📈', 'Acumulado', 'Acumul.']];
+  const ABAS = [['movimentacao', ICO_MOV, 'Movimentação', 'Movim.'], ['extrato', '🏦', 'Extrato bancário', 'Extrato'], ['cartoes', CARTAO, 'Cartões de crédito', 'Cartões'], ['saldo', '⚖', 'Saldo', 'Saldo'], ['caixa', '💵', 'Saldo por caixa', 'Caixa'], ['acumulado', '📈', 'Acumulado', 'Acumul.']];
   const B = (txt, on, cls, ttl) => '<button class="btn ' + (cls || 'bo') + ' bsm" ' + (ttl ? 'title="' + E(ttl) + '" ' : '') + 'onclick="' + on + '">' + txt + '</button>';
   const IN = 'width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--ink);font:inherit;font-size:13px';
   const TH = 'padding:7px 9px;text-align:left;font-size:11.5px;white-space:nowrap;background:var(--ink2);color:#fff';
@@ -333,7 +333,7 @@
   }
   function telaAba() {
     const d = dadosAtual();
-    return ({ entradas: () => abaMov(d, 'entradas'), gastos: () => abaMov(d, 'gastos'), extrato: () => abaExtrato(d), movimentacao: () => abaMovimentacao(d), pagar: () => abaTitulos(d, 'pagar'), receber: () => abaTitulos(d, 'receber'), saldo: () => abaSaldo(d), cartoes: () => abaCartoes(d), acumulado: () => abaAcumulado(d) }[ST.aba] || (() => ''))();
+    return ({ entradas: () => abaMov(d, 'entradas'), gastos: () => abaMov(d, 'gastos'), extrato: () => abaExtrato(d), movimentacao: () => abaMovimentacao(d), pagar: () => abaTitulos(d, 'pagar'), receber: () => abaTitulos(d, 'receber'), saldo: () => abaSaldo(d), cartoes: () => abaCartoes(d), acumulado: () => abaAcumulado(d), caixa: () => abaSaldoCaixa(d) }[ST.aba] || (() => ''))();
   }
   // ── Entradas / Gastos ──
   function abaMov(d, tipo) {
@@ -603,6 +603,38 @@
     return cabec + cards + '<div style="font-weight:700;margin:14px 0 6px">Como fica nos próximos meses</div>' + tab;
   }
 
+  // ── Saldo por caixa: só o que EFETIVAMENTE aconteceu (baixas dadas), mês a mês.
+  // Começa com o saldo dos bancos (saldo inicial de cada um); depois soma o recebido e tira o que foi pago em contas e em faturas de cartão.
+  function abaSaldoCaixa(d) {
+    const bancos = d.bancos || [], ev = { rec: {}, pag: {}, fat: {} }, abre = {};
+    const add = (tipo, data, v) => { const k = String(data || '').slice(0, 7); if (/^\d{4}-\d{2}$/.test(k)) ev[tipo][k] = (ev[tipo][k] || 0) + cents(v); };
+    (d.receber || []).forEach(it => (it.parcelas || []).forEach(p => { if (p.pago && p.dataPago) add('rec', p.dataPago, p.valor); }));
+    (d.pagar || []).forEach(it => (it.parcelas || []).forEach(p => { if (p.pago && p.dataPago) add(it.forma === 'cartao' ? 'fat' : 'pag', p.dataPago, p.valor); }));
+    // o saldo inicial de cada banco entra no mês seguinte à data do saldo (ou no 1º mês com movimento, se não tiver data)
+    const meses = [].concat(Object.keys(ev.rec), Object.keys(ev.pag), Object.keys(ev.fat));
+    bancos.forEach(b => { if (!Number(b.saldoIni)) return; const k = b.saldoIniData ? somaMes(b.saldoIniData.slice(0, 7), 1) : null; if (k) { abre[k] = (abre[k] || 0) + cents(b.saldoIni); meses.push(k); } });
+    const semData = bancos.filter(b => Number(b.saldoIni) && !b.saldoIniData).reduce((a, b) => a + cents(b.saldoIni), 0);
+    const mesIni = meses.length ? meses.reduce((x, y) => x < y ? x : y) : fechMes(); if (semData) abre[mesIni] = (abre[mesIni] || 0) + semData;
+    const mesMax = somaMes(fechMes() > mesIni ? fechMes() : mesIni, LIMITE_MESES); let m = fechMes(); if (m < mesIni) m = mesIni; if (m > mesMax) m = mesMax;
+    const linhas = []; let acum = 0;
+    for (let k = mesIni; k <= somaMes(m, 12) && k <= mesMax; k = somaMes(k, 1)) {
+      const ini = acum + (abre[k] || 0), r = ev.rec[k] || 0, pg = ev.pag[k] || 0, ft = ev.fat[k] || 0; acum = ini + r - pg - ft;
+      linhas.push({ k, ant: ini / 100, r: r / 100, pg: pg / 100, ft: ft / 100, fim: acum / 100 });
+    }
+    const L = linhas.find(x => x.k === m) || { ant: 0, r: 0, pg: 0, ft: 0, fim: 0 };
+    const card = (t, v, c, sub, grande) => '<div style="flex:1 1 ' + (grande ? 260 : 190) + 'px;border:' + (grande ? '2px solid var(--ink)' : '1px solid var(--border)') + ';border-radius:12px;padding:12px 16px"><div style="font-size:12px;color:var(--slate)">' + t + '</div><div style="font-size:' + (grande ? '1.5rem' : '1.2rem') + ';font-weight:800;color:' + c + '">' + R$(v) + '</div>' + (sub ? '<div style="font-size:11px;color:var(--slate);margin-top:2px">' + sub + '</div>' : '') + '</div>';
+    const cabec = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px"><b style="font-size:1.1rem">' + rotMes(m) + '</b><div style="margin-left:auto">' + B('⚙ Saldo inicial dos bancos', "kcbmPf.aba('extrato')") + '</div></div>'
+      + '<div style="font-size:12px;color:var(--slate);margin-bottom:12px">Só o que de fato aconteceu: o saldo dos bancos mais o que você deu baixa como recebido, menos o que deu baixa como pago em contas e em faturas de cartão, pela data da baixa. O saldo do fim do mês passa para o mês seguinte. Mude o mês pelas setas lá em cima.</div>';
+    const cards = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
+      + card('Saldo anterior (bancos)', L.ant, L.ant < 0 ? '#dc2626' : 'var(--ink)', 'saldo dos bancos + o que sobrou do mês anterior')
+      + card('(+) Recebido no mês', L.r, 'var(--teal)', 'contas a receber com baixa no mês')
+      + card('(−) Contas pagas', L.pg, '#dc2626', 'contas a pagar com baixa no mês')
+      + card('(−) Faturas pagas', L.ft, '#dc2626', 'faturas de cartão com baixa no mês')
+      + card('Saldo por caixa no fim do mês', L.fim, L.fim < 0 ? '#dc2626' : '#16a34a', 'passa para o mês seguinte', true) + '</div>';
+    const tab = tabela([{ t: 'Mês' }, { t: 'Saldo anterior', r: 1 }, { t: 'Recebido', r: 1 }, { t: 'Contas pagas', r: 1 }, { t: 'Faturas pagas', r: 1 }, { t: 'Saldo no fim do mês', r: 1 }],
+      linhas.filter(x => x.k >= m).slice(0, 13).map(x => '<tr' + (x.k === m ? ' style="font-weight:700;background:rgba(127,127,127,.12)"' : '') + '>' + td(rotMes(x.k)) + td(R$(x.ant), 1) + td('<span style="color:var(--teal)">' + R$(x.r) + '</span>', 1) + td(R$(-x.pg), 1) + td(R$(-x.ft), 1) + td('<b style="color:' + (x.fim < 0 ? '#dc2626' : '#16a34a') + '">' + R$(x.fim) + '</b>', 1) + '</tr>'), 'Sem dados.', true);
+    return cabec + cards + '<div style="font-weight:700;margin:14px 0 6px">Mês a mês (pelo que foi baixado)</div>' + tab;
+  }
   // ── Efetivado: só o que de fato foi pago/recebido (pela data da baixa); o saldo passa para o mês seguinte ──
   function blocoEfetivado(d, m) {
     const ini = m + '-01', fim = m + '-31', ev = [];
