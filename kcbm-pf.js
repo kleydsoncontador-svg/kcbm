@@ -267,12 +267,12 @@
     return escuro ? { bg: cor, fg: '#fff', mut: 'rgba(255,255,255,.78)', neg: '#FECACA', pos: '#fff', borda: 'rgba(0,0,0,.25)', sel: '#fff' } : { bg: cor, fg: '#111827', mut: 'rgba(17,24,39,.72)', neg: '#991B1B', pos: '#14532D', borda: 'rgba(0,0,0,.18)', sel: '#111827' };
   }
   // ───────────── estado e telas ─────────────
-  const ST = { bancoSel: '', pf: null, aba: 'movimentacao', movFiltro: 'todos', movAberto: {}, acumAberto: {}, scr: {}, mesSaldo: null, mesLista: hoje().slice(0, 7), cartaoSel: null, mesFatura: null, tela: 'lista' };
+  const ST = { bancoSel: '', pf: null, aba: 'movimentacao', movFiltro: 'todos', movAberto: {}, acumAberto: {}, scr: {}, dreAberto: {}, dreModo: 'ano', mesSaldo: null, mesLista: hoje().slice(0, 7), cartaoSel: null, mesFatura: null, tela: 'lista' };
   const el = () => document.getElementById('page-kcbm-pf');
   const CARTAO = '<svg width="18" height="14" viewBox="0 0 18 14" style="vertical-align:-2px"><defs><linearGradient id="pfPrata" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#c9ced6"/><stop offset=".55" stop-color="#f4f6f8"/><stop offset=".8" stop-color="#9aa1ab"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient></defs><rect x="0.5" y="0.5" width="17" height="13" rx="2" fill="url(#pfPrata)" stroke="#8b929c"/><rect x="0.5" y="3" width="17" height="2.6" fill="#6b727c"/><rect x="2.5" y="9" width="5" height="1.6" rx=".8" fill="#8b929c"/></svg>';
   const ICO_DOIS = '<svg width="18" height="16" viewBox="0 0 24 20" style="vertical-align:-3px;color:var(--ink);filter:drop-shadow(0 0 2.5px currentColor)"><circle cx="8" cy="6" r="4" fill="currentColor"/><path d="M0 19c0-4.4 3.6-7 8-7s8 2.6 8 7z" fill="currentColor"/><circle cx="17" cy="7" r="3.3" fill="currentColor" opacity=".75"/><path d="M13.5 12.4c.9-.3 2-.4 3.5-.4 4 0 7 2.2 7 6.5v.5h-8.6c0-2.6-.8-5-1.9-6.6z" fill="currentColor" opacity=".75"/><ellipse cx="6.7" cy="4.6" rx="1.5" ry="1" fill="#fff" opacity=".45"/></svg>', ICO_UM = '<svg width="16" height="16" viewBox="0 0 20 20" style="vertical-align:-3px;color:var(--ink);filter:drop-shadow(0 0 2.5px currentColor)"><circle cx="10" cy="5.5" r="4.5" fill="currentColor"/><path d="M1 19c0-5 4-8 9-8s9 3 9 8z" fill="currentColor"/><ellipse cx="8.3" cy="3.8" rx="1.7" ry="1.1" fill="#fff" opacity=".45"/></svg>';
   const ICO_MOV = '<svg width="17" height="17" viewBox="0 0 24 24" style="vertical-align:-3px;filter:drop-shadow(0 0 3px #ffc400)" fill="none" stroke="#ffc400" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V9a3 3 0 0 1 3-3h11"/><path d="M15 2.5L18.5 6 15 9.5"/><path d="M20 13v2a3 3 0 0 1-3 3H6"/><path d="M9 21.5L5.5 18 9 14.5"/></svg>';
-  const ABAS = [['movimentacao', ICO_MOV, 'Movimentação', 'Movim.'], ['extrato', '🏦', 'Extrato bancário', 'Extrato'], ['cartoes', CARTAO, 'Cartões de crédito', 'Cartões'], ['saldo', '⚖', 'Saldo', 'Saldo'], ['caixa', '💵', 'Saldo por caixa', 'Caixa'], ['acumulado', '📈', 'Acumulado', 'Acumul.']];
+  const ABAS = [['movimentacao', ICO_MOV, 'Movimentação', 'Movim.'], ['extrato', '🏦', 'Extrato bancário', 'Extrato'], ['cartoes', CARTAO, 'Cartões de crédito', 'Cartões'], ['saldo', '⚖', 'Saldo', 'Saldo'], ['caixa', '💵', 'Saldo por caixa', 'Caixa'], ['acumulado', '📈', 'Acumulado', 'Acumul.'], ['dre', '📑', 'DRE', 'DRE']];
   const B = (txt, on, cls, ttl) => '<button class="btn ' + (cls || 'bo') + ' bsm" ' + (ttl ? 'title="' + E(ttl) + '" ' : '') + 'onclick="' + on + '">' + txt + '</button>';
   const IN = 'width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--ink);font:inherit;font-size:13px';
   const TH = 'padding:7px 9px;text-align:left;font-size:11.5px;white-space:nowrap;background:var(--ink2);color:#fff';
@@ -383,7 +383,7 @@
   }
   function telaAba() {
     const d = dadosAtual();
-    return ({ entradas: () => abaMov(d, 'entradas'), gastos: () => abaMov(d, 'gastos'), extrato: () => abaExtrato(d), movimentacao: () => abaMovimentacao(d), pagar: () => abaTitulos(d, 'pagar'), receber: () => abaTitulos(d, 'receber'), saldo: () => abaSaldo(d), cartoes: () => abaCartoes(d), acumulado: () => abaAcumulado(d), caixa: () => abaSaldoCaixa(d) }[ST.aba] || (() => ''))();
+    return ({ entradas: () => abaMov(d, 'entradas'), gastos: () => abaMov(d, 'gastos'), extrato: () => abaExtrato(d), movimentacao: () => abaMovimentacao(d), pagar: () => abaTitulos(d, 'pagar'), receber: () => abaTitulos(d, 'receber'), saldo: () => abaSaldo(d), cartoes: () => abaCartoes(d), acumulado: () => abaAcumulado(d), caixa: () => abaSaldoCaixa(d), dre: () => abaDRE(d) }[ST.aba] || (() => ''))();
   }
   // ── Entradas / Gastos ──
   function abaMov(d, tipo) {
@@ -530,11 +530,38 @@
   function movimentosAno(d) {
     const out = [];
     [['pagar', 'fornecedor'], ['receber', 'cliente']].forEach(([tipo, campo]) => (d[tipo] || []).forEach(it => (it.parcelas || []).forEach(p => {
-      if (!p.venc) return; out.push({ data: p.venc, rec: tipo === 'receber', porQuem: it.porQuem || '', nome: String(it[campo] || '') + (it.parcelado ? ' (' + p.n + '/' + it.n + ')' : '') + (it.forma === 'cartao' ? ' · cartão' : ''), valor: Number(p.valor) || 0, pago: !!p.pago });
+      if (!p.venc) return; out.push({ data: p.venc, rec: tipo === 'receber', tipo: String(it.tipo || '').trim() || 'Sem tipo', porQuem: it.porQuem || '', nome: String(it[campo] || '') + (it.parcelado ? ' (' + p.n + '/' + it.n + ')' : '') + (it.forma === 'cartao' ? ' · cartão' : ''), valor: Number(p.valor) || 0, pago: !!p.pago });
     })));
-    (d.entradas || []).forEach(x => { if (x.data) out.push({ data: x.data, rec: true, nome: String(x.descricao || x.categoria || ''), valor: Math.abs(Number(x.valor) || 0), pago: true }); });
-    (d.gastos || []).forEach(x => { if (x.data) out.push({ data: x.data, rec: false, nome: String(x.descricao || x.categoria || ''), valor: Math.abs(Number(x.valor) || 0), pago: true }); });
+    (d.entradas || []).forEach(x => { if (x.data) out.push({ data: x.data, rec: true, tipo: String(x.categoria || '').trim() || 'Sem tipo', nome: String(x.descricao || x.categoria || ''), valor: Math.abs(Number(x.valor) || 0), pago: true }); });
+    (d.gastos || []).forEach(x => { if (x.data) out.push({ data: x.data, rec: false, tipo: String(x.categoria || '').trim() || 'Sem tipo', nome: String(x.descricao || x.categoria || ''), valor: Math.abs(Number(x.valor) || 0), pago: true }); });
     return out;
+  }
+  // ── DRE: receitas e gastos por TIPO, no mês do topo e acumulados (no ano até o mês, ou desde o início) ──
+  // Conta pela data de vencimento, igual à aba Acumulado; compra no cartão entra pelo tipo da compra (não pelo pagamento da fatura).
+  function abaDRE(d) {
+    const ref = fechMes(), ano = ref.slice(0, 4), tudo = ST.dreModo === 'tudo';
+    const mov = movimentosAno(d), ini = tudo ? '0000-00' : ano + '-01', fimMes = ref;
+    const noMes = mov.filter(m => m.data.slice(0, 7) === ref), acum = mov.filter(m => { const k = m.data.slice(0, 7); return k >= ini && k <= fimMes; });
+    const soma = (ls, rec) => ls.filter(m => m.rec === rec).reduce((a, m) => a + cents(m.valor), 0) / 100;
+    const grupos = rec => { const g = {}; acum.filter(m => m.rec === rec).forEach(m => { (g[m.tipo] = g[m.tipo] || []).push(m); }); return Object.keys(g).map(t => ({ tipo: t, linhas: g[t].sort((a, b) => a.data.localeCompare(b.data)), acum: g[t].reduce((a, m) => a + cents(m.valor), 0) / 100, mes: g[t].filter(m => m.data.slice(0, 7) === ref).reduce((a, m) => a + cents(m.valor), 0) / 100 })).sort((a, b) => b.acum - a.acum); };
+    const gr = grupos(true), gg = grupos(false), totRecA = soma(acum, true), totGasA = soma(acum, false), totRecM = soma(noMes, true), totGasM = soma(noMes, false);
+    const pct = (v, base) => base > 0.004 ? (v / base * 100).toFixed(1).replace('.', ',') + '%' : '—';
+    const linhaTipo = (g, rec) => {
+      const k = (rec ? 'r|' : 'g|') + g.tipo, ab = !!ST.dreAberto[k], cor1 = rec ? 'var(--teal)' : '#dc2626';
+      let h = '<tr style="cursor:pointer" onclick="kcbmPf.dreAbrir(\'' + k.replace(/'/g, "\\'") + '\')">' + td('<span style="font-size:11px">' + (ab ? '▼' : '▶') + '</span> ' + E(g.tipo)) + td('<span style="color:' + cor1 + '">' + R$(rec ? g.mes : -g.mes) + '</span>', 1) + td('<b style="color:' + cor1 + '">' + R$(rec ? g.acum : -g.acum) + '</b>', 1) + td('<span style="color:var(--slate)">' + pct(g.acum, rec ? totRecA : totRecA) + '</span>', 1) + '</tr>';
+      if (ab) h += '<tr><td colspan="4" style="padding:0;background:rgba(127,127,127,.07)"><div style="padding:6px 12px 10px 30px"><table style="width:100%;border-collapse:collapse">' + g.linhas.map(m => '<tr>' + td(br(m.data)) + td(E(m.nome) + seloPorQuem({ porQuem: m.porQuem })) + td(m.pago ? (m.rec ? 'recebido' : 'pago') : '<span style="color:var(--slate)">em aberto</span>') + td(R$(rec ? m.valor : -m.valor), 1) + '</tr>').join('') + '</table></div></td></tr>';
+      return h;
+    };
+    const sec = (titulo, cor1, total, totalM, lin) => '<tr style="background:rgba(127,127,127,.14)"><td style="' + TD + ';font-weight:800">' + titulo + '</td><td style="' + TD + ';text-align:right;font-weight:800;color:' + cor1 + '">' + R$(totalM) + '</td><td style="' + TD + ';text-align:right;font-weight:800;color:' + cor1 + '">' + R$(total) + '</td><td style="' + TD + '"></td></tr>' + lin;
+    const resA = (cents(totRecA) - cents(totGasA)) / 100, resM = (cents(totRecM) - cents(totGasM)) / 100;
+    const corpo = sec('RECEITAS', 'var(--teal)', totRecA, totRecM, gr.map(g => linhaTipo(g, true)).join('') || '<tr><td colspan="4" style="' + TD + ';color:var(--slate)">Nenhuma receita no período.</td></tr>')
+      + sec('GASTOS', '#dc2626', -totGasA, -totGasM, gg.map(g => linhaTipo(g, false)).join('') || '<tr><td colspan="4" style="' + TD + ';color:var(--slate)">Nenhum gasto no período.</td></tr>')
+      + '<tr style="background:rgba(127,127,127,.22)"><td style="' + TD + ';font-weight:800">RESULTADO (receitas − gastos)</td><td style="' + TD + ';text-align:right;font-weight:800;color:' + (resM < 0 ? '#dc2626' : '#16a34a') + '">' + R$(resM) + '</td><td style="' + TD + ';text-align:right;font-weight:800;color:' + (resA < 0 ? '#dc2626' : '#16a34a') + '">' + R$(resA) + '</td><td style="' + TD + ';text-align:right;color:var(--slate)">' + pct(resA, totRecA) + ' da receita</td></tr>';
+    const chip = (k, t) => '<button class="btn ' + (ST.dreModo === k ? 'bp' : 'bo') + ' bsm" onclick="kcbmPf.dreModo(\'' + k + '\')">' + t + '</button>';
+    const mesRot = MESES[+ref.slice(5, 7) - 1].replace(/^./, c => c.toUpperCase());
+    return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px"><b style="font-size:1.1rem">DRE — até ' + mesRot + ' de ' + ref.slice(0, 4) + '</b>' + chip('ano', 'Acumulado no ano (jan a ' + ref.slice(5, 7) + ')') + chip('tudo', 'Desde o início') + '</div>'
+      + '<div style="font-size:12px;color:var(--slate);margin-bottom:10px">Receitas e gastos por <b>tipo</b>. A coluna "No mês" é só o mês do topo; "Acumulado" soma ' + (tudo ? 'tudo desde o primeiro lançamento' : 'de janeiro até o mês do topo') + '. Conta pela data de vencimento. Clique no tipo para ver os lançamentos. Mude o mês pelas setas lá em cima.</div>'
+      + '<div style="overflow:auto;border:1px solid var(--border);border-radius:8px"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="' + TH + '">Tipo</th><th style="' + TH + ';text-align:right">No mês</th><th style="' + TH + ';text-align:right">Acumulado</th><th style="' + TH + ';text-align:right">% da receita</th></tr></thead><tbody>' + corpo + '</tbody></table></div>';
   }
   function abaAcumulado(d) {
     const mov = movimentosAno(d), anoHoje = +hoje().slice(0, 4), ini = Math.min(2026, anoHoje, ...mov.map(m => +m.data.slice(0, 4)).filter(n => n > 1990)), fim = Math.max(anoHoje + 4, ...mov.map(m => +m.data.slice(0, 4)));
@@ -990,6 +1017,8 @@
       const [x] = arr.splice(i, 1); arr.splice(j, 0, x); gravarDados(ST.pf, dd); render();
     },
     rolar(id, dir) { const c = document.getElementById(id); if (c) c.scrollBy({ left: dir * 300, behavior: 'smooth' }); },
+    dreAbrir(k) { ST.dreAberto[k] = !ST.dreAberto[k]; render(); },
+    dreModo(m) { ST.dreModo = m; render(); },
     acumAbrir(k) { ST.acumAberto[k] = !ST.acumAberto[k]; render(); },
     movAbrir(key) { ST.movAberto[key] = !ST.movAberto[key]; render(); },
     movFiltro(f) { ST.movFiltro = f; render(); },
