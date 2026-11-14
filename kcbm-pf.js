@@ -282,7 +282,8 @@
   const ICO_FIN = prataIco('f', '<path d="M2.5 11.5L12 3l9.5 8.5h-2.5V21h-5v-6h-4v6h-5v-9.5z"/>');
   const ICO_PAR = prataIco('p', '<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5" fill="none"/>');
   const ICO_CX = prataIco('c', '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3" fill="none"/><circle cx="6" cy="12" r="1" fill="#7b838e"/><circle cx="18" cy="12" r="1" fill="#7b838e"/>');
-  const ABAS = [['movimentacao', ICO_MOV, 'Movimentação', 'Movim.'], ['extrato', '🏦', 'Extrato bancário', 'Extrato'], ['cartoes', CARTAO, 'Cartões de crédito', 'Cartões'], ['emprestimos', ICO_EMP, 'Empréstimos', 'Empr.'], ['financiamentos', ICO_FIN, 'Financiamentos', 'Financ.'], ['parcelamentos', ICO_PAR, 'Parcelamentos', 'Parcel.'], ['saldo', '⚖', 'Saldo', 'Saldo'], ['caixa', ICO_CX, 'Saldo por caixa', 'Caixa'], ['acumulado', '📈', 'Acumulado', 'Acumul.'], ['dre', '📑', 'DRE', 'DRE']];
+  const ICO_NF = prataIco('n', '<path d="M5 2h14v20l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M8.5 7h7M8.5 11h7M8.5 15h4" fill="none" stroke-linecap="round"/>');
+  const ABAS = [['movimentacao', ICO_MOV, 'Movimentação', 'Movim.'], ['extrato', '🏦', 'Extrato bancário', 'Extrato'], ['cartoes', CARTAO, 'Cartões de crédito', 'Cartões'], ['emprestimos', ICO_EMP, 'Empréstimos', 'Empr.'], ['financiamentos', ICO_FIN, 'Financiamentos', 'Financ.'], ['parcelamentos', ICO_PAR, 'Parcelamentos', 'Parcel.'], ['notas', ICO_NF, 'Notas fiscais', 'Notas'], ['saldo', '⚖', 'Saldo', 'Saldo'], ['caixa', ICO_CX, 'Saldo por caixa', 'Caixa'], ['acumulado', '📈', 'Acumulado', 'Acumul.'], ['dre', '📑', 'DRE', 'DRE']];
   const B = (txt, on, cls, ttl) => '<button class="btn ' + (cls || 'bo') + ' bsm" ' + (ttl ? 'title="' + E(ttl) + '" ' : '') + 'onclick="' + on + '">' + txt + '</button>';
   const IN = 'width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--ink);font:inherit;font-size:13px';
   const TH = 'padding:7px 9px;text-align:left;font-size:11.5px;white-space:nowrap;background:var(--ink2);color:#fff';
@@ -389,12 +390,12 @@
   function telaPessoa() {
     const p = pfAtual(); if (!p) { ST.pf = null; return telaLista(); }
     const abas = ABAS.map(a => '<button class="kpfTab" onclick="kcbmPf.aba(\'' + a[0] + '\')" style="padding:8px 14px;border:1px solid var(--border);border-bottom:' + (ST.aba === a[0] ? '3px solid var(--teal)' : '1px solid var(--border)') + ';background:' + (ST.aba === a[0] ? 'var(--white)' : 'transparent') + ';color:var(--ink);font-weight:' + (ST.aba === a[0] ? '700' : '500') + ';border-radius:8px 8px 0 0;cursor:pointer;font-size:12.5px;white-space:nowrap">' + '<span class="kpfI">' + a[1] + '</span><span class="lg"> ' + a[2] + '</span><span class="sh">' + a[3] + '</span></button>').join('');
-    el().innerHTML = '<div style="padding:16px 22px 40px"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">' + B('← Pessoas físicas', 'kcbmPf.voltar()') + '<div style="font-size:1.25rem;font-weight:700">' + E(p.nome) + '</div><div style="font-size:12px;color:var(--slate)">' + E(fmtCpf(p.cpf)) + '</div></div>'
+    el().innerHTML = '<div style="padding:16px 22px 40px"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">' + B('← Pessoas físicas', 'kcbmPf.voltar()') + '<div style="font-size:1.25rem;font-weight:700">' + E(p.nome) + '</div><div style="font-size:12px;color:var(--slate)">' + E(fmtCpf(p.cpf)) + '</div>' + B('🧾 Anexar nota fiscal', 'kcbmPf.notaAnexar()', 'bo', 'Anexar NFC-e / nota fiscal (XML ou PDF)') + '</div>'
       + '<div class="kpfTabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;border-bottom:1px solid var(--border)">' + abas + '</div><div id="kpfAba">' + telaAba() + '</div></div>';
   }
   function telaAba() {
     const d = dadosAtual();
-    return ({ entradas: () => abaMov(d, 'entradas'), gastos: () => abaMov(d, 'gastos'), extrato: () => abaExtrato(d), movimentacao: () => abaMovimentacao(d), pagar: () => abaTitulos(d, 'pagar'), receber: () => abaTitulos(d, 'receber'), saldo: () => abaSaldo(d), cartoes: () => abaCartoes(d), acumulado: () => abaAcumulado(d), caixa: () => abaSaldoCaixa(d), dre: () => abaDRE(d), emprestimos: () => abaContratos(d, 'emprestimo'), financiamentos: () => abaContratos(d, 'financiamento'), parcelamentos: () => abaContratos(d, 'parcelamento') }[ST.aba] || (() => ''))();
+    return ({ entradas: () => abaMov(d, 'entradas'), gastos: () => abaMov(d, 'gastos'), extrato: () => abaExtrato(d), movimentacao: () => abaMovimentacao(d), pagar: () => abaTitulos(d, 'pagar'), receber: () => abaTitulos(d, 'receber'), saldo: () => abaSaldo(d), cartoes: () => abaCartoes(d), acumulado: () => abaAcumulado(d), caixa: () => abaSaldoCaixa(d), dre: () => abaDRE(d), emprestimos: () => abaContratos(d, 'emprestimo'), financiamentos: () => abaContratos(d, 'financiamento'), parcelamentos: () => abaContratos(d, 'parcelamento'), notas: () => abaNotas(d) }[ST.aba] || (() => ''))();
   }
   // ── Entradas / Gastos ──
   function abaMov(d, tipo) {
@@ -623,6 +624,48 @@
     }
     return '<div style="font-size:12.5px;color:var(--slate);margin-bottom:10px">Resultado acumulado ano a ano (receitas − gastos). Clique no ano para ver o movimento mês a mês. Conta pela data de vencimento; compra no cartão entra na data da fatura. Um ano novo abre sozinho quando o calendário virar.</div>'
       + tabela([{ t: 'Ano' }, { t: 'Receitas', r: 1 }, { t: 'Gastos', r: 1 }, { t: 'Resultado do ano', r: 1 }, { t: 'Acumulado', r: 1 }], [html], '', true);
+  }
+  // ── Notas fiscais (NFC-e / NF-e): anexar, produtos, fornecedor, forma de pagamento e análise por produto ──
+  const normP = s => norm(s).replace(/[^a-z0-9 ]/g, ' ').replace(/ +/g, ' ').trim();
+  const num2 = v => Math.round((Number(v) || 0) * 100) / 100;
+  function nfLerXml(txt) {
+    const doc = new DOMParser().parseFromString(txt, 'text/xml'); if (doc.getElementsByTagName('parsererror').length) return null;
+    const inf = doc.getElementsByTagName('infNFe')[0]; if (!inf) return null;
+    const t = (el, tag) => { const x = el && el.getElementsByTagName(tag)[0]; return x ? x.textContent.trim() : ''; };
+    const emit = inf.getElementsByTagName('emit')[0], ide = inf.getElementsByTagName('ide')[0], tot = inf.getElementsByTagName('ICMSTot')[0];
+    const itens = [].slice.call(inf.getElementsByTagName('det')).map(det => { const pr = det.getElementsByTagName('prod')[0]; return { desc: t(pr, 'xProd'), qtd: +t(pr, 'qCom') || 0, un: t(pr, 'uCom'), vu: +t(pr, 'vUnCom') || 0, vt: num2((+t(pr, 'vProd') || 0) - (+t(pr, 'vDesc') || 0)), grupo: '' }; });
+    return { data: (t(ide, 'dhEmi') || t(ide, 'dEmi')).slice(0, 10), fornecedor: t(emit, 'xFant') || t(emit, 'xNome'), razao: t(emit, 'xNome'), cnpj: t(emit, 'CNPJ'), chave: (inf.getAttribute('Id') || '').replace(/^NFe/, ''), total: +t(tot, 'vNF') || itens.reduce((a, x) => a + x.vt, 0), itens, origem: 'xml' };
+  }
+  async function nfLerPdf(buf) {
+    if (typeof pdfjsLib === 'undefined') return null;
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise, linhas = [];
+    for (let pg = 1; pg <= pdf.numPages; pg++) { const tc = await (await pdf.getPage(pg)).getTextContent(), mapa = {};
+      tc.items.forEach(i => { const y = Math.round(i.transform[5] / 3); (mapa[y] = mapa[y] || []).push({ x: i.transform[4], s: i.str }); });
+      Object.keys(mapa).map(Number).sort((a, b) => b - a).forEach(y => linhas.push(mapa[y].sort((a, b) => a.x - b.x).map(i => i.s).join(' ').replace(/ +/g, ' ').trim())); }
+    const L = linhas.filter(Boolean), txt = L.join('\n'), mnum = s => +String(s).replace(/\./g, '').replace(',', '.') || 0;
+    const md = /(\d{2})\/(\d{2})\/(\d{4})/.exec(txt), mt = /(?:valor\s*total|valor\s*a\s*pagar|total\s*r\$)[^0-9\n]*([\d.]+,\d{2})/i.exec(txt), mc = /(\d{44})/.exec(txt.replace(/(\d) (?=\d)/g, '$1')), mcn = /(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})/.exec(txt);
+    const forn = (L.find(l => /[A-Za-zÀ-ú]{4}/.test(l) && !/danfe|nfc-?e|nota fiscal|documento auxiliar|cnpj|consumidor/i.test(l)) || '').slice(0, 80);
+    const itens = []; L.forEach(l => { const m = /^(?:\d{1,14}\s+)?(.+?)\s+([\d.,]+)\s*(UN|UND|KG|LT|L|PC|PCT|CX|G|ML|FD|DZ|M)\s*(?:x|X)?\s*([\d.,]+)\s+([\d.,]+)$/.exec(l); if (m && /[A-Za-z]{3}/.test(m[1])) itens.push({ desc: m[1].trim(), qtd: mnum(m[2]), un: m[3].toUpperCase(), vu: mnum(m[4]), vt: mnum(m[5]), grupo: '' }); });
+    return { data: md ? md[3] + '-' + md[2] + '-' + md[1] : '', fornecedor: forn, razao: forn, cnpj: mcn ? mcn[1].replace(/\D/g, '') : '', chave: mc ? mc[1] : '', total: mt ? mnum(mt[1]) : itens.reduce((a, x) => a + x.vt, 0), itens, origem: 'pdf' };
+  }
+  const nfRotPg = (d, n) => { const g = n.pg || {}; if (g.tipo === 'cartao') { const c = (d.cartoes || []).find(x => x.id === g.cartaoId); return '💳 ' + E(c ? c.nome : 'cartão'); } if (g.tipo === 'vinculo') return '🔗 vinculada a um lançamento'; if (g.tipo === 'extrato') return '🏦 extrato bancário'; if (g.tipo === 'dinheiro') return '💵 dinheiro / outro'; return '<span style="color:#dc2626">sem pagamento</span>'; };
+  function abaNotas(d) {
+    d.notas = d.notas || []; d.produtos = d.produtos || {};
+    const vis = ST.notasVis || 'notas', anos = [...new Set(d.notas.map(n => (n.data || '').slice(0, 4)).filter(Boolean).concat([hoje().slice(0, 4)]))].sort().reverse(), ano = ST.notasAno && anos.indexOf(ST.notasAno) >= 0 ? ST.notasAno : anos[0];
+    const topo = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><b style="font-size:1.1rem">🧾 Notas fiscais</b>' + B('Notas', "kcbmPf.notasVis('notas')", vis === 'notas' ? 'bp' : 'bo') + B('Produtos do ano', "kcbmPf.notasVis('produtos')", vis === 'produtos' ? 'bp' : 'bo') + sel('kpfNtAno', anos.map(a => [a, a]), ano, 'onchange="kcbmPf.notasAno(this.value)" style="width:auto"') + '<div style="margin-left:auto">' + B('+ Anexar nota fiscal', 'kcbmPf.notaAnexar()', 'bp') + '</div></div>';
+    const doAno = d.notas.filter(n => (n.data || '').slice(0, 4) === ano).sort((a, b) => b.data.localeCompare(a.data));
+    if (vis === 'notas') {
+      const linhas = doAno.map(n => '<tr>' + td(br(n.data)) + td(E(n.fornecedor || '—')) + td(String((n.itens || []).length) + ' item(ns)') + td(R$(n.total), 1) + td(nfRotPg(d, n)) + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + (n.pg && n.pg.tipo ? B('Pagamento', "kcbmPf.notaPagar('" + n.id + "')") : B('✔ Informar pagamento', "kcbmPf.notaPagar('" + n.id + "')", 'bp')) + ' ' + B('✏️', "kcbmPf.notaEditar('" + n.id + "')", 'bo', 'Editar produtos e dados') + ' ' + B('🗑', "kcbmPf.notaExcluir('" + n.id + "')") + '</td></tr>');
+      return topo + '<div style="font-size:12px;color:var(--slate);margin-bottom:8px">Anexe o XML da nota (baixado do site da Fazenda) ou o PDF. Você confere os produtos, liga o fornecedor e diz como pagou: no cartão (a compra entra na fatura) ou vinculando a um lançamento que já existe.</div>'
+        + tabela([{ t: 'Data' }, { t: 'Fornecedor' }, { t: 'Produtos' }, { t: 'Total', r: 1 }, { t: 'Pagamento' }, { t: '' }], linhas, 'Nenhuma nota neste ano. Clique em "Anexar nota fiscal".');
+    }
+    const q = normP(ST.notasBusca || ''), rows = []; doAno.forEach(n => (n.itens || []).forEach(it => { const nome = it.grupo || d.produtos[normP(it.desc)] || it.desc; if (!q || normP(nome + ' ' + it.desc + ' ' + n.fornecedor).indexOf(q) >= 0) rows.push({ n, it, nome }); }));
+    const res = {}; rows.forEach(r => { const g = res[normP(r.nome)] = res[normP(r.nome)] || { nome: r.nome, qtd: 0, tot: 0, vezes: 0, forn: {} }; g.qtd += r.it.qtd; g.tot += r.it.vt; g.vezes++; const f = g.forn[r.n.fornecedor] = g.forn[r.n.fornecedor] || { q: 0, t: 0 }; f.q += r.it.qtd; f.t += r.it.vt; });
+    const resL = Object.values(res).sort((a, b) => b.tot - a.tot).map(g => { const fs = Object.keys(g.forn).map(k => ({ k, pm: g.forn[k].q > 0 ? g.forn[k].t / g.forn[k].q : 0 })).filter(x => x.pm > 0).sort((a, b) => a.pm - b.pm); return '<tr>' + td('<b>' + E(g.nome) + '</b>') + td(String(g.vezes)) + td(String(Math.round(g.qtd * 1000) / 1000), 1) + td(R$(g.tot), 1) + td(g.qtd > 0 ? R$(g.tot / g.qtd) : '—', 1) + td(fs.length ? E(fs[0].k) + ' (' + R$(fs[0].pm) + ')' : '—') + '</tr>'; });
+    const detL = rows.sort((a, b) => b.n.data.localeCompare(a.n.data)).map(r => '<tr>' + td(br(r.n.data)) + td('<b>' + E(r.nome) + '</b>' + (r.nome !== r.it.desc ? '<div style="font-size:11px;color:var(--slate)">' + E(r.it.desc) + '</div>' : '')) + td(String(r.it.qtd) + ' ' + E(r.it.un || ''), 1) + td(R$(r.it.vu), 1) + td(R$(r.it.vt), 1) + td(E(r.n.fornecedor)) + '</tr>');
+    return topo + '<div style="margin-bottom:10px">' + inp('kpfNtBusca', ST.notasBusca || '', 'text', 'placeholder="Buscar produto ou fornecedor (ex.: arroz)" oninput="kcbmPf.notasBusca(this.value)" style="max-width:360px"') + '</div>'
+      + '<div style="font-weight:700;margin:6px 0">Resumo por produto — ' + ano + '</div>' + tabela([{ t: 'Produto' }, { t: 'Compras' }, { t: 'Qtd total', r: 1 }, { t: 'Gasto total', r: 1 }, { t: 'Preço médio', r: 1 }, { t: 'Fornecedor mais barato' }], resL, 'Nenhum produto neste ano.', 1)
+      + '<div style="font-weight:700;margin:14px 0 6px">Todas as compras de produtos</div>' + tabela([{ t: 'Data' }, { t: 'Produto' }, { t: 'Qtd', r: 1 }, { t: 'Valor unit.', r: 1 }, { t: 'Valor total', r: 1 }, { t: 'Fornecedor' }], detL, 'Nenhuma compra de produto.');
   }
   function abaMovimentacao(d) {
     const mes = fechMes(), fl = ST.movFiltro || 'todos', rows = [];
@@ -1162,6 +1205,65 @@
     },
     acumAbrir(k) { ST.acumAberto[k] = !ST.acumAberto[k]; render(); },
     movAbrir(key) { ST.movAberto[key] = !ST.movAberto[key]; render(); },
+    notasVis(v) { ST.notasVis = v; render(); },
+    notasAno(a) { ST.notasAno = a; render(); },
+    notasBusca(v) { ST.notasBusca = v; clearTimeout(ST.ntT); ST.ntT = setTimeout(() => { const el0 = document.getElementById('kpfNtBusca'), pos = el0 ? el0.selectionStart : 0; render(); const e2 = document.getElementById('kpfNtBusca'); if (e2) { e2.focus(); try { e2.setSelectionRange(pos, pos); } catch (e) {} } }, 350); },
+    notaAnexar() {
+      const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.xml,.pdf,image/*'; fi.onchange = async () => {
+        const f = fi.files && fi.files[0]; if (!f) return; let n = null;
+        try { if (/\.xml$/i.test(f.name)) n = nfLerXml(await f.text()); else if (/\.pdf$/i.test(f.name)) n = await nfLerPdf(await f.arrayBuffer()); else root.toast('Imagem: ainda não leio automaticamente. Abri o formulário em branco para você digitar; me mande esse modelo para eu aprender a ler.', 'err'); } catch (e) { console.warn('nota', e); }
+        if (!n) n = { data: hoje(), fornecedor: '', cnpj: '', chave: '', total: 0, itens: [], origem: 'manual' };
+        if (n.chave && (dadosAtual().notas || []).some(x => x.chave === n.chave)) { root.toast('Esta nota já foi anexada.', 'err'); return; }
+        K.notaEditar(null, n); }; fi.click();
+    },
+    notaEditar(id, novaN) {
+      const d = dadosAtual(); d.notas = d.notas || []; d.produtos = d.produtos || {};
+      const n = novaN || d.notas.find(x => x.id === id); if (!n) return;
+      const linha = it => '<tr class="kpfNfIt"><td><input class="nfD" value="' + E(it.desc || '') + '" style="' + IN + '"></td><td><input class="nfG" list="kpfDLP" value="' + E(it.grupo || d.produtos[normP(it.desc)] || '') + '" placeholder="Ex.: Arroz" style="' + IN + '"></td><td><input class="nfQ" value="' + E(it.qtd || '') + '" inputmode="decimal" style="' + IN + ';width:62px"></td><td><input class="nfU" value="' + E(it.un || '') + '" style="' + IN + ';width:48px"></td><td><input class="nfV" value="' + E(it.vu ? String(it.vu).replace('.', ',') : '') + '" inputmode="decimal" style="' + IN + ';width:76px"></td><td><input class="nfT" value="' + E(it.vt ? String(it.vt).replace('.', ',') : '') + '" inputmode="decimal" style="' + IN + ';width:80px"></td><td><button type="button" class="btn bo bsm nfX">🗑</button></td></tr>';
+      const conhecidos = '<datalist id="kpfDLP">' + [...new Set(Object.values(d.produtos).filter(Boolean))].sort().map(x => '<option value="' + E(x) + '">').join('') + '</datalist>';
+      const corpo = campo('Fornecedor (nome na nota)', inp('kpfNfForn', n.fornecedor || '', 'text', 'maxlength="100" list="kpfDLF" autocomplete="off"') + datalistTerc('kpfDLF', 'fornecedor'), 'Se já estiver no cadastro, escolha na lista para amarrar. Se for novo, ele entra no cadastro sozinho.') + '<div id="kpfNfFornInfo" style="font-size:11.5px;margin:-4px 0 8px"></div>'
+        + '<div style="display:flex;gap:10px;flex-wrap:wrap"><div style="flex:1;min-width:150px">' + campo('Data da compra', inp('kpfNfData', n.data || hoje(), 'date')) + '</div><div style="flex:1;min-width:150px">' + campo('Total da nota (R$)', inp('kpfNfTot', n.total ? String(n.total).replace('.', ',') : '', 'text', 'inputmode="decimal"')) + '</div></div>'
+        + '<div style="font-size:12px;font-weight:600;margin:6px 0 4px">Produtos <span style="font-weight:400;color:var(--slate)">— em "Produto" dê o nome que quer ver nos relatórios (ex.: "Arroz"); eu guardo para as próximas notas.</span></div><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th align="left">Descrição na nota</th><th align="left">Produto (seu nome)</th><th>Qtd</th><th>Un.</th><th>Unit.</th><th>Total</th><th></th></tr></thead><tbody id="kpfNfBody">' + (n.itens || []).map(linha).join('') + '</tbody></table></div><div style="margin-top:6px">' + B('+ Produto', '', 'bo') + '</div>' + conhecidos;
+      const m = modal(novaN ? 'Nova nota fiscal' : 'Editar nota fiscal', corpo, mm => {
+        const forn = (val(mm, 'kpfNfForn') || '').trim(), data = val(mm, 'kpfNfData'), total = num(val(mm, 'kpfNfTot'));
+        const itens = [...mm.querySelectorAll('.kpfNfIt')].map(r => ({ desc: r.querySelector('.nfD').value.trim(), grupo: r.querySelector('.nfG').value.trim(), qtd: num(r.querySelector('.nfQ').value) || 0, un: r.querySelector('.nfU').value.trim(), vu: num(r.querySelector('.nfV').value) || 0, vt: num(r.querySelector('.nfT').value) || 0 })).filter(x => x.desc || x.vt);
+        if (!forn || !data || !(total > 0)) { root.toast('Informe o fornecedor, a data e o total da nota.', 'err'); return false; }
+        itens.forEach(it => { if (!it.vt && it.qtd && it.vu) it.vt = num2(it.qtd * it.vu); if (!it.vu && it.qtd && it.vt) it.vu = num2(it.vt / it.qtd); if (it.grupo) d.produtos[normP(it.desc)] = it.grupo; });
+        const soma = num2(itens.reduce((a, x) => a + x.vt, 0)); if (itens.length && Math.abs(soma - total) > 0.05 && !confirm('A soma dos produtos (' + R$(soma) + ') é diferente do total da nota (' + R$(total) + '). Salvar mesmo assim?')) return false;
+        const nn = Object.assign(n, { fornecedor: forn, data, total, itens }); if (!nn.id) { nn.id = uid(); nn.criado = Date.now(); d.notas.push(nn); }
+        registrarTerceiro(forn, 'fornecedor'); gravarDados(ST.pf, d); render(); root.toast('Nota salva. Agora informe como foi paga.', 'ok');
+      }, 'Salvar', 880);
+      const bind = () => { m.querySelectorAll('.nfX').forEach(b => b.onclick = () => b.closest('tr').remove()); };
+      const bAdd = [...m.querySelectorAll('button')].find(b => b.textContent === '+ Produto'); if (bAdd) bAdd.onclick = () => { m.querySelector('#kpfNfBody').insertAdjacentHTML('beforeend', linha({})); bind(); };
+      m.querySelector('#kpfNfBody').addEventListener('change', ev => { const r = ev.target.closest('tr'); if (!r) return; if (ev.target.classList.contains('nfD')) { const g = r.querySelector('.nfG'); if (!g.value) g.value = d.produtos[normP(ev.target.value)] || ''; } });
+      const inf = () => { const v = norm(val(m, 'kpfNfForn')); m.querySelector('#kpfNfFornInfo').innerHTML = !v ? '' : (lerTerceiros().some(t => norm(t.nome) === v) ? '<span style="color:var(--teal)">✓ já está no cadastro de fornecedores</span>' : '<span style="color:var(--slate)">novo fornecedor — será criado ao salvar</span>'); };
+      m.querySelector('#kpfNfForn').oninput = inf; inf(); bind();
+    },
+    notaExcluir(id) { const d = dadosAtual(), n = (d.notas || []).find(x => x.id === id); if (!n) return; if (!confirm('Excluir esta nota (' + n.fornecedor + ', ' + R$(n.total) + ')? O lançamento no cartão ou no extrato, se existir, NÃO é apagado: só deixa de estar ligado à nota.')) return;
+      (d.pagar || []).forEach(x => { if (x.notaId === id) delete x.notaId; }); (d.extrato || []).forEach(x => { if (x.notaId === id) delete x.notaId; }); d.notas = d.notas.filter(x => x.id !== id); gravarDados(ST.pf, d); render(); },
+    notaPagar(id) {
+      const d = dadosAtual(), n = (d.notas || []).find(x => x.id === id); if (!n) return;
+      const cand = []; (d.pagar || []).forEach(it => { if (it.taxaAuto) return; const v = (it.parcelas || []).reduce((a, p) => a + p.valor, 0); if (Math.abs(v - n.total) <= 0.02 || Math.abs(it.valor - n.total) <= 0.02) cand.push({ k: 'P|' + it.id, o: Math.abs(new Date(it.data) - new Date(n.data)), t: br(it.data) + ' — ' + E(it.fornecedor || '') + (it.forma === 'cartao' ? ' (' + E(((d.cartoes || []).find(c => c.id === it.cartaoId) || {}).nome || 'cartão') + ')' : ' (conta a pagar)') + ' — ' + R$(it.valor) + (it.notaId && it.notaId !== id ? ' · já ligada a outra nota' : '') }); });
+      (d.extrato || []).forEach(l => { if (Math.abs(Math.abs(l.valor) - n.total) <= 0.02) cand.push({ k: 'E|' + l.id, o: Math.abs(new Date(l.data) - new Date(n.data)), t: br(l.data) + ' — extrato ' + E(l.banco || '') + ': ' + E((l.hist || '').slice(0, 50)) + ' — ' + R$(l.valor) + (l.notaId && l.notaId !== id ? ' · já ligada a outra nota' : '') }); });
+      cand.sort((a, b) => a.o - b.o);
+      const lista = cand.length ? '<div style="max-height:200px;overflow:auto;border:1px solid var(--border);border-radius:8px">' + cand.map((x, i) => '<label style="display:flex;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);font-size:12.5px;cursor:pointer"><input type="radio" name="kpfNpV" value="' + E(x.k) + '"' + (i === 0 && n.pg && n.pg.ref === x.k ? ' checked' : '') + '> <span>' + x.t + '</span></label>').join('') + '</div>' : '<div style="padding:8px;color:var(--slate);font-size:12.5px">Nenhum lançamento com o valor ' + R$(n.total) + ' encontrado.</div>';
+      const tipoGasto = (tiposDe('gasto').find(t => /aliment|mercado/.test(norm(t.nome))) || {}).nome || '';
+      const corpo = '<div style="font-size:13px;margin-bottom:8px"><b>' + E(n.fornecedor) + '</b> · ' + br(n.data) + ' · <b>' + R$(n.total) + '</b></div>'
+        + campo('Como foi paga?', sel('kpfNpTipo', [['cartao', '💳 Cartão de crédito — lançar a compra na fatura'], ['vinc', '🔗 Vincular a um lançamento que já existe (cartão, conta ou extrato)'], ['dinheiro', '💵 Dinheiro / outro (só registrar)']], (n.pg && n.pg.tipo === 'cartao') ? 'cartao' : 'cartao'))
+        + '<div id="kpfNpCartao">' + campo('Cartão', sel('kpfNpCard', (d.cartoes || []).map(c => [c.id, c.nome]), n.pg && n.pg.cartaoId || '')) + campo('Parcelas', inp('kpfNpN', '1', 'number', 'min="1" max="48"')) + campo('Tipo de gasto (despesa)', selTipo('kpfNpTipoG', 'gasto', tipoGasto), 'Na tela principal a compra fica nesse tipo (ex.: Alimentação). Os produtos aparecem detalhados só aqui.') + '</div>'
+        + '<div id="kpfNpVinc" style="display:none">' + campo('Lançamentos com o mesmo valor', lista, 'Escolha o lançamento que corresponde a esta nota.') + '</div>';
+      const m = modal('Pagamento da nota', corpo, mm => {
+        const tp = val(mm, 'kpfNpTipo'), dd = dadosAtual(), nn = (dd.notas || []).find(x => x.id === id); if (!nn) return;
+        if (tp === 'cartao') { const cart = (dd.cartoes || []).find(c => c.id === val(mm, 'kpfNpCard')); if (!cart) { root.toast('Escolha o cartão.', 'err'); return false; } if (!cart.mesmoDia && !(cart.fechamento >= 1 && cart.vencimento >= 1)) { root.toast('Este cartão não tem fechamento e vencimento. Edite o cartão primeiro.', 'err'); return false; }
+          const nP = Math.max(1, Math.floor(num(val(mm, 'kpfNpN'))) || 1), tg = (val(mm, 'kpfNpTipoG') || '').trim();
+          const it = { id: uid(), data: nn.data, fornecedor: nn.fornecedor, tipo: tg, valor: nn.total, parcelado: nP > 1, n: nP, forma: 'cartao', cartaoId: cart.id, venc1: '', notaId: nn.id }; it.parcelas = gerarParcelas(it, cart); dd.pagar.push(it); nn.pg = { tipo: 'cartao', cartaoId: cart.id, pagarId: it.id }; }
+        else if (tp === 'vinc') { const r = (mm.querySelector('input[name=kpfNpV]:checked') || {}).value; if (!r) { root.toast('Escolha o lançamento.', 'err'); return false; } const [k, rid] = r.split('|');
+          if (k === 'P') { const it = dd.pagar.find(x => x.id === rid); if (it) { it.notaId = nn.id; nn.pg = { tipo: it.forma === 'cartao' ? 'cartao' : 'vinculo', cartaoId: it.cartaoId || '', pagarId: rid, ref: r }; } } else { const l = dd.extrato.find(x => x.id === rid); if (l) { l.notaId = nn.id; nn.pg = { tipo: 'extrato', extratoId: rid, ref: r }; } } }
+        else nn.pg = { tipo: 'dinheiro' };
+        gravarDados(ST.pf, dd); render(); root.toast('Pagamento da nota registrado.', 'ok');
+      }, 'Salvar', 620);
+      const at = () => { const t = val(m, 'kpfNpTipo'); m.querySelector('#kpfNpCartao').style.display = t === 'cartao' ? '' : 'none'; m.querySelector('#kpfNpVinc').style.display = t === 'vinc' ? '' : 'none'; }; m.querySelector('#kpfNpTipo').onchange = at; at();
+    },
     movFiltro(f) { ST.movFiltro = f; render(); },
     movAtras() { ST.movAtras = !ST.movAtras; render(); },
     movMesesAbrir() {
