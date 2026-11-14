@@ -267,7 +267,7 @@
     return escuro ? { bg: cor, fg: '#fff', mut: 'rgba(255,255,255,.78)', neg: '#FECACA', pos: '#fff', borda: 'rgba(0,0,0,.25)', sel: '#fff' } : { bg: cor, fg: '#111827', mut: 'rgba(17,24,39,.72)', neg: '#991B1B', pos: '#14532D', borda: 'rgba(0,0,0,.18)', sel: '#111827' };
   }
   // ───────────── estado e telas ─────────────
-  const ST = { bancoSel: '', pf: null, aba: 'movimentacao', movFiltro: 'todos', movAberto: {}, acumAberto: {}, scr: {}, dreAberto: {}, dreModo: 'ano', mesSaldo: null, mesLista: hoje().slice(0, 7), cartaoSel: null, mesFatura: null, tela: 'lista' };
+  const ST = { movMeses: null, movMesesRef: '', movAtras: false, bancoSel: '', pf: null, aba: 'movimentacao', movFiltro: 'todos', movAberto: {}, acumAberto: {}, scr: {}, dreAberto: {}, dreModo: 'ano', mesSaldo: null, mesLista: hoje().slice(0, 7), cartaoSel: null, mesFatura: null, tela: 'lista' };
   const el = () => document.getElementById('page-kcbm-pf');
   const CARTAO = '<svg width="18" height="14" viewBox="0 0 18 14" style="vertical-align:-2px"><defs><linearGradient id="pfPrata" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#c9ced6"/><stop offset=".55" stop-color="#f4f6f8"/><stop offset=".8" stop-color="#9aa1ab"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient></defs><rect x="0.5" y="0.5" width="17" height="13" rx="2" fill="url(#pfPrata)" stroke="#8b929c"/><rect x="0.5" y="3" width="17" height="2.6" fill="#6b727c"/><rect x="2.5" y="9" width="5" height="1.6" rx=".8" fill="#8b929c"/></svg>';
   const ICO_DOIS = '<svg width="18" height="16" viewBox="0 0 24 20" style="vertical-align:-3px;color:var(--ink);filter:drop-shadow(0 0 2.5px currentColor)"><circle cx="8" cy="6" r="4" fill="currentColor"/><path d="M0 19c0-4.4 3.6-7 8-7s8 2.6 8 7z" fill="currentColor"/><circle cx="17" cy="7" r="3.3" fill="currentColor" opacity=".75"/><path d="M13.5 12.4c.9-.3 2-.4 3.5-.4 4 0 7 2.2 7 6.5v.5h-8.6c0-2.6-.8-5-1.9-6.6z" fill="currentColor" opacity=".75"/><ellipse cx="6.7" cy="4.6" rx="1.5" ry="1" fill="#fff" opacity=".45"/></svg>', ICO_UM = '<svg width="16" height="16" viewBox="0 0 20 20" style="vertical-align:-3px;color:var(--ink);filter:drop-shadow(0 0 2.5px currentColor)"><circle cx="10" cy="5.5" r="4.5" fill="currentColor"/><path d="M1 19c0-5 4-8 9-8s9 3 9 8z" fill="currentColor"/><ellipse cx="8.3" cy="3.8" rx="1.7" ry="1.1" fill="#fff" opacity=".45"/></svg>';
@@ -621,8 +621,10 @@
   }
   function abaMovimentacao(d) {
     const mes = fechMes(), fl = ST.movFiltro || 'todos', rows = [];
-    ['pagar', 'receber'].forEach(tipo => (d[tipo] || []).forEach(it => { if (it.forma === 'cartao') return; (it.parcelas || []).forEach(p => { const vm = p.venc.slice(0, 7); if (vm === mes || (!p.pago && vm < mes)) rows.push({ tipo, venc: p.venc, it, p, atras: vm < mes }); }); }));
-    (d.cartoes || []).forEach(c => faturasDoCartao(d, c.id).forEach(f => { const vm = f.venc.slice(0, 7); if (vm === mes || (f.aberto > 0.004 && vm < mes)) rows.push({ tipo: 'pagar', venc: f.venc, fat: { c, f }, atras: vm < mes }); }));
+    if (ST.movMesesRef !== mes) { ST.movMeses = null; ST.movMesesRef = mes; }
+    const sel = ST.movMeses && ST.movMeses.length ? ST.movMeses.slice().sort() : [mes], conj = new Set(sel), mini = sel[0], trazer = !!ST.movAtras;
+    ['pagar', 'receber'].forEach(tipo => (d[tipo] || []).forEach(it => { if (it.forma === 'cartao') return; (it.parcelas || []).forEach(p => { const vm = p.venc.slice(0, 7); if (conj.has(vm) || (trazer && !p.pago && vm < mini)) rows.push({ tipo, venc: p.venc, it, p, atras: !conj.has(vm) }); }); }));
+    (d.cartoes || []).forEach(c => faturasDoCartao(d, c.id).forEach(f => { const vm = f.venc.slice(0, 7); if (conj.has(vm) || (trazer && f.aberto > 0.004 && vm < mini)) rows.push({ tipo: 'pagar', venc: f.venc, fat: { c, f }, atras: !conj.has(vm) }); }));
     rows.sort((a, b) => a.venc.localeCompare(b.venc));
     let aPagar = 0, aReceber = 0, pagoT = 0, recebT = 0;
     const html = rows.filter(r => fl === 'todos' || r.tipo === fl).map(r => {
@@ -643,8 +645,8 @@
       return '<tr' + (p.pago ? ' style="background:' + (pag ? 'rgba(59,130,246,.16)' : 'rgba(34,197,94,.17)') + '"' : '') + '>' + td(br(r.venc)) + td(badge) + td(E(it[pag ? 'fornecedor' : 'cliente']) + seloPorQuem(it) + (it.rec ? ' ↻' : '') + (it.parcelado ? ' <span style="color:var(--slate);font-size:11.5px">' + p.n + '/' + it.n + '</span>' : '')) + td(E(it.tipo || '')) + td('<span style="color:' + cor(v) + '">' + R$(v) + '</span>', 1) + td(sit) + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + acao + ' ' + B('✏️', "kcbmPf.tituloEditar('" + r.tipo + "','" + it.id + "')", 'bo', 'Editar') + ' ' + B('Parcelas', "kcbmPf.tituloVer('" + r.tipo + "','" + it.id + "')") + (pag ? ' ' + B(ICO_UM, "kcbmPf.porQuemDefinir('" + r.tipo + "','" + it.id + "')") : '') + ' ' + B('🗑', "kcbmPf.tituloExcluir('" + r.tipo + "','" + it.id + "'" + ',' + p.n + ")") + '</td></tr>';
     });
     const chip = (k, t) => '<button class="btn ' + (fl === k ? 'bp' : 'bo') + ' bsm" onclick="kcbmPf.movFiltro(\'' + k + '\')">' + t + '</button>';
-    return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">' + navMes(mes) + chip('todos', 'Tudo') + chip('pagar', 'A pagar') + chip('receber', 'A receber') + '<div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">' + B('+ Conta a pagar', "kcbmPf.tituloForm('pagar')", 'bp') + B('+ Conta a receber', "kcbmPf.tituloForm('receber')", 'bp') + '</div></div>'
-      + '<div style="font-size:12px;color:var(--slate);margin-bottom:8px">Tudo que vence no mês do topo (e o que ficou atrasado de meses anteriores). Compras no cartão aparecem somadas na fatura: clique na linha do cartão para abrir ou fechar o que compõe o valor. A baixa também é feita sozinha quando o extrato paga exatamente o valor no dia do vencimento.</div>'
+    return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">' + navMes(mes) + B('📅 ' + (ST.movMeses && ST.movMeses.length > 1 ? ST.movMeses.length + ' meses' : 'Meses / ano'), 'kcbmPf.movMesesAbrir()', ST.movMeses && ST.movMeses.length > 1 ? 'bp' : 'bo') + '<button class="btn ' + (trazer ? 'bp' : 'bo') + ' bsm" title="Inclui o que venceu antes e ainda não foi pago" onclick="kcbmPf.movAtras()">' + (trazer ? '✓ ' : '') + 'Trazer pendências anteriores</button>' + chip('todos', 'Tudo') + chip('pagar', 'A pagar') + chip('receber', 'A receber') + '<div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">' + B('+ Conta a pagar', "kcbmPf.tituloForm('pagar')", 'bp') + B('+ Conta a receber', "kcbmPf.tituloForm('receber')", 'bp') + '</div></div>'
+      + '<div style="font-size:12px;color:var(--slate);margin-bottom:8px">' + (sel.length > 1 ? 'Mostrando: <b>' + sel.map(rotMes).join(', ') + '</b>. ' : 'Só o que vence em <b>' + rotMes(mes) + '</b> (pago ou não). ') + (trazer ? 'Com as pendências de meses anteriores. ' : 'Use o botão "Trazer pendências anteriores" para somar o que ficou sem pagar antes. ') + 'Compras no cartão aparecem somadas na fatura: clique na linha do cartão para abrir ou fechar o que compõe o valor. A baixa também é feita sozinha quando o extrato paga exatamente o valor no dia do vencimento.</div>'
       + tabela([{ t: 'Vencimento' }, { t: 'Movimento' }, { t: 'Descrição' }, { t: 'Tipo' }, { t: 'Valor', r: 1 }, { t: 'Situação' }, { t: '' }], html, 'Nada vence neste mês.')
       + '<div style="text-align:right;margin-top:8px;font-size:13px">A pagar <b style="color:#dc2626">' + R$(aPagar) + '</b> · Pago <b>' + R$(pagoT) + '</b> · A receber <b style="color:var(--teal)">' + R$(aReceber) + '</b> · Recebido <b>' + R$(recebT) + '</b></div>';
   }
@@ -1155,6 +1157,21 @@
     acumAbrir(k) { ST.acumAberto[k] = !ST.acumAberto[k]; render(); },
     movAbrir(key) { ST.movAberto[key] = !ST.movAberto[key]; render(); },
     movFiltro(f) { ST.movFiltro = f; render(); },
+    movAtras() { ST.movAtras = !ST.movAtras; render(); },
+    movMesesAbrir() {
+      const mes = fechMes(); let ano = +mes.slice(0, 4); const sel = new Set(ST.movMeses && ST.movMeses.length ? ST.movMeses : [mes]);
+      const m = modal('Escolher meses', '<div id="kpfMM"></div>', () => { const v = [...sel].sort(); if (!v.length) { root.toast('Marque pelo menos um mês.', 'err'); return false; } ST.movMeses = v.length === 1 && v[0] === mes ? null : v; ST.movMesesRef = mes; render(); }, 'Aplicar', 420);
+      const NM = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      const desenha = () => { const cx = m.querySelector('#kpfMM'); const ms = i => ano + '-' + String(i + 1).padStart(2, '0'); const todos = NM.every((_, i) => sel.has(ms(i)));
+        cx.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px"><button class="btn bo bsm" id="kpfMMa">‹</button><b style="font-size:1.1rem">' + ano + '</b><button class="btn bo bsm" id="kpfMMp">›</button></div>'
+          + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">' + NM.map((n, i) => '<button class="btn ' + (sel.has(ms(i)) ? 'bp' : 'bo') + '" data-m="' + ms(i) + '">' + n + '</button>').join('') + '</div>'
+          + '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><button class="btn ' + (todos ? 'bp' : 'bo') + ' bsm" id="kpfMMt">' + (todos ? '✓ ' : '') + 'Ano inteiro</button><button class="btn bo bsm" id="kpfMMl">Só o mês do topo</button></div><div style="font-size:11.5px;color:var(--slate);margin-top:8px">Clique nos meses para marcar ou desmarcar. Pode misturar meses de anos diferentes.</div>';
+        cx.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { sel.has(b.dataset.m) ? sel.delete(b.dataset.m) : sel.add(b.dataset.m); desenha(); });
+        cx.querySelector('#kpfMMa').onclick = () => { ano--; desenha(); }; cx.querySelector('#kpfMMp').onclick = () => { ano++; desenha(); };
+        cx.querySelector('#kpfMMt').onclick = () => { NM.forEach((_, i) => todos ? sel.delete(ms(i)) : sel.add(ms(i))); desenha(); };
+        cx.querySelector('#kpfMMl').onclick = () => { sel.clear(); sel.add(mes); ano = +mes.slice(0, 4); desenha(); }; };
+      desenha();
+    },
     parcelaBaixa(tipo, itemId, n) {
       let v = prompt('Data em que foi ' + (tipo === 'pagar' ? 'paga' : 'recebida') + ' (AAAA-MM-DD ou DD/MM/AAAA):', hoje()); if (v == null) return; v = v.trim();
       const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v); if (m) v = m[3] + '-' + m[2] + '-' + m[1]; if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { root.toast('Data inválida.', 'err'); return; }
