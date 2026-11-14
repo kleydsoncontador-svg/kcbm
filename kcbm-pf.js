@@ -329,6 +329,7 @@
   const selTipo = (id, nat, atual) => { const ts = tiposDe(nat); return ts.length ? sel(id, [['', '— escolha —']].concat(ts.map(t => [t.nome, t.nome])), atual || '') + (atual && !ts.some(t => t.nome === atual) ? '<div style="font-size:11px;color:#b45309">"' + E(atual) + '" não está mais na lista de tipos.</div>' : '') : '<div style="font-size:12px;color:#b45309">Nenhum tipo de ' + nat + ' cadastrado — cadastre em “Tipos de gasto / receita” (na lista de pessoas físicas).</div><input type="hidden" id="' + id + '" value="">'; };
   const navMes = (mes) => '<div style="display:flex;align-items:center;gap:6px"><b style="min-width:150px" title="O mês vem da data lá em cima, no topo do site">' + rotMes(mes) + '</b></div>';
   // campo de pessoa (fornecedor/cliente) com sugestões do cadastro universal
+  const datalistCred = (id, d) => '<datalist id="' + id + '">' + (d.cartoes || []).map(c => '<option value="' + E(c.nome) + '">Cartão de crédito</option>').join('') + (d.bancos || []).map(b => '<option value="' + E(b.nome) + '">Conta corrente</option>').join('') + lerTerceiros().filter(t => t.tipo === 'fornecedor' || t.tipo === 'ambos').sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map(t => '<option value="' + E(t.nome) + '">').join('') + '</datalist>';
   const datalistTerc = (id, tipo) => '<datalist id="' + id + '">' + lerTerceiros().filter(t => t.tipo === tipo || t.tipo === 'ambos').sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map(t => '<option value="' + E(t.nome) + '">').join('') + '</datalist>';
   function registrarTerceiro(nome, tipo) { // todo fornecedor/cliente digitado entra no cadastro universal
     nome = (nome || '').trim(); if (!nome) return; const l = lerTerceiros(), x = l.find(t => norm(t.nome) === norm(nome));
@@ -1076,30 +1077,31 @@
       if (tipo === 'parcelamento') { K.contratoFormParc(); return; }
       const d = dadosAtual(), cfg = CONTRATO[tipo], emp = tipo === 'emprestimo';
       const bancosOpts = [['', '— não informar —']].concat((d.bancos || []).map(b => [b.id, b.nome]));
-      const corpo = campo(emp ? 'De quem peguei emprestado' : (tipo === 'financiamento' ? 'Credor / instituição' : 'Credor / descrição'), inp('kpfCtCred', '', 'text', 'maxlength="100" list="kpfDLC" autocomplete="off"') + datalistTerc('kpfDLC', 'fornecedor'), 'Comece a digitar para puxar do cadastro; se for novo, ele entra no cadastro sozinho.')
+      const corpo = campo(emp ? 'De quem peguei emprestado' : (tipo === 'financiamento' ? 'Credor / instituição' : 'Credor / descrição'), inp('kpfCtCred', '', 'text', 'maxlength="100" list="kpfDLC" autocomplete="off"') + (emp ? datalistCred('kpfDLC', d) : datalistTerc('kpfDLC', 'fornecedor')), emp ? 'Escolha um dos seus cartões de crédito ou contas correntes (as parcelas vão para a fatura do cartão), ou digite o nome de quem emprestou.' : 'Comece a digitar para puxar do cadastro; se for novo, ele entra no cadastro sozinho.')
         + (tipo !== 'emprestimo' ? campo('Descrição (opcional)', inp('kpfCtDesc', '', 'text', 'maxlength="100" placeholder="Ex.: Honda Civic, apartamento…"')) : '')
         + (emp ? campo('Valor recebido (R$)', inp('kpfCtPrinc', '', 'text', 'inputmode="decimal"'), 'O dinheiro que entrou na sua conta.') + campo('Dia em que entra na conta corrente', inp('kpfCtEntrada', hoje(), 'date')) + campo('Onde entra (conta corrente)', sel('kpfCtBanco', bancosOpts, '')) + campo('Tipo de receita', selTipo('kpfCtTipoRec', 'receita', ''), 'Como o valor recebido aparece nas suas receitas.') : '')
         + campo(emp ? 'Total a pagar (R$)' : 'Valor total (R$)', inp('kpfCtTotal', '', 'text', 'inputmode="decimal"'), emp ? 'Com juros: é o valor somado de todas as parcelas.' : 'É dividido igualmente nas parcelas.')
         + campo(tipo === 'financiamento' ? 'Tipo do financiamento (tipo de gasto)' : 'Tipo de gasto das parcelas', selTipo('kpfCtTipoGasto', 'gasto', ''), tipo === 'financiamento' ? 'Escolha um tipo de gasto cadastrado, por exemplo "Financiamento de carro".' : 'Se deixar em branco, usa "' + (emp ? 'Empréstimo' : 'Parcelamento') + '".')
         + campo('Quantas parcelas', inp('kpfCtN', '12', 'number', 'min="1" max="480"'))
         + campo('Vencimento da 1ª parcela', inp('kpfCtV1', '', 'date'), 'As demais vencem nos meses seguintes, no mesmo dia.')
-        + campo('Forma de pagamento', sel('kpfCtForma', FORMAS_PAG, 'Boleto'))
-        + ((d.cartoes || []).length ? campo('Pagar as parcelas com o cartão', '<select id="kpfCtCartao" style="width:100%"><option value="">Nenhum — pago por boleto/conta (usa a forma acima)</option>' + d.cartoes.map(c => '<option value="' + E(c.id) + '">' + E(c.nome) + '</option>').join('') + '</select>', 'Ex.: empréstimo por Pix cobrado na fatura do Digio. As parcelas entram nas FATURAS desse cartão, uma por mês, a partir do mês do vencimento da 1ª parcela. Depois você baixa pagando a fatura.') : '');
-      modal('Adicionar ' + cfg.un, corpo, mm => {
+        + '<div id="kpfFormaBox">' + campo('Forma de pagamento', sel('kpfCtForma', FORMAS_PAG, 'Boleto')) + '</div>';
+      const mo = modal('Adicionar ' + cfg.un, corpo, mm => {
         const credor = (val(mm, 'kpfCtCred') || '').trim(), total = num(val(mm, 'kpfCtTotal')), n = Math.floor(num(val(mm, 'kpfCtN'))), v1 = val(mm, 'kpfCtV1'), principal = emp ? num(val(mm, 'kpfCtPrinc')) : 0, entrada = emp ? val(mm, 'kpfCtEntrada') : '';
         if (!credor || !(total > 0) || !(n >= 1) || !v1) { root.toast('Informe ' + (emp ? 'de quem pegou, o total a pagar, ' : 'o credor, o valor total, ') + 'quantas parcelas e o vencimento da 1ª.', 'err'); return false; }
         if (emp && (!(principal > 0) || !entrada)) { root.toast('Informe o valor recebido e o dia em que ele entra na conta.', 'err'); return false; }
         const tipoRec = emp ? (val(mm, 'kpfCtTipoRec') || '').trim() : '', tipoGasto = (val(mm, 'kpfCtTipoGasto') || '').trim() || (emp ? 'Empréstimo' : 'Parcelamento'), formaTxt = val(mm, 'kpfCtForma') || 'Boleto';
         if (tipo === 'financiamento' && !(val(mm, 'kpfCtTipoGasto') || '').trim()) { root.toast('Escolha o tipo do financiamento (tipo de gasto).', 'err'); return false; }
         const dd = dadosAtual(); dd.contratos = dd.contratos || []; const cid = uid();
-        const cartaoCt = (dd.cartoes || []).find(c => c.id === val(mm, 'kpfCtCartao')) || null, base = { parcelado: n > 1, n, cartaoId: cartaoCt ? cartaoCt.id : null, forma: cartaoCt ? 'cartao' : (formaTxt === 'Carnê' ? 'carne' : 'avista'), contratoId: cid, contratoTipo: tipo };
+        const cartaoCt = emp ? ((dd.cartoes || []).find(c => norm(c.nome) === norm(credor)) || null) : null, base = { parcelado: n > 1, n, cartaoId: cartaoCt ? cartaoCt.id : null, forma: cartaoCt ? 'cartao' : (formaTxt === 'Carnê' ? 'carne' : 'avista'), contratoId: cid, contratoTipo: tipo };
         const pagar = Object.assign({ id: uid(), data: emp ? entrada : v1, fornecedor: credor, tipo: tipoGasto, valor: total, venc1: v1 }, base); if (cartaoCt) pagar.vencFat = v1.slice(0, 7); pagar.parcelas = gerarParcelas(pagar, cartaoCt);
         const c = { id: cid, tipo, credor, desc: (val(mm, 'kpfCtDesc') || '').trim(), total, n, venc1: v1, tipoGasto, formaTxt: cartaoCt ? 'Cartão ' + cartaoCt.nome : formaTxt, cartaoId: cartaoCt ? cartaoCt.id : null, principal, dataEntrada: entrada, bancoId: emp ? (val(mm, 'kpfCtBanco') || '') : '', tipoReceita: tipoRec, pagarId: pagar.id, criado: Date.now() };
         dd.pagar.push(pagar);
         if (emp) { const rec = { id: uid(), data: entrada, cliente: credor, tipo: tipoRec, valor: principal, parcelado: false, n: 1, cartaoId: null, forma: 'avista', venc1: entrada, contratoId: cid, contratoTipo: tipo }; rec.parcelas = gerarParcelas(rec, null); dd.receber.push(rec); c.receberId = rec.id; }
         dd.contratos.push(c); registrarTerceiro(credor, 'ambos'); gravarDados(ST.pf, dd); render(); root.toast(cfg.un.charAt(0).toUpperCase() + cfg.un.slice(1) + ' criado: ' + n + ' parcela(s) em contas a pagar' + (emp ? ' e o valor recebido em contas a receber' : '') + '.', 'ok');
-      }, 'Salvar', 620);
+      }, 'Salvar', 620); K.ligaCred(mo, 'kpfCtCred', emp);
     },
+    ligaCred(m, id, on) { if (!on || !m) return; const d = dadosAtual(), inp = m.querySelector('#' + id), box = m.querySelector('#kpfFormaBox'); if (!inp || !box) return;
+      const fn = () => { const hit = (d.cartoes || []).some(c => norm(c.nome) === norm((inp.value || '').trim())); box.style.display = hit ? 'none' : ''; }; inp.addEventListener('input', fn); inp.addEventListener('change', fn); fn(); },
     // Parcelamento: quita (anula) dívidas já lançadas — faturas de cartão, impostos, contas — e gera as parcelas + juros + IOF como despesas novas.
     contratoFormParc() {
       const d = dadosAtual(), dividas = [];
@@ -1108,7 +1110,7 @@
       dividas.sort((a, b) => a.o.localeCompare(b.o));
       const tipos = tiposDe('gasto'), acha = re => (tipos.find(t => re.test(norm(t.nome))) || {}).nome || '';
       const lista = dividas.length ? '<div style="max-height:230px;overflow:auto;border:1px solid var(--border);border-radius:8px">' + dividas.map(x => '<label style="display:flex;gap:8px;align-items:center;padding:5px 8px;border-bottom:1px solid var(--border);font-size:12.5px;cursor:pointer"><input type="checkbox" class="kpfPcSel" data-k="' + E(x.k) + '" data-v="' + cents(x.v) + '"> <span style="flex:1">' + E(x.t) + '</span><b>' + R$(x.v) + '</b></label>').join('') + '</div>' : '<div style="padding:10px;color:var(--slate);font-size:12.5px">Nenhuma dívida em aberto para quitar.</div>';
-      const corpo = campo('A quem pago (credor do parcelamento)', inp('kpfPcCred', '', 'text', 'maxlength="100" list="kpfDLC" autocomplete="off"') + datalistTerc('kpfDLC', 'fornecedor'), 'Comece a digitar para puxar do cadastro; se for novo, ele entra no cadastro sozinho.')
+      const corpo = campo('A quem pago (credor do parcelamento)', inp('kpfPcCred', '', 'text', 'maxlength="100" list="kpfDLC" autocomplete="off"') + datalistCred('kpfDLC', d), 'Escolha um dos seus cartões de crédito ou contas correntes (as parcelas vão para a fatura do cartão), ou digite o nome do credor.')
         + campo('Parcelamento do quê?', inp('kpfPcDesc', '', 'text', 'maxlength="100" placeholder="Ex.: faturas do cartão, DARF, IPTU…"'))
         + campo('Dívidas que este parcelamento quita <span id="kpfPcSoma" style="font-weight:400"></span>', lista, 'Marque tudo o que entra no parcelamento. Essas linhas deixam de contar na conta (ficam na Movimentação, marcadas como "quitada por parcelamento").')
         + campo('Valor total do parcelamento (R$)', inp('kpfPcTotal', '', 'text', 'inputmode="decimal"'), 'Soma de todas as parcelas, com juros e IOF.')
@@ -1117,8 +1119,7 @@
         + campo('Tipo de gasto dos juros', selTipo('kpfPcTipoJ', 'gasto', acha(/juros.*parcel|juros/)), 'Ex.: "Juros sobre parcelamentos". Se deixar em branco, usa "Juros sobre parcelamento".')
         + campo('Tipo de gasto do IOF', selTipo('kpfPcTipoI', 'gasto', acha(/iof/)), 'Se deixar em branco, usa "IOF".')
         + campo('Quantas parcelas', inp('kpfPcN', '12', 'number', 'min="1" max="480"')) + campo('Vencimento da 1ª parcela', inp('kpfPcV1', '', 'date'), 'As demais vencem nos meses seguintes, no mesmo dia.')
-        + campo('Data do parcelamento', inp('kpfPcData', hoje(), 'date'), 'As dívidas marcadas ficam quitadas nesta data.') + campo('Forma de pagamento', sel('kpfPcForma', FORMAS_PAG, 'Boleto'))
-        + ((d.cartoes || []).length ? campo('Pagar este parcelamento com o cartão', '<select id="kpfPcCartao" style="width:100%"><option value="">Nenhum — pago por boleto/conta (usa a forma acima)</option>' + d.cartoes.map(c => '<option value="' + E(c.id) + '">' + E(c.nome) + '</option>').join('') + '</select>', 'Se escolher um cartão, as parcelas (dívida + juros + IOF) entram nas FATURAS desse cartão, uma por mês, a partir do mês do vencimento da 1ª parcela. A dívida original fica quitada, e você baixa depois pagando a fatura.') : '');
+        + campo('Data do parcelamento', inp('kpfPcData', hoje(), 'date'), 'As dívidas marcadas ficam quitadas nesta data.') + '<div id="kpfFormaBox">' + campo('Forma de pagamento', sel('kpfPcForma', FORMAS_PAG, 'Boleto')) + '</div>';
       const m = modal('Adicionar parcelamento', corpo, mm => {
         const credor = (val(mm, 'kpfPcCred') || '').trim(), total = num(val(mm, 'kpfPcTotal')), iof = num(val(mm, 'kpfPcIof')) || 0, n = Math.floor(num(val(mm, 'kpfPcN'))), v1 = val(mm, 'kpfPcV1'), dataP = val(mm, 'kpfPcData') || hoje();
         const sel2 = [...mm.querySelectorAll('.kpfPcSel:checked')].map(c => c.dataset.k), divida = [...mm.querySelectorAll('.kpfPcSel:checked')].reduce((a, c) => a + (+c.dataset.v), 0) / 100;
@@ -1127,7 +1128,7 @@
         const juros = Math.round((total - divida - iof) * 100) / 100;
         if (juros < -0.005) { root.toast('O total (' + R$(total) + ') é menor que a dívida quitada (' + R$(divida) + ') mais o IOF.', 'err'); return false; }
         const tP = (val(mm, 'kpfPcTipoP') || '').trim() || 'Parcelamento', tJ = (val(mm, 'kpfPcTipoJ') || '').trim() || 'Juros sobre parcelamento', tI = (val(mm, 'kpfPcTipoI') || '').trim() || 'IOF', formaTxt = val(mm, 'kpfPcForma') || 'Boleto';
-        const dd = dadosAtual(); dd.contratos = dd.contratos || []; const cid = uid(), cartaoPc = (dd.cartoes || []).find(c => c.id === val(mm, 'kpfPcCartao')) || null, forma = cartaoPc ? 'cartao' : (formaTxt === 'Carnê' ? 'carne' : 'avista');
+        const dd = dadosAtual(); dd.contratos = dd.contratos || []; const cid = uid(), cartaoPc = (dd.cartoes || []).find(c => norm(c.nome) === norm(credor)) || null, forma = cartaoPc ? 'cartao' : (formaTxt === 'Carnê' ? 'carne' : 'avista');
         // 1) quita (anula) as dívidas marcadas
         sel2.forEach(k => { const [t, a, b] = k.split('|'); const marca = p => { if (p.pago) return; p.pago = true; p.dataPago = dataP; p.via = 'parcelamento'; p.parcelamentoId = cid; };
           if (t === 'F') { const f = faturasDoCartao(dd, a).find(x => x.fatura === b); if (f) f.linhas.forEach(x => marca(x.p)); } else { const it = dd.pagar.find(x => x.id === a), p = it && (it.parcelas || []).find(q => q.n === +b); if (p) marca(p); } });
@@ -1136,7 +1137,7 @@
         const pagarId = mk(divida, tP, 'principal', true), jurosId = juros > 0.004 ? mk(juros, tJ, 'juros', false) : '', iofId = iof > 0.004 ? mk(iof, tI, 'iof', false) : '';
         dd.contratos.push({ id: cid, tipo: 'parcelamento', credor, desc: (val(mm, 'kpfPcDesc') || '').trim(), total, n, venc1: v1, divida, iof, juros: Math.max(0, juros), tipoGasto: tP, tipoJuros: tJ, tipoIof: tI, formaTxt: cartaoPc ? 'Cartão ' + cartaoPc.nome : formaTxt, cartaoId: cartaoPc ? cartaoPc.id : null, dataParc: dataP, pagarId, jurosId, iofId, criado: Date.now() });
         registrarTerceiro(credor, 'fornecedor'); gravarDados(ST.pf, dd); render(); root.toast('Parcelamento criado: ' + sel2.length + ' dívida(s) quitada(s), ' + n + ' parcela(s)' + (juros > 0.004 ? ' + juros de ' + R$(juros) : '') + (iof > 0.004 ? ' + IOF de ' + R$(iof) : '') + '.', 'ok');
-      }, 'Salvar', 660);
+      }, 'Salvar', 660); K.ligaCred(m, 'kpfPcCred', true);
       const atual = () => { const divida = [...m.querySelectorAll('.kpfPcSel:checked')].reduce((a, c) => a + (+c.dataset.v), 0) / 100, total = num(val(m, 'kpfPcTotal')) || 0, iof = num(val(m, 'kpfPcIof')) || 0, juros = total - divida - iof;
         m.querySelector('#kpfPcSoma').textContent = divida ? '— marcado ' + R$(divida) : '';
         m.querySelector('#kpfPcJuros').innerHTML = total > 0 ? 'Dívida quitada <b>' + R$(divida) + '</b> + IOF <b>' + R$(iof) + '</b> + juros <b style="color:' + (juros < -0.005 ? '#dc2626' : 'var(--ink)') + '">' + R$(Math.max(juros, 0)) + '</b> = total <b>' + R$(total) + '</b>' + (juros < -0.005 ? ' <span style="color:#dc2626">(o total está menor que a dívida + IOF)</span>' : '') : ''; };
