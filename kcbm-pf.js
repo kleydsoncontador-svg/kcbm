@@ -394,7 +394,8 @@
     let s0 = bs.reduce((a, b) => a + cents(b.saldoIni || 0), 0);
     (d.extrato || []).slice().sort((a, c) => a.data.localeCompare(c.data) || (a.criado || 0) - (c.criado || 0)).forEach(l => {
       const b = bs.find(x => x.id === l.bancoId); if (b && b.saldoIniData && l.data <= b.saldoIniData) { out[l.id] = null; return; }
-      s0 += cents(l.valor); out[l.id] = s0 / 100;
+      if (!(l.classe && l.classe.tipo === 'transferencia')) s0 += cents(l.valor); // transferência entre contas suas não muda o saldo consolidado
+      out[l.id] = s0 / 100;
     });
     return out;
   }
