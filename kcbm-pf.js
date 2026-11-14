@@ -124,8 +124,20 @@
     (dados.pagar || []).forEach(it => { if (it.forma !== 'cartao' || it.cartaoId !== cartaoId) return; (it.parcelas || []).forEach(p => { const k = p.fatura; if (!k) return; (mapa[k] = mapa[k] || { fatura: k, venc: p.venc, total: 0, pago: 0, linhas: [] }); mapa[k].total += cents(p.valor); if (p.pago) mapa[k].pago += cents(p.valor); mapa[k].linhas.push({ item: it, p }); }); });
     return Object.keys(mapa).sort().map(k => { const f = mapa[k]; return { fatura: f.fatura, venc: f.venc, total: f.total / 100, pago: f.pago / 100, aberto: (f.total - f.pago) / 100, linhas: f.linhas }; });
   }
-  // Limite em uso NO MÊS de referência: soma o que está em aberto nas faturas que vencem até esse mês (o mês inteiro já conta como comprometido; o que não foi pago acumula). Faturas de meses depois ainda não pesam. Sem mês = tudo em aberto.
-  const limiteUsado = (dados, cartaoId, mes) => faturasDoCartao(dados, cartaoId).reduce((a, f) => (!mes || f.venc.slice(0, 7) <= mes) ? a + f.aberto : a, 0);
+  // Limite em uso NO MÊS de referência: é o que já foi COMPRADO até o fim desse mês e ainda não foi pago (a compra pesa no limite na data em que acontece, mesmo que a fatura só vença no mês seguinte; compra parcelada pesa inteira; assinatura mensal pesa mês a mês). Quando a fatura é paga, o limite volta (no mês do pagamento). Sem mês = tudo em aberto.
+  const limiteUsado = (dados, cartaoId, mes) => {
+    if (!mes) return faturasDoCartao(dados, cartaoId).reduce((a, f) => a + f.aberto, 0);
+    let t = 0;
+    (dados.pagar || []).forEach(it => {
+      if (it.forma !== 'cartao' || it.cartaoId !== cartaoId) return;
+      (it.parcelas || []).forEach(p => {
+        if (p.pago && (!p.dataPago || p.dataPago.slice(0, 7) <= mes)) return; // já pago até o mês: limite devolvido
+        const mc = it.manual ? '' : (it.rec ? (p.mes || (p.venc || '').slice(0, 7)) : String(it.data || '').slice(0, 7));
+        if (it.manual || mc <= mes) t += cents(p.valor);
+      });
+    });
+    return t / 100;
+  };
   // Limite UNIFICADO: cartões com `limiteCom` = id de outro cartão dividem o limite dele (conta uma vez só). Vencimentos podem ser diferentes.
   const mestreDe = (dados, c) => { const m = c && c.limiteCom && (dados.cartoes || []).find(x => x.id === c.limiteCom && !x.limiteCom); return m || c; };
   const gruposCartoes = dados => { const g = {}; (dados.cartoes || []).forEach(c => { const m = mestreDe(dados, c); (g[m.id] = g[m.id] || { mestre: m, membros: [] }).membros.push(c); }); return Object.keys(g).map(k => g[k]); };
