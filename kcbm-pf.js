@@ -590,17 +590,19 @@
     (d.receber || []).forEach(it => (it.parcelas || []).forEach(p => { const k = mk(p.venc); rec[k] = (rec[k] || 0) + cents(p.valor); }));
     (d.pagar || []).forEach(it => { if (it.forma === 'cartao') return; (it.parcelas || []).forEach(p => { const k = mk(p.venc); pag[k] = (pag[k] || 0) + cents(p.valor); }); });
     (d.cartoes || []).forEach(c => faturasDoCartao(d, c.id).forEach(f => { const k = mk(f.venc); fat[k] = (fat[k] || 0) + cents(f.total); }));
-    const ini0 = cents((d.saldoIni || {}).receber || 0) - cents((d.saldoIni || {}).pagar || 0);
+    const bancosIni = (d.bancos || []).reduce((a, b) => a + cents(b.saldoIni || 0), 0); // saldo das contas correntes (inicial): positivo abate o negativo, negativo aumenta
+    const ini0 = cents((d.saldoIni || {}).receber || 0) - cents((d.saldoIni || {}).pagar || 0) + bancosIni;
     const linhas = []; let acum = ini0;
     for (let k = mesIni; k <= somaMes(m, 12) && k <= mesMax; k = somaMes(k, 1)) {
       const r = rec[k] || 0, pg = pag[k] || 0, ft = fat[k] || 0, ant = acum; acum = ant + r - pg - ft;
       linhas.push({ k, ant: ant / 100, r: r / 100, pg: pg / 100, ft: ft / 100, fim: acum / 100 });
     }
     const L = linhas.find(x => x.k === m) || { ant: 0, r: 0, pg: 0, ft: 0, fim: 0 };
-    const card = (t, v, c, sub, grande) => '<div style="flex:1 1 ' + (grande ? 260 : 190) + 'px;border:' + (grande ? '2px solid var(--ink)' : '1px solid var(--border)') + ';border-radius:12px;padding:12px 16px"><div style="font-size:12px;color:var(--slate)">' + t + '</div><div style="font-size:' + (grande ? '1.5rem' : '1.2rem') + ';font-weight:800;color:' + c + '">' + R$(v) + '</div>' + (sub ? '<div style="font-size:11px;color:var(--slate);margin-top:2px">' + sub + '</div>' : '') + '</div>';
+    const card = (t, v, c, sub, grande) => '<div style="flex:0 1 ' + (grande ? 215 : 160) + 'px;min-width:140px;border:' + (grande ? '2px solid var(--ink)' : '1px solid var(--border)') + ';border-radius:10px;padding:8px 12px"><div style="font-size:11.5px;color:var(--slate)">' + t + '</div><div style="font-size:' + (grande ? '1.3rem' : '1.05rem') + ';font-weight:800;color:' + c + '">' + R$(v) + '</div>' + (sub ? '<div style="font-size:11px;color:var(--slate);margin-top:2px">' + sub + '</div>' : '') + '</div>';
     const cabec = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px"><b style="font-size:1.1rem" title="O mês vem da data lá em cima, no topo do site">' + rotMes(m) + '</b>' + (fechMes() < mesIni ? '<span style="font-size:11.5px;color:var(--slate)">(o mês do topo é anterior ao mês inicial dos saldos)</span>' : '') + '<div style="margin-left:auto">' + B('⚙ Saldos iniciais', 'kcbmPf.saldoIniForm()') + '</div></div>'
-      + '<div style="font-size:12px;color:var(--slate);margin-bottom:12px">Tudo o que já está cadastrado conta no mês em que vence, tenha sido pago ou não. O saldo do fim de um mês é o saldo com que o mês seguinte começa. Mude o mês pelas setas lá em cima.</div>';
+      + '<div style="font-size:12px;color:var(--slate);margin-bottom:12px">Tudo o que já está cadastrado conta no mês em que vence, tenha sido pago ou não. O saldo começa com o saldo das suas contas correntes (se estiverem negativas, o saldo final fica ainda mais negativo; se positivas, abatem o negativo). O saldo do fim de um mês é o saldo com que o mês seguinte começa. Mude o mês pelas setas lá em cima.</div>';
     const cards = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
+      + ((d.bancos || []).length ? card('Saldo em conta corrente', bancosIni / 100, bancosIni < 0 ? '#dc2626' : 'var(--teal)', (d.bancos || []).map(b => E(b.nome) + ' ' + R$(b.saldoIni || 0)).join(' · ') + ' — já entra no saldo do primeiro mês') : '')
       + card('Saldo do mês anterior', L.ant, L.ant < 0 ? '#dc2626' : 'var(--ink)', 'com que ' + rotMes(m) + ' começa')
       + card('(+) Contas a receber', L.r, 'var(--teal)', 'receitas que vencem no mês')
       + card('(−) Contas a pagar', L.pg, '#dc2626', 'fora do cartão')
@@ -630,7 +632,7 @@
       linhas.push({ k, ant: ini / 100, r: r / 100, pg: pg / 100, ft: ft / 100, fim: acum / 100 });
     }
     const L = linhas.find(x => x.k === m) || { ant: 0, r: 0, pg: 0, ft: 0, fim: 0 };
-    const card = (t, v, c, sub, grande) => '<div style="flex:1 1 ' + (grande ? 260 : 190) + 'px;border:' + (grande ? '2px solid var(--ink)' : '1px solid var(--border)') + ';border-radius:12px;padding:12px 16px"><div style="font-size:12px;color:var(--slate)">' + t + '</div><div style="font-size:' + (grande ? '1.5rem' : '1.2rem') + ';font-weight:800;color:' + c + '">' + R$(v) + '</div>' + (sub ? '<div style="font-size:11px;color:var(--slate);margin-top:2px">' + sub + '</div>' : '') + '</div>';
+    const card = (t, v, c, sub, grande) => '<div style="flex:0 1 ' + (grande ? 215 : 160) + 'px;min-width:140px;border:' + (grande ? '2px solid var(--ink)' : '1px solid var(--border)') + ';border-radius:10px;padding:8px 12px"><div style="font-size:11.5px;color:var(--slate)">' + t + '</div><div style="font-size:' + (grande ? '1.3rem' : '1.05rem') + ';font-weight:800;color:' + c + '">' + R$(v) + '</div>' + (sub ? '<div style="font-size:11px;color:var(--slate);margin-top:2px">' + sub + '</div>' : '') + '</div>';
     const cabec = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px"><b style="font-size:1.1rem">' + rotMes(m) + '</b><div style="margin-left:auto">' + B('⚙ Saldo inicial dos bancos', "kcbmPf.aba('extrato')") + '</div></div>'
       + '<div style="font-size:12px;color:var(--slate);margin-bottom:12px">Só o que de fato aconteceu: o saldo dos bancos mais o que você deu baixa como recebido, menos o que deu baixa como pago em contas e em faturas de cartão, pela data da baixa. O saldo do fim do mês passa para o mês seguinte. Mude o mês pelas setas lá em cima.</div>';
     const cards = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
