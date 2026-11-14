@@ -217,7 +217,7 @@
     return escuro ? { bg: cor, fg: '#fff', mut: 'rgba(255,255,255,.78)', neg: '#FECACA', pos: '#fff', borda: 'rgba(0,0,0,.25)', sel: '#fff' } : { bg: cor, fg: '#111827', mut: 'rgba(17,24,39,.72)', neg: '#991B1B', pos: '#14532D', borda: 'rgba(0,0,0,.18)', sel: '#111827' };
   }
   // ───────────── estado e telas ─────────────
-  const ST = { bancoSel: '', pf: null, aba: 'movimentacao', movFiltro: 'todos', movAberto: {}, acumAberto: {}, mesSaldo: null, mesLista: hoje().slice(0, 7), cartaoSel: null, mesFatura: null, tela: 'lista' };
+  const ST = { bancoSel: '', pf: null, aba: 'movimentacao', movFiltro: 'todos', movAberto: {}, acumAberto: {}, scr: {}, mesSaldo: null, mesLista: hoje().slice(0, 7), cartaoSel: null, mesFatura: null, tela: 'lista' };
   const el = () => document.getElementById('page-kcbm-pf');
   const CARTAO = '<svg width="18" height="14" viewBox="0 0 18 14" style="vertical-align:-2px"><defs><linearGradient id="pfPrata" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#c9ced6"/><stop offset=".55" stop-color="#f4f6f8"/><stop offset=".8" stop-color="#9aa1ab"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient></defs><rect x="0.5" y="0.5" width="17" height="13" rx="2" fill="url(#pfPrata)" stroke="#8b929c"/><rect x="0.5" y="3" width="17" height="2.6" fill="#6b727c"/><rect x="2.5" y="9" width="5" height="1.6" rx=".8" fill="#8b929c"/></svg>';
   const ICO_DOIS = '<svg width="18" height="16" viewBox="0 0 24 20" style="vertical-align:-3px;color:var(--ink);filter:drop-shadow(0 0 2.5px currentColor)"><circle cx="8" cy="6" r="4" fill="currentColor"/><path d="M0 19c0-4.4 3.6-7 8-7s8 2.6 8 7z" fill="currentColor"/><circle cx="17" cy="7" r="3.3" fill="currentColor" opacity=".75"/><path d="M13.5 12.4c.9-.3 2-.4 3.5-.4 4 0 7 2.2 7 6.5v.5h-8.6c0-2.6-.8-5-1.9-6.6z" fill="currentColor" opacity=".75"/><ellipse cx="6.7" cy="4.6" rx="1.5" ry="1" fill="#fff" opacity=".45"/></svg>', ICO_UM = '<svg width="16" height="16" viewBox="0 0 20 20" style="vertical-align:-3px;color:var(--ink);filter:drop-shadow(0 0 2.5px currentColor)"><circle cx="10" cy="5.5" r="4.5" fill="currentColor"/><path d="M1 19c0-5 4-8 9-8s9 3 9 8z" fill="currentColor"/><ellipse cx="8.3" cy="3.8" rx="1.7" ry="1.1" fill="#fff" opacity=".45"/></svg>';
@@ -361,7 +361,7 @@
   }
   function bancoLogo(tipo, z) {
     z = z || 34;
-    if (LOGOS_OFICIAIS.indexOf(tipo) >= 0) return '<img src="assets/bancos/' + tipo + '.png" width="' + z + '" height="' + z + '" alt="" style="flex:none;border-radius:9px;background:#fff;object-fit:contain">';
+    if (LOGOS_OFICIAIS.indexOf(tipo) >= 0) return '<img src="assets/bancos/' + tipo + '.svg" onerror="this.onerror=null;this.src=\'assets/bancos/' + tipo + '.png\'" width="' + z + '" height="' + z + '" alt="" style="flex:none;border-radius:9px;background:#fff;object-fit:contain">';
     const sv = (bg, inner) => '<svg width="' + z + '" height="' + z + '" viewBox="0 0 40 40" style="flex:none;border-radius:9px"><rect width="40" height="40" rx="9" fill="' + bg + '"/>' + inner + '</svg>';
     const txt = (t, c, fs) => '<text x="20" y="26" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="' + (fs || 15) + '" fill="' + (c || '#fff') + '">' + t + '</text>';
     if (tipo === 'caixa') return sv('#005CA9', '<path d="M9 9 L18 20 L9 31 L15 31 L21 23.5 L27 31 L33 31 L24 20 L33 9 L27 9 L21 16.5 L15 9 Z" fill="#fff"/><path d="M21 16.5 L27 9 L33 9 L24 20 L21 16.5Z" fill="#F7941D"/>');
@@ -396,11 +396,17 @@
     return mu;
   }
   const saldoBanco = (d, b, mes) => { const fim = mes + '-31'; let s0 = cents(b.saldoIni || 0); (d.extrato || []).forEach(l => { if (l.bancoId === b.id && l.data <= fim && (!b.saldoIniData || l.data > b.saldoIniData)) s0 += cents(l.valor); }); return s0 / 100; };
+  // Uma linha só, com setas para os lados (rolar). Guarda a posição para não voltar ao início ao redesenhar.
+  function carrossel(id, html) {
+    const seta = (lado, txt, dir) => '<button type="button" class="btn bo kpfSeta" aria-label="' + (dir < 0 ? 'Anterior' : 'Próximo') + '" style="position:absolute;' + lado + ':-10px;top:50%;transform:translateY(-50%);z-index:5;width:34px;height:34px;padding:0;border-radius:50%;font-size:20px;line-height:1;box-shadow:0 2px 10px rgba(0,0,0,.35)" onclick="kcbmPf.rolar(\'' + id + '\',' + dir + ')">' + txt + '</button>';
+    return '<div style="position:relative">' + seta('left', '‹', -1) + '<div id="' + id + '" class="kpfCarr" onscroll="kcbmPf.scr(this)" style="display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x proximity;padding:4px 2px 10px;margin:0 14px">' + html + '</div>' + seta('right', '›', 1) + '</div>';
+  }
+  function restaurarCarrosseis() { try { const e = el(); if (!e) return; e.querySelectorAll('.kpfCarr').forEach(c => { const v = ST.scr[c.id]; if (v) { c.style.scrollBehavior = 'auto'; c.scrollLeft = v; c.style.scrollBehavior = ''; } }); } catch (x) {} }
   function abaBancos(d) {
     const mes = fechMes(), sel = ST.bancoSel || '';
     const cards = (d.bancos || []).map(b => {
       const ls = (d.extrato || []).filter(l => l.bancoId === b.id && l.data.slice(0, 7) === mes), ent = ls.filter(l => l.valor > 0).reduce((a, l) => a + cents(l.valor), 0) / 100, sai = ls.filter(l => l.valor < 0).reduce((a, l) => a + cents(l.valor), 0) / 100, pend = ls.filter(l => !l.baixa && !l.classe).length, tp = transfPendentes(d, b.id), on = sel === b.id, sd = saldoBanco(d, b, mes), sa = saldoBanco(d, b, somaMes(mes, -1));
-      return '<div onclick="kcbmPf.bancoSel(\'' + b.id + '\')" style="cursor:pointer;min-width:230px;flex:0 1 270px;border:' + (on ? '3px solid var(--teal)' : '2px solid var(--border)') + ';border-radius:12px;padding:11px 13px;background:var(--white)"><div style="display:flex;align-items:center;gap:10px">' + bancoLogo(b.tipo, 34) + '<div style="flex:1;min-width:0"><b>' + E(b.nome) + '</b>' + ((b.agencia || b.conta) ? '<div style="font-size:11.5px;color:var(--slate)">' + (b.agencia ? 'Ag. ' + E(b.agencia) : '') + (b.agencia && b.conta ? ' · ' : '') + (b.conta ? 'Conta ' + E(b.conta) : '') + '</div>' : '') + '</div><span onclick="event.stopPropagation()">' + B('✏️', "kcbmPf.bancoForm('" + b.id + "')", 'bo', 'Editar banco') + '</span></div>'
+      return '<div onclick="kcbmPf.bancoSel(\'' + b.id + '\')" style="cursor:pointer;min-width:230px;flex:0 0 270px;scroll-snap-align:start;position:relative;border:' + (on ? '3px solid var(--teal)' : '2px solid var(--border)') + ';border-radius:12px;padding:11px 13px 34px;background:var(--white)"><div style="display:flex;align-items:center;gap:10px">' + bancoLogo(b.tipo, 34) + '<div style="flex:1;min-width:0"><b>' + E(b.nome) + '</b>' + ((b.agencia || b.conta) ? '<div style="font-size:11.5px;color:var(--slate)">' + (b.agencia ? 'Ag. ' + E(b.agencia) : '') + (b.agencia && b.conta ? ' · ' : '') + (b.conta ? 'Conta ' + E(b.conta) : '') + '</div>' : '') + '</div><span onclick="event.stopPropagation()">' + B('✏️', "kcbmPf.bancoForm('" + b.id + "')", 'bo', 'Editar banco') + '</span></div>'
         + '<div style="font-size:12.5px;line-height:1.55;margin-top:6px">'
           + '<div style="display:flex;justify-content:space-between;gap:8px"><span>Saldo inicial <span style="color:var(--slate);font-size:11px">(' + ((b.saldoIniData && b.saldoIniData.slice(0, 7) === somaMes(mes, -1)) ? br(b.saldoIniData) : 'início de ' + mes.slice(5, 7) + '/' + mes.slice(0, 4)) + ')</span></span><b style="color:' + cor(sa) + '">' + R$(sa) + '</b></div>'
           + '<div style="display:flex;justify-content:space-between;gap:8px"><span>Entradas</span><b style="color:var(--teal)">' + R$(ent) + '</b></div>'
@@ -408,9 +414,10 @@
           + '<div style="display:flex;justify-content:space-between;gap:8px;color:#b45309"><span>Lançamentos pendentes</span><b>' + pend + '</b></div>'
           + (tp.length ? '<div style="margin-top:3px;padding:3px 7px;border-radius:7px;background:#fde047;color:#422006;font-weight:700;font-size:11.5px" title="Uma transferência saiu ou entrou em outro banco e ainda não foi conciliada aqui">↔ Transferência entre contas pendente: ' + tp.length + ' (' + R$(tp.reduce((a, l) => a + Math.abs(l.valor), 0)) + ')</div>' : '')
           + '<div style="display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--border);margin-top:3px;padding-top:3px"><span><b>Saldo corrente</b> <span style="color:var(--slate);font-size:11px">(' + mes.slice(5, 7) + '/' + mes.slice(0, 4) + ')</span></span><b style="color:' + cor(sd) + '">' + R$(sd) + '</b></div>'
+          + '<span onclick="event.stopPropagation()" style="position:absolute;left:10px;bottom:6px">' + B('◀', "kcbmPf.moverBanco('" + b.id + "',-1)", 'bo', 'Mover para a esquerda') + ' ' + B('▶', "kcbmPf.moverBanco('" + b.id + "',1)", 'bo', 'Mover para a direita') + '</span>'
         + '</div></div>';
     }).join('');
-    return '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch;margin-bottom:14px">' + cards + '<div style="align-self:flex-start">' + B('Adicionar banco', 'kcbmPf.bancoForm()', 'bp') + '</div></div>'
+    return (cards ? carrossel('kpfCarBancos', cards) : '') + '<div style="margin:0 0 14px">' + B('Adicionar banco', 'kcbmPf.bancoForm()', 'bp') + '</div>'
       + ((d.bancos || []).length ? '<div style="font-size:12px;color:var(--slate);margin:-4px 0 10px">Clique no banco para ver o extrato dele no mês. ' + (sel ? '' : '<b>Nenhum selecionado: mostrando todos.</b> ') + (sel ? B('Ver todos', "kcbmPf.bancoSel('')") : '') + '</div>' : '<div style="font-size:12.5px;color:var(--slate);margin-bottom:10px">Adicione o seu primeiro banco para importar extratos.</div>');
   }
   function abaExtrato(d) { return abaBancos(d) + abaExtratoLista(d); }
@@ -543,8 +550,8 @@
   function abaCartoes(d) {
     const cards = d.cartoes.map(c => {
       const gr = gruposCartoes(d).find(g => g.membros.some(x => x.id === c.id)), unif = gr && gr.membros.length > 1, limG = Number(gr.mestre.limite) || 0, usado = unif ? grupoUso(d, gr, fechMes()) : limiteUsado(d, c.id, fechMes()), disp = limG - usado, sel2 = ST.cartaoSel === c.id, tm = temaCartao(c.cor);
-      return '<div onclick="kcbmPf.cartaoSel(\'' + c.id + '\')" style="cursor:pointer;min-width:230px;flex:0 1 270px;border:' + (sel2 ? '3px' : '2px') + ' solid ' + (sel2 ? tm.sel : tm.borda) + ';border-radius:12px;padding:12px 14px;background:' + tm.bg + ';color:' + tm.fg + '"><div style="display:flex;justify-content:space-between;align-items:center"><b style="display:flex;align-items:center;gap:8px">' + emissorLogo(emissorDe(c), 28) + E(c.nome) + '</b><span onclick="event.stopPropagation()">' + B('✏️', "kcbmPf.cartaoForm('" + c.id + "')") + '</span></div>'
-        + '<div style="font-size:12px;color:' + tm.mut + ';margin:4px 0">' + '<span style="display:inline-flex;align-items:center;gap:6px">' + bandeiraSvg(c.bandeira, 16) + E(c.bandeira || 'Bandeira não informada') + '</span> · fecha dia ' + c.fechamento + ' · vence dia ' + c.vencimento + '</div><div style="font-size:12.5px;line-height:1.6">' + (unif ? '<span style="font-size:11px;color:' + tm.mut + '">Limite unificado: ' + gr.membros.map(x => E(x.nome)).join(' + ') + '</span><br>' : '') + 'Limite <b>' + R$(limG) + '</b><br>Em uso' + (unif ? ' (grupo)' : '') + ' em ' + fechMes().slice(5, 7) + '/' + fechMes().slice(0, 4) + ' <b style="color:' + tm.neg + '">' + R$(usado) + '</b><br>Disponível <b style="color:' + (disp < 0 ? tm.neg : tm.pos) + '">' + R$(disp) + '</b></div></div>';
+      return '<div onclick="kcbmPf.cartaoSel(\'' + c.id + '\')" style="cursor:pointer;min-width:230px;flex:0 0 270px;scroll-snap-align:start;padding-bottom:30px !important;border:' + (sel2 ? '3px' : '2px') + ' solid ' + (sel2 ? tm.sel : tm.borda) + ';border-radius:12px;padding:12px 14px;background:' + tm.bg + ';color:' + tm.fg + ';position:relative"><div style="display:flex;justify-content:space-between;align-items:center"><b style="display:flex;align-items:center;gap:8px">' + emissorLogo(emissorDe(c), 28) + E(c.nome) + '</b><span onclick="event.stopPropagation()">' + B('✏️', "kcbmPf.cartaoForm('" + c.id + "')") + '</span></div>'
+        + '<div style="font-size:12px;color:' + tm.mut + ';margin:4px 0">' + E(c.bandeira || 'Bandeira não informada') + ' · fecha dia ' + c.fechamento + ' · vence dia ' + c.vencimento + '</div><div style="font-size:12.5px;line-height:1.6">' + (unif ? '<span style="font-size:11px;color:' + tm.mut + '">Limite unificado: ' + gr.membros.map(x => E(x.nome)).join(' + ') + '</span><br>' : '') + 'Limite <b>' + R$(limG) + '</b><br>Em uso' + (unif ? ' (grupo)' : '') + ' em ' + fechMes().slice(5, 7) + '/' + fechMes().slice(0, 4) + ' <b style="color:' + tm.neg + '">' + R$(usado) + '</b><br>Disponível <b style="color:' + (disp < 0 ? tm.neg : tm.pos) + '">' + R$(disp) + '</b></div><span onclick="event.stopPropagation()" style="position:absolute;left:10px;bottom:6px">' + B('◀', "kcbmPf.moverCartao('" + c.id + "',-1)", 'bo', 'Mover para a esquerda') + ' ' + B('▶', "kcbmPf.moverCartao('" + c.id + "',1)", 'bo', 'Mover para a direita') + '</span><span title="' + E(c.bandeira || '') + '" style="position:absolute;right:12px;bottom:10px;line-height:0">' + bandeiraSvg(c.bandeira, 22) + '</span></div>';
     }).join('');
     let det = ''; const c = d.cartoes.find(x => x.id === ST.cartaoSel);
     if (c) {
@@ -560,7 +567,7 @@
     const mini = (t, v, sub, cor) => '<div style="flex:1 1 170px;min-width:150px;border:1px solid var(--border);border-radius:10px;padding:9px 12px;background:var(--white)"><div style="font-size:11px;color:var(--slate);font-weight:600">' + t + '</div><div style="font-size:18px;font-weight:800;color:' + (cor || 'var(--ink)') + ';margin:2px 0">' + R$(v) + '</div><div style="font-size:11px;color:var(--slate)">' + sub + '</div></div>';
     const resumo = d.cartoes.length ? '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">' + mini('A pagar em ' + refM.slice(5, 7) + '/' + refM.slice(0, 4), aPagar, fv.length + ' fatura(s) vencendo' + (jaPago > 0.004 ? ' · já pago ' + R$(jaPago) : ''), aPagar > 0.004 ? '#dc2626' : '') + mini('Limite total', limTot, gs.length + ' limite(s)' + (gs.length < d.cartoes.length ? ' · unificados contam 1 vez' : '')) + mini('Em uso até ' + refM.slice(5, 7) + '/' + refM.slice(0, 4), usoTot, limTot ? Math.round(usoTot / limTot * 100) + '% do limite' : '') + mini('Disponível', limTot - usoTot, 'limite total − em uso', limTot - usoTot < 0 ? '#dc2626' : 'var(--teal)') + '</div>' : '';
     return resumo + '<div style="display:flex;align-items:center;margin-bottom:10px"><div style="font-weight:700">Cartões de crédito</div><div style="margin-left:auto">' + B('+ Novo cartão', 'kcbmPf.cartaoForm()', 'bp') + '</div></div>'
-      + '<div style="display:flex;gap:12px;flex-wrap:wrap">' + (cards || '<div style="color:var(--slate);padding:16px">Nenhum cartão cadastrado. Cadastre para escolher na compra parcelada ou recorrente.</div>') + '</div>' + det;
+      + (cards ? carrossel('kpfCarCartoes', cards) : '<div style="color:var(--slate);padding:16px">Nenhum cartão cadastrado. Cadastre para escolher na compra parcelada ou recorrente.</div>') + det;
   }
   // ── Saldo a pagar / a receber (depois dos cartões): faturas que vencem no mês + contas fora do cartão ──
   function abaSaldo(d) {
@@ -832,6 +839,10 @@
       gravarDados(ST.pf, dd); render();
     },
     filtrar(inp) { const t = inp.closest('table'); if (!t) return; const sg = t.getAttribute('data-sig'); (FILTROS[sg] = FILTROS[sg] || {})[inp.getAttribute('data-i')] = inp.value; aplicarFiltroTabela(t); },
+    scr(c) { ST.scr[c.id] = c.scrollLeft; },
+    rolar(id, dir) { const c = document.getElementById(id); if (c) c.scrollBy({ left: dir * 300, behavior: 'smooth' }); },
+    moverCartao(id, dir) { const dd = dadosAtual(), i = dd.cartoes.findIndex(x => x.id === id), j = i + dir; if (i < 0 || j < 0 || j >= dd.cartoes.length) return; const t = dd.cartoes[i]; dd.cartoes[i] = dd.cartoes[j]; dd.cartoes[j] = t; gravarDados(ST.pf, dd); render(); },
+    moverBanco(id, dir) { const dd = dadosAtual(), i = (dd.bancos || []).findIndex(x => x.id === id), j = i + dir; if (i < 0 || j < 0 || j >= dd.bancos.length) return; const t = dd.bancos[i]; dd.bancos[i] = dd.bancos[j]; dd.bancos[j] = t; gravarDados(ST.pf, dd); render(); },
     acumAbrir(k) { ST.acumAberto[k] = !ST.acumAberto[k]; render(); },
     movAbrir(key) { ST.movAberto[key] = !ST.movAberto[key]; render(); },
     movFiltro(f) { ST.movFiltro = f; render(); },
@@ -887,7 +898,7 @@
     }
   };
   root.kcbmPf = K;
-  function render() { if (!el()) return; if (ST.pf) telaPessoa(); else if (ST.tela === 'tipos') telaTipos(); else if (ST.tela === 'terceiros') telaTerceiros(); else if (ST.tela === 'porquem') telaPorQuem(); else telaLista(); rotularTabelas(); aplicarFiltros(); }
+  function render() { if (!el()) return; if (ST.pf) telaPessoa(); else if (ST.tela === 'tipos') telaTipos(); else if (ST.tela === 'terceiros') telaTerceiros(); else if (ST.tela === 'porquem') telaPorQuem(); else telaLista(); rotularTabelas(); aplicarFiltros(); restaurarCarrosseis(); }
 
   // ───────────── integração com o site (menu, cartão da tela inicial, página) ─────────────
   root.kcbmPfAbrir = function () { root.goPage('kcbm-pf'); };
