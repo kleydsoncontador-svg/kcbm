@@ -659,7 +659,7 @@
   function nfDeLinhas(L, origem) {
     const txt = L.join('\n'), mnum = s => +String(s).replace(/\./g, '').replace(',', '.') || 0;
     const sp = /V[Il1]\.?\s*Unit/i.test(txt) && /C[oó]digo:/i.test(txt);
-    const md = (sp ? /Emiss[aã]o:\s*(\d{2})\/(\d{2})\/(\d{4})/i.exec(txt) : null) || /(\d{2})\/(\d{2})\/(\d{4})/.exec(txt), mt = /(?:valor\s*total|valor\s*a\s*pagar|total\s*r\$)[^0-9\n]*([\d.]+,\d{2})/i.exec(txt), mc = /(\d{44})/.exec(txt.replace(/(\d) (?=\d)/g, '$1')), mcn = /(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})/.exec(txt);
+    const md = (sp ? /Emiss[aã]o:\s*(\d{2})\/(\d{2})\/(\d{4})/i.exec(txt) : null) || /(\d{2})\/(\d{2})\/(\d{4})/.exec(txt), mt = /valor\s*a\s*pagar[^0-9\n]*([\d.]+,\d{2})/i.exec(txt) || /(?:valor\s*total|total\s*r\$)[^0-9\n]*([\d.]+,\d{2})/i.exec(txt), mc = /(\d{44})/.exec(txt.replace(/(\d) (?=\d)/g, '$1')), mcn = /(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})/.exec(txt);
     const forn = (L.find(l => /[A-Za-zÀ-ú]{4}/.test(l) && !/danfe|nfc-?e|nota fiscal|documento auxiliar|cnpj|consumidor/i.test(l)) || '').slice(0, 80);
     const itens = [];
     if (sp) L.forEach((l, i) => { const a = /^(.+?)\s*\(C[oó]digo:?\s*[A-Za-z0-9]+\s*\)/i.exec(l), b = a && /Qtde\.?:?\s*([\d.,]+)\s*[—–-]?\s*UN:?\s*(\S+?)\s*[—–-]?\s*V[Il1]\.?\s*Unit\.?:?\s*([\d.,]+)\s+([\d.,]+)/i.exec(L[i + 1] || ''); if (b) itens.push({ desc: a[1].trim(), qtd: mnum(b[1]), un: b[2].replace(/\d+$/, '').toUpperCase(), vu: mnum(b[3]), vt: mnum(b[4]), grupo: '' }); });
