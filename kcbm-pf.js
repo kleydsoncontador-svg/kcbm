@@ -579,10 +579,11 @@
   // ── Empréstimos, Financiamentos e Parcelamentos ──
   // Cada contrato gera lançamentos normais: as parcelas viram contas a pagar (1ª no vencimento escolhido, as outras mês a mês) e, no empréstimo, o dinheiro que entra vira uma conta a receber na data de entrada.
   // Por isso tudo aparece na Movimentação, no Saldo e na DRE, no mês certo.
+  const icoG = sv => sv.replace('width="17" height="17"', 'width="24" height="24"');
   const CONTRATO = {
-    emprestimo: { tit: 'Empréstimos', un: 'empréstimo', ic: '🤝', ajuda: 'Dinheiro que você pegou emprestado. Ao adicionar, o valor recebido entra como receita na data informada e as parcelas viram contas a pagar nos meses seguintes.' },
-    financiamento: { tit: 'Financiamentos', un: 'financiamento', ic: '🏠', ajuda: 'Compras financiadas (carro, apartamento…). Escolha o tipo de gasto; cada parcela entra na Movimentação no mês certo.' },
-    parcelamento: { tit: 'Parcelamentos', un: 'parcelamento', ic: '🧩', ajuda: 'Dívidas ou compras que você parcelou (por exemplo, a fatura de um cartão). Cada parcela entra na Movimentação no mês certo.' }
+    emprestimo: { tit: 'Empréstimos', un: 'empréstimo', ic: icoG(ICO_EMP), ajuda: 'Dinheiro que você pegou emprestado. Ao adicionar, o valor recebido entra como receita na data informada e as parcelas viram contas a pagar nos meses seguintes.' },
+    financiamento: { tit: 'Financiamentos', un: 'financiamento', ic: icoG(ICO_FIN), ajuda: 'Compras financiadas (carro, apartamento…). Escolha o tipo de gasto; cada parcela entra na Movimentação no mês certo.' },
+    parcelamento: { tit: 'Parcelamentos', un: 'parcelamento', ic: icoG(ICO_PAR), ajuda: 'Dívidas ou compras que você parcelou (por exemplo, a fatura de um cartão). Cada parcela entra na Movimentação no mês certo.' }
   };
   const FORMAS_PAG = [['Boleto', 'Boleto'], ['Débito automático', 'Débito automático'], ['Pix', 'Pix'], ['Carnê', 'Carnê'], ['Outro', 'Outro']];
   function resumoContrato(d, c) {
@@ -690,7 +691,7 @@
   const pqSeed = d => { pqBase(d); return d; };
   function abaPesqTela(d, vis) {
     const P = pqBase(d); P.listas = P.listas || []; const mes = ST.pesqMes || fechMes(); const mesBtn = '<input type="month" value="' + mes + '" onchange="kcbmPf.pesqMes(this.value)" style="' + IN + ';width:auto">';
-    const topo = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><b style="font-size:1.1rem">🛒 Mercado</b>' + B('Lista padrão (preços)', "kcbmPf.mercadoVis('pesq')", vis === 'pesq' ? 'bp' : 'bo') + B('Lista de mercado do mês', "kcbmPf.mercadoVis('lista')", vis === 'lista' ? 'bp' : 'bo') + '<div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">' + B('🤖 Pedir ao Claude para atualizar preços', 'kcbmPf.pesqPedir()', 'bp', 'Copia um pedido pronto, com todos os dados desta tela, para colar na conversa do Claude') + '</div></div>';
+    const topo = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><b style="font-size:1.1rem;display:inline-flex;align-items:center;gap:6px">' + icoG(ICO_MERC) + ' Mercado</b>' + B('Lista padrão (preços)', "kcbmPf.mercadoVis('pesq')", vis === 'pesq' ? 'bp' : 'bo') + B('Lista de mercado do mês', "kcbmPf.mercadoVis('lista')", vis === 'lista' ? 'bp' : 'bo') + '<div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">' + B('🤖 Pedir ao Claude para atualizar preços', 'kcbmPf.pesqPedir()', 'bp', 'Copia um pedido pronto, com todos os dados desta tela, para colar na conversa do Claude') + '</div></div>';
     const melhor = p => { let b = null; P.mercados.forEach(m => { const x = (p.precos || {})[m.id]; if (x && x.preco > 0 && (!b || x.preco < b.preco)) b = { id: m.id, preco: x.preco }; }); return b; };
     if (vis === 'pesq') {
       const comP = P.mercados.filter(m => P.produtos.some(q => (q.precos || {})[m.id] && q.precos[m.id].preco > 0)), semP = P.mercados.length - comP.length, MV = (ST.pesqTodosMerc || !comP.length) ? P.mercados : comP;
@@ -736,7 +737,7 @@
   function abaNotas(d) {
     d.notas = d.notas || []; d.produtos = d.produtos || {};
     const vis = ST.notasVis || 'notas', anos = [...new Set(d.notas.map(n => (n.data || '').slice(0, 4)).filter(Boolean).concat([hoje().slice(0, 4)]))].sort().reverse(), ano = ST.notasAno && anos.indexOf(ST.notasAno) >= 0 ? ST.notasAno : anos[0];
-    const topo = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><b style="font-size:1.1rem">🧾 Notas fiscais</b>' + B('Notas', "kcbmPf.notasVis('notas')", vis === 'notas' ? 'bp' : 'bo') + B('Produtos do ano', "kcbmPf.notasVis('produtos')", vis === 'produtos' ? 'bp' : 'bo') + sel('kpfNtAno', anos.map(a => [a, a]), ano, 'onchange="kcbmPf.notasAno(this.value)" style="width:auto"') + '<div style="margin-left:auto">' + B('+ Anexar nota fiscal', 'kcbmPf.notaAnexar()', 'bp') + '</div></div>';
+    const topo = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><b style="font-size:1.1rem;display:inline-flex;align-items:center;gap:6px">' + icoG(ICO_NF) + ' Notas fiscais</b>' + B('Notas', "kcbmPf.notasVis('notas')", vis === 'notas' ? 'bp' : 'bo') + B('Produtos do ano', "kcbmPf.notasVis('produtos')", vis === 'produtos' ? 'bp' : 'bo') + sel('kpfNtAno', anos.map(a => [a, a]), ano, 'onchange="kcbmPf.notasAno(this.value)" style="width:auto"') + '<div style="margin-left:auto">' + B('+ Anexar nota fiscal', 'kcbmPf.notaAnexar()', 'bp') + '</div></div>';
     const doAno = d.notas.filter(n => (n.data || '').slice(0, 4) === ano).sort((a, b) => b.data.localeCompare(a.data));
     if (vis === 'notas') {
       const linhas = []; doAno.forEach(n => { const ab = !!(ST.notaAberta || {})[n.id]; linhas.push('<tr style="cursor:pointer" onclick="kcbmPf.notaAbrir(\'' + n.id + '\')">' + td((ab ? '▼ ' : '▶ ') + br(n.data)) + td(E(n.fornecedor || '—')) + td(String((n.itens || []).length) + ' item(ns)') + td(R$(n.total), 1) + td(nfRotPg(d, n)) + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + (n.pg && n.pg.tipo ? B('Pagamento', "kcbmPf.notaPagar('" + n.id + "')") : B('✔ Informar pagamento', "kcbmPf.notaPagar('" + n.id + "')", 'bp')) + ' ' + B('✏️', "kcbmPf.notaEditar('" + n.id + "')", 'bo', 'Editar produtos e dados') + ' ' + B('🗑', "kcbmPf.notaExcluir('" + n.id + "')", 'bo', 'Excluir a nota inteira') + '</td></tr>');
