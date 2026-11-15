@@ -1311,8 +1311,14 @@
       const inf = () => { const v = norm(val(m, 'kpfNfForn')); m.querySelector('#kpfNfFornInfo').innerHTML = !v ? '' : reconhecido && norm(n.fornecedor) === v ? '<span style="color:var(--teal)">✓ reconhecido pelo CNPJ (nome que você já tinha dado a esse estabelecimento)</span>' : (lerTerceiros().some(t => norm(t.nome) === v) ? '<span style="color:var(--teal)">✓ já está no cadastro de fornecedores</span>' : '<span style="color:var(--slate)">novo fornecedor — será criado ao salvar</span>'); };
       m.querySelector('#kpfNfForn').oninput = inf; inf(); bind();
     },
-    notaExcluir(id) { const d = dadosAtual(), n = (d.notas || []).find(x => x.id === id); if (!n) return; if (!confirm('Excluir esta nota (' + n.fornecedor + ', ' + R$(n.total) + ')? O lançamento no cartão ou no extrato, se existir, NÃO é apagado: só deixa de estar ligado à nota.')) return;
-      (d.pagar || []).forEach(x => { if (x.notaId === id) delete x.notaId; }); (d.extrato || []).forEach(x => { if (x.notaId === id) delete x.notaId; }); d.notas = d.notas.filter(x => x.id !== id); gravarDados(ST.pf, d); render(); },
+    notaExcluir(id) { const d = dadosAtual(), n = (d.notas || []).find(x => x.id === id); if (!n) return;
+      // compras que a PRÓPRIA nota criou no cartão (não as que só foram vinculadas a um lançamento que já existia): saem junto com a nota
+      const g = n.pg || {}, criadas = (!g.ref && Array.isArray(g.pagarIds)) ? (d.pagar || []).filter(x => g.pagarIds.indexOf(x.id) >= 0 && x.notaId === id) : [];
+      if (criadas.some(x => (x.parcelas || []).some(p => p.pago))) { root.toast('A compra lançada no cartão por esta nota já tem parcela paga. O site não exclui o que já foi pago: desfaça a baixa antes de excluir a nota.', 'err'); return; }
+      const totC = criadas.reduce((a, x) => a + (x.valor || 0), 0);
+      if (!confirm('Excluir esta nota (' + n.fornecedor + ', ' + R$(n.total) + ')?' + (criadas.length ? '\n\nA compra lançada no cartão por ela (' + R$(totC) + (criadas[0].n > 1 ? ' em ' + criadas[0].n + ' parcelas' : '') + ') também será EXCLUÍDA da fatura.' : '\n\nO lançamento no cartão ou no extrato, se existir, NÃO é apagado: só deixa de estar ligado à nota.'))) return;
+      const ids = criadas.map(x => x.id); d.pagar = (d.pagar || []).filter(x => ids.indexOf(x.id) < 0);
+      (d.pagar || []).forEach(x => { if (x.notaId === id) delete x.notaId; }); (d.extrato || []).forEach(x => { if (x.notaId === id) delete x.notaId; }); d.notas = d.notas.filter(x => x.id !== id); gravarDados(ST.pf, d); render(); root.toast(criadas.length ? 'Nota e compra no cartão excluídas.' : 'Nota excluída.', 'ok'); },
     notaPagar(id) {
       const d = dadosAtual(), n = (d.notas || []).find(x => x.id === id); if (!n) return;
       const cand = []; (d.pagar || []).forEach(it => { if (it.taxaAuto) return; const v = (it.parcelas || []).reduce((a, p) => a + p.valor, 0); if (Math.abs(v - n.total) <= 0.02 || Math.abs(it.valor - n.total) <= 0.02) cand.push({ k: 'P|' + it.id, o: Math.abs(new Date(it.data) - new Date(n.data)), t: br(it.data) + ' — ' + E(it.fornecedor || '') + (it.forma === 'cartao' ? ' (' + E(((d.cartoes || []).find(c => c.id === it.cartaoId) || {}).nome || 'cartão') + ')' : ' (conta a pagar)') + ' — ' + R$(it.valor) + (it.notaId && it.notaId !== id ? ' · já ligada a outra nota' : '') }); });
