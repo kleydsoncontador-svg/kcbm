@@ -1037,7 +1037,7 @@
       (l.baixa || []).forEach(b => { const it = (dd[b.tipo] || []).find(x => x.id === b.itemId); if (it) (it.parcelas || []).forEach(p => { if (p.n === b.n && p.extratoId === id) { p.pago = false; p.dataPago = null; delete p.extratoId; } }); });
       if (l.classe && l.classe.tipo === 'transferencia') { const par = l.classe.parId && dd.extrato.find(x => x.id === l.classe.parId); if (par && par.classe) { if (par.classe.auto) par.classe = null; else par.classe.parId = null; } }
       else if (l.classe) { const lista = l.valor < 0 ? 'gastos' : 'entradas'; dd[lista] = dd[lista].filter(x => x.extratoId !== id); }
-      l.baixa = null; l.classe = null; gravarDados(ST.pf, dd); if (!silencioso) render();
+      if (l.porBaixa) dd.extrato = dd.extrato.filter(x => x.id !== id); else { l.baixa = null; l.classe = null; } gravarDados(ST.pf, dd); if (!silencioso) render();
     },
     extratoBaixar(id) {
       const dd = dadosAtual(), l = dd.extrato.find(x => x.id === id); if (!l) return;
@@ -1468,12 +1468,21 @@
       desenha();
     },
     parcelaBaixa(tipo, itemId, n) {
-      let v = prompt('Data em que foi ' + (tipo === 'pagar' ? 'paga' : 'recebida') + ' (AAAA-MM-DD ou DD/MM/AAAA):', hoje()); if (v == null) return; v = v.trim();
-      const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v); if (m) v = m[3] + '-' + m[2] + '-' + m[1]; if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { root.toast('Data inválida.', 'err'); return; }
-      const dd = dadosAtual(), it = dd[tipo].find(x => x.id === itemId), p = it && it.parcelas.find(q => q.n === n); if (!p || p.pago) return; p.pago = true; p.dataPago = v; p.baixaManual = true; gravarDados(ST.pf, dd); render();
+      const d = dadosAtual(), it = (d[tipo] || []).find(x => x.id === itemId), p = it && it.parcelas.find(q => q.n === n); if (!p || p.pago) return;
+      const pag = tipo === 'pagar', quem = it[pag ? 'fornecedor' : 'cliente'], bancos = d.bancos || [], padrao = bancos.some(b => b.id === ST.ultBancoBaixa) ? ST.ultBancoBaixa : (bancos.length === 1 ? bancos[0].id : '');
+      const corpo = '<div style="font-size:13px;margin-bottom:8px"><b>' + E(quem) + '</b>' + (it.tipo ? ' (' + E(it.tipo) + ')' : '') + ' — <b>' + R$(p.valor) + '</b></div>'
+        + campo('Data em que foi ' + (pag ? 'paga' : 'recebida'), inp('kpfBxData', hoje(), 'date'))
+        + campo(pag ? 'Fonte pagadora (de onde saiu o dinheiro)' : 'Onde o dinheiro entrou', sel('kpfBxBanco', [['', 'Dinheiro / outro (só marcar como ' + (pag ? 'pago' : 'recebido') + ')']].concat(bancos.map(b => [b.id, 'Banco: ' + b.nome])), padrao), 'Escolhendo um banco, eu lanço no extrato dele (' + (pag ? 'saída' : 'entrada') + ') com o histórico "' + E(quem) + (it.tipo ? ' (' + E(it.tipo) + ')' : '') + '". Isso entra no saldo do banco e na conciliação.');
+      modal((pag ? 'Dar baixa — pagamento' : 'Dar baixa — recebimento'), corpo, mm => {
+        const data = val(mm, 'kpfBxData'), bid = val(mm, 'kpfBxBanco'); if (!/^\d{4}-\d{2}-\d{2}$/.test(data || '')) { root.toast('Informe a data.', 'err'); return false; }
+        const dd = dadosAtual(), it2 = (dd[tipo] || []).find(x => x.id === itemId), p2 = it2 && it2.parcelas.find(q => q.n === n); if (!p2 || p2.pago) return;
+        p2.pago = true; p2.dataPago = data; p2.baixaManual = true;
+        if (bid) { const bk = (dd.bancos || []).find(b => b.id === bid); if (bk) { ST.ultBancoBaixa = bid; const hist = String(quem).trim() + (it2.tipo ? ' (' + it2.tipo + ')' : ''), l = { id: uid(), criado: Date.now(), data, banco: bk.nome, bancoId: bk.id, hist, valor: pag ? -p2.valor : p2.valor, baixa: [{ tipo, itemId, n }], classe: null, porBaixa: true }; dd.extrato = dd.extrato || []; dd.extrato.push(l); p2.extratoId = l.id; delete p2.baixaManual; } }
+        gravarDados(ST.pf, dd); render(); root.toast(bid ? 'Baixa dada e lançada no extrato do banco.' : 'Baixa dada.', 'ok');
+      }, 'Confirmar', 480);
     },
     parcelaDesfaz(tipo, itemId, n) {
-      const dd = dadosAtual(), it = dd[tipo].find(x => x.id === itemId), p = it && it.parcelas.find(q => q.n === n); if (!p || !p.pago || p.extratoId) return; p.pago = false; p.dataPago = null; delete p.baixaManual; gravarDados(ST.pf, dd); render();
+      const dd = dadosAtual(), it = dd[tipo].find(x => x.id === itemId), p = it && it.parcelas.find(q => q.n === n); if (p && p.pago && p.extratoId) { const l0 = (dd.extrato || []).find(x => x.id === p.extratoId); if (l0 && l0.porBaixa) { K.extratoDesfazer(l0.id, true); render(); } return; } if (!p || !p.pago) return; p.pago = false; p.dataPago = null; delete p.baixaManual; gravarDados(ST.pf, dd); render();
     },
     baixaAuto() { const dd = dadosAtual(), n = baixaAutomatica(dd); if (n) { gravarDados(ST.pf, dd); render(); } root.toast(n ? n + ' linha(s) do extrato baixaram contas sozinhas.' : 'Nenhuma linha pendente bate exatamente com um vencimento.', n ? 'ok' : 'info'); },
     bancoSel(id) { ST.bancoSel = id || ''; render(); },
