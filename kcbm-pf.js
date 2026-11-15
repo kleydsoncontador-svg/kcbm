@@ -798,24 +798,26 @@
     (d.cartoes || []).forEach(c => faturasDoCartao(d, c.id).forEach(f => { const k = mk(f.venc); fat[k] = (fat[k] || 0) + cents(f.total) - f.linhas.filter(x => x.p.via).reduce((a, x) => a + cents(x.p.valor), 0); }));
     const bancosIni = (d.bancos || []).reduce((a, b) => a + cents(b.saldoIni || 0), 0); // saldo das contas correntes (inicial): positivo abate o negativo, negativo aumenta
     const ini0 = cents((d.saldoIni || {}).receber || 0) - cents((d.saldoIni || {}).pagar || 0) + bancosIni;
+    // Movimento de conta corrente: só linhas do extrato JÁ classificadas (gasto/entrada, sem relação com conta a pagar/receber já cadastrada). As que deram baixa em conta a pagar/receber ficam de fora (já contam lá) e as que ainda estão pendentes também.
+    const mvE = {}, mvS = {}; (d.extrato || []).forEach(l => { if (!l.classe || (l.baixa && l.baixa.length)) return; const bk = (d.bancos || []).find(b => b.id === l.bancoId); if (bk && bk.saldoIniData && String(l.data) <= String(bk.saldoIniData)) return; const k = mk(l.data), v = cents(l.valor); if (v >= 0) mvE[k] = (mvE[k] || 0) + v; else mvS[k] = (mvS[k] || 0) + v; });
     const linhas = []; let acum = ini0;
     for (let k = mesIni; k <= somaMes(m, 12) && k <= mesMax; k = somaMes(k, 1)) {
-      const r = rec[k] || 0, pg = pag[k] || 0, ft = fat[k] || 0, ant = acum; acum = ant + r - pg - ft;
-      linhas.push({ k, ant: ant / 100, r: r / 100, pg: pg / 100, ft: ft / 100, fim: acum / 100 });
+      const r = rec[k] || 0, pg = pag[k] || 0, ft = fat[k] || 0, me = mvE[k] || 0, ms = mvS[k] || 0, ant = acum; acum = ant + me + ms + r - pg - ft;
+      linhas.push({ k, ant: ant / 100, me: me / 100, ms: ms / 100, mv: (me + ms) / 100, r: r / 100, pg: pg / 100, ft: ft / 100, fim: acum / 100 });
     }
-    const L = linhas.find(x => x.k === m) || { ant: 0, r: 0, pg: 0, ft: 0, fim: 0 };
+    const L = linhas.find(x => x.k === m) || { ant: 0, mv: 0, me: 0, ms: 0, r: 0, pg: 0, ft: 0, fim: 0 };
     const card = (t, v, c, sub, grande) => '<div style="flex:0 1 ' + (grande ? 215 : 160) + 'px;min-width:140px;border:' + (grande ? '2px solid var(--ink)' : '1px solid var(--border)') + ';border-radius:10px;padding:8px 12px"><div style="font-size:11.5px;color:var(--slate)">' + t + '</div><div style="font-size:' + (grande ? '1.3rem' : '1.05rem') + ';font-weight:800;color:' + c + '">' + R$(v) + '</div>' + (sub ? '<div style="font-size:11px;color:var(--slate);margin-top:2px">' + sub + '</div>' : '') + '</div>';
     const cabec = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px"><b style="font-size:1.1rem" title="O mês vem da data lá em cima, no topo do site">' + rotMes(m) + '</b>' + (fechMes() < mesIni ? '<span style="font-size:11.5px;color:var(--slate)">(o mês do topo é anterior ao mês inicial dos saldos)</span>' : '') + '<div style="margin-left:auto">' + B('⚙ Saldos iniciais', 'kcbmPf.saldoIniForm()') + '</div></div>'
-      + '<div style="font-size:12px;color:var(--slate);margin-bottom:12px">Tudo o que já está cadastrado conta no mês em que vence, tenha sido pago ou não. O saldo começa com o saldo das suas contas correntes (se estiverem negativas, o saldo final fica ainda mais negativo; se positivas, abatem o negativo). O saldo do fim de um mês é o saldo com que o mês seguinte começa. Mude o mês pelas setas lá em cima.</div>';
+      + '<div style="font-size:12px;color:var(--slate);margin-bottom:12px">Tudo o que já está cadastrado conta no mês em que vence, tenha sido pago ou não. O saldo começa com o saldo das suas contas correntes (se estiverem negativas, o saldo final fica ainda mais negativo; se positivas, abatem o negativo). O "movimento de conta corrente" soma só o que você classificou no extrato como gasto/entrada; o que deu baixa em conta a pagar, a receber ou fatura não entra de novo (já está nos outros quadros). O saldo do fim de um mês é o saldo com que o mês seguinte começa. Mude o mês pelas setas lá em cima.</div>';
     const cards = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
-      + ((d.bancos || []).length ? card('Saldo em conta corrente', bancosIni / 100, bancosIni < 0 ? '#dc2626' : 'var(--teal)', (d.bancos || []).map(b => E(b.nome) + ' ' + R$(b.saldoIni || 0)).join(' · ') + ' — já entra no saldo do primeiro mês') : '')
-      + card('Saldo do mês anterior', L.ant, L.ant < 0 ? '#dc2626' : 'var(--ink)', 'com que ' + rotMes(m) + ' começa')
+      + card('Saldo do mês anterior', L.ant, L.ant < 0 ? '#dc2626' : 'var(--ink)', 'com que ' + rotMes(m) + ' começa' + (m === mesIni && (d.bancos || []).length ? ' (inclui o saldo inicial das contas correntes: ' + R$(bancosIni / 100) + ')' : ''))
+      + card('(±) Movimento de conta corrente', L.mv, L.mv < 0 ? '#dc2626' : 'var(--teal)', 'entradas ' + R$(L.me) + ' · saídas ' + R$(L.ms) + ' — só o que você classificou no extrato e não é conta a pagar/receber')
       + card('(+) Contas a receber', L.r, 'var(--teal)', 'receitas que vencem no mês')
       + card('(−) Contas a pagar', L.pg, '#dc2626', 'fora do cartão')
       + card('(−) Faturas de cartão', L.ft, '#dc2626', 'faturas que vencem no mês')
       + card('Saldo no fim do mês', L.fim, L.fim < 0 ? '#dc2626' : '#16a34a', 'passa para o mês seguinte', true) + '</div>';
-    const tab = tabela([{ t: 'Mês' }, { t: 'Saldo anterior', r: 1 }, { t: 'A receber', r: 1 }, { t: 'Contas a pagar', r: 1 }, { t: 'Faturas', r: 1 }, { t: 'Saldo no fim do mês', r: 1 }],
-      linhas.filter(x => x.k >= m).slice(0, 13).map(x => '<tr' + (x.k === m ? ' style="font-weight:700;background:rgba(127,127,127,.12)"' : '') + '>' + td(rotMes(x.k)) + td(R$(x.ant), 1) + td('<span style="color:var(--teal)">' + R$(x.r) + '</span>', 1) + td(R$(-x.pg), 1) + td(R$(-x.ft), 1) + td('<b style="color:' + (x.fim < 0 ? '#dc2626' : '#16a34a') + '">' + R$(x.fim) + '</b>', 1) + '</tr>'), 'Sem dados.', true);
+    const tab = tabela([{ t: 'Mês' }, { t: 'Saldo anterior', r: 1 }, { t: 'Mov. conta corrente', r: 1 }, { t: 'A receber', r: 1 }, { t: 'Contas a pagar', r: 1 }, { t: 'Faturas', r: 1 }, { t: 'Saldo no fim do mês', r: 1 }],
+      linhas.filter(x => x.k >= m).slice(0, 13).map(x => '<tr' + (x.k === m ? ' style="font-weight:700;background:rgba(127,127,127,.12)"' : '') + '>' + td(rotMes(x.k)) + td(R$(x.ant), 1) + td('<span style="color:' + (x.mv < 0 ? '#dc2626' : 'var(--teal)') + '">' + R$(x.mv) + '</span>', 1) + td('<span style="color:var(--teal)">' + R$(x.r) + '</span>', 1) + td(R$(-x.pg), 1) + td(R$(-x.ft), 1) + td('<b style="color:' + (x.fim < 0 ? '#dc2626' : '#16a34a') + '">' + R$(x.fim) + '</b>', 1) + '</tr>'), 'Sem dados.', true);
     return cabec + cards + '<div style="font-weight:700;margin:14px 0 6px">Como fica nos próximos meses</div>' + tab;
   }
 
