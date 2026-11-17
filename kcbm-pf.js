@@ -522,7 +522,7 @@
       return '<tr>' + '<td style="' + TD + '">' + (pend ? '<input type="checkbox" class="kpfSelL" data-id="' + x.id + '">' : '') + '</td>' + td(br(x.data)) + td(E(x.banco || '')) + td(E(x.hist)) + '<td style="' + TD + ';text-align:right;white-space:nowrap;color:' + cor(x.valor) + '">' + R$(x.valor) + '</td>' + '<td style="' + TD + ';text-align:right;white-space:nowrap;font-weight:600;color:' + (sc[x.id] == null ? 'var(--slate)' : cor(sc[x.id])) + '">' + (sc[x.id] == null ? '' : R$(sc[x.id])) + '</td>'
         + td(pend ? '<span style="color:#b45309">— pendente —</span>' : '<span style="font-size:11.5px">' + E(lanc) + '</span>') + '<td style="' + TD + ';text-align:right;white-space:nowrap">' + (pend ? B('Baixar / classificar', "kcbmPf.extratoBaixar('" + x.id + "')", 'bp') : B('↩ Desfazer', "kcbmPf.extratoDesfazer('" + x.id + "')")) + ' ' + B('🗑', "kcbmPf.extratoExcluir('" + x.id + "')") + '</td></tr>';
     }));
-    return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">' + navMes(mes, 'kcbmPf.mesLista') + '<div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">' + B('📄 Importar extrato (PDF)', 'kcbmPf.importarPdf()', 'bp', 'Sobe o PDF do extrato; o site lê e você classifica') + B('+ Lançar à mão', 'kcbmPf.extratoForm()') + B('⚡ Baixa automática', 'kcbmPf.baixaAuto()', 'bo', 'Dá baixa nas contas cujo valor e vencimento batem com a linha do extrato') + B('✔ Classificar selecionadas', 'kcbmPf.extratoLote()', 'bo', 'Classifica várias linhas pendentes de uma vez') + '</div></div>'
+    return '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">' + navMes(mes, 'kcbmPf.mesLista') + '<div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">' + B('📄 Importar extrato (PDF)', 'kcbmPf.importarPdf()', 'bp', 'Sobe o PDF do extrato; o site lê e você classifica') + B('+ Lançar à mão', 'kcbmPf.extratoForm()') + B('⇄ Transferência entre contas', 'kcbmPf.extratoTransf()', 'bo', 'Passa dinheiro de um banco seu para outro (ex.: Bradesco → Caixa), lançando saída e entrada já amarradas') + B('⚡ Baixa automática', 'kcbmPf.baixaAuto()', 'bo', 'Dá baixa nas contas cujo valor e vencimento batem com a linha do extrato') + B('✔ Classificar selecionadas', 'kcbmPf.extratoLote()', 'bo', 'Classifica várias linhas pendentes de uma vez') + '</div></div>'
       + (d.bancos || []).filter(b => (!ST.bancoSel || b.id === ST.bancoSel) && transfPendentes(d, b.id).length).map(b => '<div style="border:1px solid #eab308;background:rgba(253,224,71,.18);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:12.5px"><b>↔ Transferência entre contas pendente no ' + E(b.nome) + ':</b> ' + transfPendentes(d, b.id).map(l => R$(Math.abs(l.valor)) + ' em ' + br(l.data) + ' (' + (l.valor < 0 ? 'saiu d' : 'entrou n') + 'o ' + E(l.banco || '') + ')').join(' · ') + '. Localize a linha correspondente aqui e classifique como transferência entre contas (ou lance à mão).</div>').join('')
       + '<div style="font-size:12px;color:var(--slate);margin-bottom:8px">Cada linha do extrato forma um <b>lançamento contábil</b>: dar baixa numa conta a pagar/receber, ou classificar como gasto/entrada (com o tipo cadastrado). Valor positivo = entrada; negativo = saída.</div>'
       + tabela([{ t: '<input type="checkbox" onchange="document.querySelectorAll(\'.kpfSelL\').forEach(c=>c.checked=this.checked)" title="Marcar todas as pendentes">' }, { t: 'Data' }, { t: 'Banco' }, { t: 'Histórico' }, { t: 'Valor', r: 1 }, { t: 'Saldo', r: 1 }, { t: 'Lançamento contábil' }, { t: '' }], linhas, 'Nenhuma linha de extrato neste mês.')
@@ -999,6 +999,22 @@
     },
     movExcluir(tipo, id) { if (!confirm('Excluir este lançamento?')) return; const dd = dadosAtual(); const x = dd[tipo].find(y => y.id === id); dd[tipo] = dd[tipo].filter(y => y.id !== id); if (x && x.extratoId) dd.extrato = dd.extrato.map(l => l.id === x.extratoId ? Object.assign({}, l, { classe: null }) : l); gravarDados(ST.pf, dd); render(); },
     // ── extrato ──
+    extratoTransf() {
+      const d = dadosAtual(), bs = d.bancos || []; if (bs.length < 2) { root.toast('Cadastre pelo menos dois bancos (clique em "Adicionar banco") para lançar uma transferência entre contas.', 'err'); return; }
+      const o0 = bs.some(b => b.id === ST.bancoSel) ? ST.bancoSel : bs[0].id, d0 = (bs.find(b => b.id !== o0) || bs[1]).id, lista = bs.map(b => [b.id, b.nome]);
+      modal('Transferência entre contas', '<div style="font-size:12.5px;color:var(--slate);margin-bottom:8px">Lanço a <b>saída</b> no banco de origem e a <b>entrada</b> no banco de destino, já amarradas. Não muda o saldo total, só passa o dinheiro de uma conta para a outra.</div>'
+        + campo('Data', inp('kpfTrData', hoje(), 'date')) + campo('Saiu de (banco de origem)', sel('kpfTrOri', lista, o0)) + campo('Entrou em (banco de destino)', sel('kpfTrDes', lista, d0)) + campo('Valor (R$)', inp('kpfTrVal', '', 'text', 'inputmode="decimal"')),
+        m => {
+          const v = num(val(m, 'kpfTrVal')), ori = val(m, 'kpfTrOri'), des = val(m, 'kpfTrDes'), data = val(m, 'kpfTrData');
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(data || '') || !(v > 0)) { root.toast('Informe a data e um valor maior que zero.', 'err'); return false; }
+          if (ori === des) { root.toast('O banco de origem e o de destino precisam ser diferentes.', 'err'); return false; }
+          const dd = dadosAtual(), bo = dd.bancos.find(b => b.id === ori), bd = dd.bancos.find(b => b.id === des); if (!bo || !bd) return false;
+          const ia = uid(), ib = uid(), t = Date.now();
+          dd.extrato.push({ id: ia, criado: t, data, banco: bo.nome, bancoId: bo.id, hist: 'Transferência para ' + bd.nome, valor: -v, baixa: null, classe: { tipo: 'transferencia', contraBancoId: bd.id, contraBanco: bd.nome, categoria: 'Transferência entre contas', parId: ib } });
+          dd.extrato.push({ id: ib, criado: t + 1, data, banco: bd.nome, bancoId: bd.id, hist: 'Transferência de ' + bo.nome, valor: v, baixa: null, classe: { tipo: 'transferencia', contraBancoId: bo.id, contraBanco: bo.nome, categoria: 'Transferência entre contas', parId: ia } });
+          gravarDados(ST.pf, dd); render(); root.toast('Transferência lançada: ' + R$(v) + ' de ' + bo.nome + ' para ' + bd.nome + '.', 'ok');
+        }, 'Lançar', 480);
+    },
     extratoForm() {
       modal('Lançar no extrato bancário', campo('Data', inp('kpfData', hoje(), 'date')) + (dadosAtual().bancos.length ? campo('Banco', sel('kpfBkSel', dadosAtual().bancos.map(b => [b.id, b.nome]), ST.bancoSel || dadosAtual().bancos[0].id)) : campo('Banco / conta', inp('kpfBanco', '', 'text', 'maxlength="60"'))) + campo('Histórico', inp('kpfHist', '', 'text', 'maxlength="140"')) + campo('Tipo', sel('kpfTipo', [['sai', 'Saída (pagamento)'], ['ent', 'Entrada (recebimento)']], 'sai')) + campo('Valor (R$)', inp('kpfValor', '', 'text', 'inputmode="decimal"')),
         m => { const v = num(val(m, 'kpfValor')); if (!val(m, 'kpfData') || !(v > 0)) { root.toast('Informe a data e um valor maior que zero.', 'err'); return false; } const dd = dadosAtual(); dd.extrato.push({ id: uid(), criado: Date.now(), data: val(m, 'kpfData'), banco: ((dd.bancos.find(b => b.id === val(m, 'kpfBkSel')) || {}).nome || (val(m, 'kpfBanco') || '').trim()), bancoId: val(m, 'kpfBkSel') || '', hist: (val(m, 'kpfHist') || '').trim(), valor: val(m, 'kpfTipo') === 'sai' ? -v : v, baixa: null, classe: null }); const nb0 = baixaAutomatica(dd); if (nb0) root.toast(nb0 + ' baixa(s) automática(s).', 'ok'); gravarDados(ST.pf, dd); render(); });
@@ -1231,18 +1247,29 @@
       m.querySelectorAll('#kpfCores button').forEach(b => { b.onclick = () => { m.querySelector('#kpfCor').value = b.dataset.cor || ''; marcarCor(); }; }); marcarCor();
     },
     faturaBaixa(cartaoId, fatura) {
-      let v = prompt('Data do pagamento da fatura (AAAA-MM-DD ou DD/MM/AAAA):', hoje()); if (v == null) return; v = v.trim();
-      const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v); if (m) v = m[3] + '-' + m[2] + '-' + m[1];
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { root.toast('Data inválida.', 'err'); return; }
-      const dd = dadosAtual(); let n = 0;
-      (dd.pagar || []).forEach(it => { if (it.forma !== 'cartao' || it.cartaoId !== cartaoId) return; (it.parcelas || []).forEach(p => { if (p.fatura === fatura && !p.pago) { p.pago = true; p.dataPago = v; p.baixaFatura = true; n++; } }); });
-      if (!n) { root.toast('Essa fatura não tem nada em aberto.', 'err'); return; }
-      gravarDados(ST.pf, dd); render(); root.toast('Fatura paga em ' + v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) + '.', 'ok');
+      const d = dadosAtual(), c = (d.cartoes || []).find(x => x.id === cartaoId), bancos = d.bancos || [], padrao = bancos.some(b => b.id === ST.ultBancoBaixa) ? ST.ultBancoBaixa : (bancos.length === 1 ? bancos[0].id : '');
+      let tot = 0; (d.pagar || []).forEach(it => { if (it.forma !== 'cartao' || it.cartaoId !== cartaoId) return; (it.parcelas || []).forEach(p => { if (p.fatura === fatura && !p.pago) tot += cents(p.valor); }); });
+      if (!tot) { root.toast('Essa fatura não tem nada em aberto.', 'err'); return; }
+      const nomeC = c ? c.nome : 'Cartão', hist = 'Pagamento fatura ' + nomeC + ' ' + rotMes(fatura);
+      const corpo = '<div style="font-size:13px;margin-bottom:8px"><b>' + E(nomeC) + '</b> — fatura de ' + rotMes(fatura) + ' — <b>' + R$(tot / 100) + '</b></div>'
+        + campo('Data do pagamento da fatura', inp('kpfBxData', hoje(), 'date'))
+        + campo('Fonte pagadora (de onde saiu o dinheiro)', sel('kpfBxBanco', [['', 'Dinheiro / outro (só marcar como paga)']].concat(bancos.map(b => [b.id, 'Banco: ' + b.nome])), padrao), 'Escolhendo um banco, eu lanço a saída no extrato dele com o histórico "' + E(hist) + '". Isso entra no saldo do banco e na conciliação.');
+      modal('Dar baixa — fatura do cartão', corpo, mm => {
+        const v = val(mm, 'kpfBxData'), bid = val(mm, 'kpfBxBanco'); if (!/^\d{4}-\d{2}-\d{2}$/.test(v || '')) { root.toast('Informe a data.', 'err'); return false; }
+        const dd = dadosAtual(), baixa = []; let soma = 0, n = 0; const ps = [];
+        (dd.pagar || []).forEach(it => { if (it.forma !== 'cartao' || it.cartaoId !== cartaoId) return; (it.parcelas || []).forEach(p => { if (p.fatura === fatura && !p.pago) { p.pago = true; p.dataPago = v; p.baixaFatura = true; ps.push(p); baixa.push({ tipo: 'pagar', itemId: it.id, n: p.n }); soma += cents(p.valor); n++; } }); });
+        if (!n) { root.toast('Essa fatura não tem nada em aberto.', 'err'); return; }
+        const bk = bid && (dd.banco || dd.bancos || []).find(b => b.id === bid);
+        if (bk) { ST.ultBancoBaixa = bid; const l = { id: uid(), criado: Date.now(), data: v, banco: bk.nome, bancoId: bk.id, hist, valor: -soma / 100, baixa, classe: null, porBaixa: true }; dd.extrato = dd.extrato || []; dd.extrato.push(l); ps.forEach(p => { p.extratoId = l.id; }); }
+        gravarDados(ST.pf, dd); render(); root.toast(bk ? 'Fatura paga e lançada no extrato de ' + bk.nome + '.' : 'Fatura paga em ' + v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) + '.', 'ok');
+      }, 'Confirmar', 480);
     },
     faturaDesfazBaixa(cartaoId, fatura) {
-      if (!confirm('Desfazer a baixa desta fatura? As parcelas pagas por aqui voltam para "em aberto".')) return;
+      if (!confirm('Desfazer a baixa desta fatura? As parcelas pagas por aqui voltam para "em aberto" (e a saída lançada no extrato, se houver, é removida).')) return;
+      const d0 = dadosAtual(), ids = {}; (d0.pagar || []).forEach(it => { if (it.forma !== 'cartao' || it.cartaoId !== cartaoId) return; (it.parcelas || []).forEach(p => { if (p.fatura === fatura && p.pago && p.baixaFatura && p.extratoId) ids[p.extratoId] = 1; }); });
+      Object.keys(ids).forEach(id => { const l0 = (dadosAtual().extrato || []).find(x => x.id === id); if (l0 && l0.porBaixa) K.extratoDesfazer(id, true); });
       const dd = dadosAtual(); let n = 0;
-      (dd.pagar || []).forEach(it => { if (it.forma !== 'cartao' || it.cartaoId !== cartaoId) return; (it.parcelas || []).forEach(p => { if (p.fatura === fatura && p.pago && p.baixaFatura) { p.pago = false; p.dataPago = null; delete p.baixaFatura; n++; } }); });
+      (dd.pagar || []).forEach(it => { if (it.forma !== 'cartao' || it.cartaoId !== cartaoId) return; (it.parcelas || []).forEach(p => { if (p.fatura === fatura && p.baixaFatura && (p.pago || Object.keys(ids).length)) { p.pago = false; p.dataPago = null; delete p.baixaFatura; delete p.extratoId; n++; } }); });
       if (!n) { root.toast('Não há baixa feita por aqui para desfazer (pagamentos vindos do extrato se desfazem no extrato).', 'err'); return; }
       gravarDados(ST.pf, dd); render();
     },
